@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useApi } from '../hooks/useApi';
@@ -6,14 +6,19 @@ import { api } from '../lib/api';
 import { fmtINR, fmtDate } from '../lib/utils';
 
 // UI Components
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
-import Input from '../components/ui/Input';
-import Modal from '../components/ui/Modal';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 import { PnlSpan } from '../components/ui/PnlSpan';
-import Skeleton from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { 
+  IconFilter, IconPlus, IconImport, IconSearch, IconTrash, 
+  IconEdit, IconPsychology, IconChevronRight, IconChevronDown, 
+  IconCalendar, IconArrowUp, IconArrowDown, IconMore
+} from '../components/ui/Icons';
 
 const LIMIT = 20;
 
@@ -69,15 +74,29 @@ export default function Trades() {
   }, [query, setSearchParams]);
 
   // Handlers
+  const updateFilters = (newFilters) => {
+    setFilters(newFilters);
+    setPage(1);
+    const params = new URLSearchParams();
+    Object.entries(newFilters).forEach(([k, v]) => { if (v) params.set(k, v); });
+    params.set('page', '1');
+    setSearchParams(params, { replace: true });
+  };
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-    setPage(1);
+    updateFilters({ ...filters, [name]: value });
   };
 
   const clearFilters = () => {
-    setFilters({ status: '', optionType: '', symbol: '', from: '', to: '' });
-    setPage(1);
+    updateFilters({ status: '', optionType: '', symbol: '', from: '', to: '' });
+  };
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    const params = new URLSearchParams(searchParams);
+    params.set('page', newPage.toString());
+    setSearchParams(params, { replace: true });
   };
 
   const toggleSelect = (id) => {
@@ -127,119 +146,119 @@ export default function Trades() {
     }
   };
 
+  const activeFiltersCount = Object.values(filters).filter(v => !!v).length;
+
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-6 sm:space-y-8 animate-fade-up">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black">Trade Book</h1>
-          <p className="text-sm text-text-muted">{total} trades found</p>
+          <h1 className="text-2xl sm:text-3xl font-black font-heading tracking-tight text-text-primary">Trade Book</h1>
+          <p className="text-sm font-medium text-text-faint mt-1">{total} records found</p>
         </div>
         <div className="flex items-center gap-2">
           <Button 
-            variant="outline" 
-            size="sm" 
+            variant="secondary" 
             onClick={() => openModal('import')}
             className="flex-1 sm:flex-none"
           >
-            <span className="sm:hidden">📥</span>
+            <IconImport className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Import CSV</span>
           </Button>
           <Button 
-            size="sm" 
+            variant="primary"
             onClick={() => navigate('/add-trade')}
-            className="flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none shadow-glow-blue"
           >
-            <span className="sm:hidden">➕</span>
-            <span className="hidden sm:inline">+ Add Trade</span>
+            <IconPlus className="w-4 h-4 sm:mr-2" strokeWidth={2.5} />
+            <span className="hidden sm:inline">Add Trade</span>
           </Button>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <Card className="p-2 sm:p-4">
-        {/* Mobile Filter Toggle */}
-        <button 
-          className="w-full py-2 flex items-center justify-center gap-2 text-sm font-bold sm:hidden"
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          {showFilters ? 'Hide Filters ▴' : 'Show Filters ▾'}
-        </button>
+      <Card variant="flat" className="p-3">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="flex-1 flex items-center gap-3">
+            <div className="relative flex-1">
+              <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
+              <input 
+                type="text"
+                placeholder="Search symbol..."
+                name="symbol"
+                value={filters.symbol}
+                onChange={handleFilterChange}
+                className="w-full h-11 pl-10 pr-4 rounded-xl bg-card border border-border focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all text-sm font-medium"
+              />
+            </div>
+            <Button 
+              variant={showFilters ? 'primary' : 'secondary'} 
+              className="lg:hidden h-11 px-4 rounded-xl min-w-[44px]"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <IconFilter className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline text-xs uppercase tracking-widest font-black">Filters</span>
+              {activeFiltersCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-black">{activeFiltersCount}</span>}
+            </Button>
+          </div>
 
-        <div className={`${showFilters ? 'block' : 'hidden'} sm:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-2 sm:mt-0`}>
-          <Input 
-            placeholder="Search Symbol..." 
-            name="symbol"
-            value={filters.symbol}
-            onChange={handleFilterChange}
-          />
-          <select 
-            name="status"
-            value={filters.status}
-            onChange={handleFilterChange}
-            className="h-10 px-3 rounded-lg bg-card-alt border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-          >
-            <option value="">All Status</option>
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-          </select>
-          <select 
-            name="optionType"
-            value={filters.optionType}
-            onChange={handleFilterChange}
-            className="h-10 px-3 rounded-lg bg-card-alt border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-          >
-            <option value="">All Types</option>
-            <option value="BUY">BUY</option>
-            <option value="SELL">SELL</option>
-          </select>
-          <Input 
-            type="date"
-            name="from"
-            value={filters.from}
-            onChange={handleFilterChange}
-          />
-          <Input 
-            type="date"
-            name="to"
-            value={filters.to}
-            onChange={handleFilterChange}
-          />
-          <Button variant="ghost" onClick={clearFilters} className="text-xs uppercase font-black tracking-widest">
-            Clear
-          </Button>
+          <div className={`${showFilters ? 'grid' : 'hidden'} lg:flex grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 lg:items-center gap-3 animate-fade-in`}>
+            <select 
+              name="status"
+              value={filters.status}
+              onChange={handleFilterChange}
+              className="h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none"
+            >
+              <option value="">Status: All</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+            </select>
+            <select 
+              name="optionType"
+              value={filters.optionType}
+              onChange={handleFilterChange}
+              className="h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none"
+            >
+              <option value="">Type: All</option>
+              <option value="BUY">BUY</option>
+              <option value="SELL">SELL</option>
+            </select>
+            <div className="relative group">
+              <IconCalendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-accent" />
+              <input 
+                type="date"
+                name="from"
+                value={filters.from}
+                onChange={handleFilterChange}
+                className="h-11 pl-10 pr-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none w-full"
+              />
+            </div>
+            <div className="relative group">
+              <IconCalendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-accent" />
+              <input 
+                type="date"
+                name="to"
+                value={filters.to}
+                onChange={handleFilterChange}
+                className="h-11 pl-10 pr-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none w-full"
+              />
+            </div>
+            {activeFiltersCount > 0 && (
+              <Button variant="ghost" onClick={clearFilters} className="text-loss h-11 px-4 rounded-xl hover:bg-loss/10">
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-accent/10 border border-accent/20 rounded-xl animate-fade-down">
-          <span className="text-sm font-bold text-accent">{selectedIds.size} selected</span>
+        <div className="flex items-center gap-3 p-4 bg-accent/8 border border-accent/20 rounded-2xl animate-scale-in">
+          <span className="text-sm font-black text-accent tracking-tight">{selectedIds.size} selected</span>
           <div className="flex items-center gap-2 ml-auto">
-            <Button size="xs" variant="outline" onClick={() => openModal('bulkStrategy')}>Tag Strategy</Button>
-            <Button 
-              size="xs" 
-              variant="outline" 
-              onClick={async () => {
-                if (!window.confirm('Mark selected open trades as expired at 0?')) return;
-                try {
-                  await Promise.all(Array.from(selectedIds).map(async id => {
-                    const t = trades.find(tr => tr.id === id);
-                    if (t?.status === 'open') {
-                      return api.put(`/trades/${id}/close`, { exitPrice: 0, exitDate: new Date(), charges: 20 });
-                    }
-                  }));
-                  toast.success('Trades expired @ 0');
-                  setSelectedIds(new Set());
-                  refetch();
-                } catch (err) {
-                  toast.error(err.message);
-                }
-              }}
-            >
-              Expire @ 0
-            </Button>
-            <Button size="xs" variant="danger" onClick={handleBulkDelete}>Delete</Button>
+            <Button size="sm" variant="secondary" onClick={() => openModal('bulkStrategy')}>Tag Strategy</Button>
+            <Button size="sm" variant="danger" onClick={handleBulkDelete}>Delete</Button>
           </div>
         </div>
       )}
@@ -247,82 +266,82 @@ export default function Trades() {
       {/* Trades Display */}
       <div className="relative">
         {loading && !trades.length ? (
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} height="80px" />)}
+          <div className="space-y-4">
+            {[...Array(6)].map((_, i) => <Skeleton key={i} height="84px" className="rounded-2xl" />)}
           </div>
         ) : trades.length > 0 ? (
           <>
             {/* Desktop Table */}
-            <div className="hidden min-[900px]:block overflow-x-auto rounded-xl border border-border bg-card">
+            <div className="hidden min-[900px]:block overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-card-alt sticky top-0 z-10">
-                  <tr className="border-b border-border">
-                    <th className="p-4 w-10">
+                <thead className="bg-card-alt/50 border-b border-border">
+                  <tr>
+                    <th className="p-4 w-12 text-center">
                       <input 
                         type="checkbox" 
                         checked={selectedIds.size === trades.length} 
                         onChange={toggleSelectAll}
-                        className="rounded border-border"
+                        className="rounded-md border-border text-accent focus:ring-accent/30 w-4 h-4"
                       />
                     </th>
-                    <th className="p-4 text-xs font-black uppercase tracking-widest text-text-muted">Symbol</th>
-                    <th className="p-4 text-xs font-black uppercase tracking-widest text-text-muted">Type</th>
-                    <th className="p-4 text-xs font-black uppercase tracking-widest text-text-muted">Qty</th>
-                    <th className="p-4 text-xs font-black uppercase tracking-widest text-text-muted">Entry</th>
-                    <th className="p-4 text-xs font-black uppercase tracking-widest text-text-muted">Exit</th>
-                    <th className="p-4 text-xs font-black uppercase tracking-widest text-text-muted text-right">Net P&L</th>
-                    <th className="p-4 text-xs font-black uppercase tracking-widest text-text-muted">Actions</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint">Symbol / Strategy</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint">Type</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint text-center">Qty</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint">Entry Details</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint">Exit Details</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint text-right">Realized P&L</th>
+                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-border/50">
                   {trades.map(trade => (
-                    <tr key={trade.id} className="hover:bg-card-alt/50 transition-colors group">
-                      <td className="p-4">
+                    <tr 
+                      key={trade.id} 
+                      className={`group hover:bg-card-alt/30 transition-all duration-150 border-l-4 ${trade.status === 'open' ? 'border-blue-500/0 hover:border-blue-500' : (trade.pnl >= 0 ? 'border-profit/0 hover:border-profit' : 'border-loss/0 hover:border-loss')}`}
+                    >
+                      <td className="p-4 text-center">
                         <input 
                           type="checkbox" 
                           checked={selectedIds.has(trade.id)} 
                           onChange={() => toggleSelect(trade.id)}
-                          className="rounded border-border"
+                          className="rounded-md border-border text-accent focus:ring-accent/30 w-4 h-4"
                         />
                       </td>
-                      <td className="p-4 font-bold" onClick={() => openModal('detail', trade)}>
-                        <div className="cursor-pointer hover:text-accent">
-                          {trade.symbol}
-                          <div className="text-[10px] text-text-muted font-normal uppercase tracking-tighter">
-                            {trade.strategy || 'No Strategy'}
-                          </div>
+                      <td className="p-4" onClick={() => openModal('detail', trade)}>
+                        <div className="cursor-pointer">
+                          <p className="font-black text-sm text-text-primary group-hover:text-accent transition-colors">{trade.symbol}</p>
+                          <p className="text-[10px] font-bold text-text-faint uppercase tracking-tighter mt-0.5">
+                            {trade.strategy || 'Uncategorized'}
+                          </p>
                         </div>
                       </td>
                       <td className="p-4"><Badge type={trade.tradeType} /></td>
-                      <td className="p-4 font-mono text-sm">{trade.quantity}</td>
+                      <td className="p-4 text-center font-mono font-bold text-sm text-text-secondary">{trade.quantity}</td>
                       <td className="p-4">
-                        <div className="text-sm font-bold">₹{trade.entryPrice}</div>
-                        <div className="text-[10px] text-text-muted">{fmtDate(trade.entryDate)}</div>
+                        <div className="text-sm font-black text-text-primary">₹{trade.entryPrice}</div>
+                        <div className="text-[10px] font-medium text-text-faint uppercase tracking-tighter">{fmtDate(trade.entryDate)}</div>
                       </td>
                       <td className="p-4">
                         {trade.status === 'open' ? (
                           <Badge type="OPEN">OPEN</Badge>
                         ) : (
                           <>
-                            <div className="text-sm font-bold">₹{trade.exitPrice}</div>
-                            <div className="text-[10px] text-text-muted">{fmtDate(trade.exitDate)}</div>
+                            <div className="text-sm font-black text-text-primary">₹{trade.exitPrice}</div>
+                            <div className="text-[10px] font-medium text-text-faint uppercase tracking-tighter">{fmtDate(trade.exitDate)}</div>
                           </>
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        <PnlSpan value={trade.pnl} className="font-black" />
-                        <div className="text-[10px] text-text-muted">
-                          {trade.charges > 0 ? `Chg: ${fmtINR(trade.charges)}` : ''}
+                        <PnlSpan value={trade.pnl} className="text-sm font-black" />
+                        <div className="text-[9px] font-bold text-text-faint mt-0.5">
+                          {trade.charges > 0 ? `NET OF ${fmtINR(trade.charges)} CHG` : 'ZERO CHARGES'}
                         </div>
                       </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => openModal('strategy', trade)} title="Strategy & Notes">📝</button>
-                          <button onClick={() => openModal('psychology', trade)} title="Psychology">🧠</button>
-                          {trade.status === 'open' && (
-                            <button onClick={() => openModal('close', trade)} className="text-accent font-bold text-xs uppercase">Close</button>
-                          )}
-                          <button onClick={() => handleDelete(trade.id)} className="text-loss">🗑️</button>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                          <button onClick={() => openModal('strategy', trade)} className="p-2 rounded-lg hover:bg-accent/10 text-accent transition-colors" title="Journal"><IconEdit className="w-4 h-4" /></button>
+                          <button onClick={() => openModal('psychology', trade)} className="p-2 rounded-lg hover:bg-violet-500/10 text-violet-500 transition-colors" title="Psychology"><IconPsychology className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(trade.id)} className="p-2 rounded-lg hover:bg-loss/10 text-loss transition-colors" title="Delete"><IconTrash className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -332,54 +351,50 @@ export default function Trades() {
             </div>
 
             {/* Mobile Cards */}
-            <div className="min-[900px]:hidden space-y-3">
+            <div className="min-[900px]:hidden space-y-4">
               {trades.map(trade => (
-                <Card key={trade.id} padding="p-0" className="overflow-hidden">
-                  <div className="p-4 flex items-center justify-between border-b border-border bg-card-alt/30">
+                <Card 
+                  key={trade.id} 
+                  padding="p-0" 
+                  className={`overflow-hidden border-l-4 ${trade.status === 'open' ? 'border-blue-500' : (trade.pnl >= 0 ? 'border-profit' : 'border-loss')}`}
+                  onClick={() => openModal('detail', trade)}
+                >
+                  <div className="p-4 flex items-center justify-between border-b border-border bg-card-alt/20">
                     <div className="flex items-center gap-3">
                       <input 
                         type="checkbox" 
                         checked={selectedIds.has(trade.id)} 
-                        onChange={() => toggleSelect(trade.id)}
-                        className="rounded border-border"
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleSelect(trade.id);
+                        }}
+                        className="rounded-md border-border text-accent w-4 h-4"
                       />
-                      <div onClick={() => openModal('detail', trade)}>
-                        <div className="font-bold">{trade.symbol}</div>
-                        <div className="text-[10px] text-text-muted">{fmtDate(trade.entryDate)}</div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="font-black text-sm">{trade.symbol}</div>
+                        <Badge type={trade.tradeType} className="scale-75 origin-left" />
                       </div>
                     </div>
-                    <Badge type={trade.tradeType} />
+                    <div className="text-[10px] font-bold text-text-faint uppercase tracking-tighter">{fmtDate(trade.entryDate)}</div>
                   </div>
-                  <div className="p-4 grid grid-cols-2 gap-4" onClick={() => openModal('detail', trade)}>
+                  <div className="p-4 grid grid-cols-3 gap-2 text-center text-xs">
                     <div>
-                      <p className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Entry / Exit</p>
-                      <p className="text-sm font-bold">₹{trade.entryPrice} → {trade.status === 'open' ? '?' : `₹${trade.exitPrice}`}</p>
+                      <p className="text-[9px] text-text-faint font-black uppercase tracking-widest mb-1">Entry</p>
+                      <p className="text-sm font-black">₹{trade.entryPrice}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-text-faint font-black uppercase tracking-widest mb-1">Exit</p>
+                      <p className="text-sm font-black">{trade.status === 'open' ? '—' : `₹${trade.exitPrice}`}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] text-text-muted uppercase font-bold tracking-widest">Net P&L</p>
-                      <PnlSpan value={trade.pnl} className="font-black text-lg" />
+                      <p className="text-[9px] text-text-faint font-black uppercase tracking-widest mb-1">P&L</p>
+                      <PnlSpan value={trade.pnl} className="text-base font-black" />
                     </div>
                   </div>
-                  <div className="p-3 border-t border-border flex items-center justify-around bg-card-alt/10">
-                    <button onClick={() => openModal('strategy', trade)} className="text-sm flex flex-col items-center gap-1">
-                      <span>📝</span>
-                      <span className="text-[10px] font-bold text-text-muted uppercase">Journal</span>
-                    </button>
-                    <button onClick={() => openModal('psychology', trade)} className="text-sm flex flex-col items-center gap-1">
-                      <span>🧠</span>
-                      <span className="text-[10px] font-bold text-text-muted uppercase">Mindset</span>
-                    </button>
-                    {trade.status === 'open' ? (
-                      <button onClick={() => openModal('close', trade)} className="text-sm flex flex-col items-center gap-1 text-accent">
-                        <span>🔒</span>
-                        <span className="text-[10px] font-bold uppercase">Close</span>
-                      </button>
-                    ) : (
-                       <button onClick={() => handleDelete(trade.id)} className="text-sm flex flex-col items-center gap-1 text-loss">
-                        <span>🗑️</span>
-                        <span className="text-[10px] font-bold uppercase">Delete</span>
-                      </button>
-                    )}
+                  <div className="px-4 pb-4 flex gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); openModal('strategy', trade); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-card-alt border border-border text-accent transition-colors"><IconEdit className="w-4 h-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); openModal('psychology', trade); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-card-alt border border-border text-violet-500 transition-colors"><IconPsychology className="w-4 h-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-card-alt border border-border text-loss transition-colors"><IconTrash className="w-4 h-4" /></button>
                   </div>
                 </Card>
               ))}
@@ -387,77 +402,97 @@ export default function Trades() {
           </>
         ) : (
           <EmptyState 
-            title="No trades found" 
-            message="Adjust your filters or add some trades to get started."
+            title="Empty Trade Book" 
+            message="No trades match your current filters. Clear filters or add your first trade."
           />
         )}
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between py-4 min-[900px]:py-0">
-          <div className="hidden sm:block text-sm text-text-muted">
-            Page {page} of {totalPages} ({total} trades)
+        <>
+          {/* Desktop Pagination */}
+          <div className="hidden sm:flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
+            <p className="text-xs font-bold text-text-faint uppercase tracking-widest">
+              Showing <span className="text-text-primary">{(page - 1) * LIMIT + 1}</span> to <span className="text-text-primary">{Math.min(page * LIMIT, total)}</span> of {total} trades
+            </p>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                disabled={page === 1}
+                onClick={() => handlePageChange(page - 1)}
+                className="rounded-full w-10 h-10 p-0 min-h-[40px] min-w-[40px]"
+              >
+                <IconChevronDown className="w-5 h-5 rotate-90" />
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                  let p = page - 2 + i;
+                  if (page <= 2) p = i + 1;
+                  if (page >= totalPages - 1) p = totalPages - 4 + i;
+                  if (p <= 0 || p > totalPages) return null;
+                  
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p)}
+                      className={`w-10 h-10 rounded-full text-xs font-black transition-all ${page === p ? 'bg-accent text-white shadow-glow-blue scale-110' : 'text-text-muted hover:bg-card-alt hover:text-text-primary'}`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                disabled={page === totalPages}
+                onClick={() => handlePageChange(page + 1)}
+                className="rounded-full w-10 h-10 p-0 min-h-[40px] min-w-[40px]"
+              >
+                <IconChevronDown className="w-5 h-5 -rotate-90" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto fixed bottom-[58px] left-0 right-0 p-3 bg-card border-t border-border sm:relative sm:bottom-0 sm:bg-transparent sm:border-0 sm:p-0 z-20">
+
+          {/* Mobile Pagination (Sticky) */}
+          <div className="sm:hidden fixed bottom-[calc(58px+env(safe-area-inset-bottom))] left-0 right-0 z-40 bg-card/90 backdrop-blur border-t border-border px-4 py-2 flex items-center justify-between">
             <Button 
-              variant="outline" 
+              variant="secondary" 
               size="sm" 
               disabled={page === 1}
-              onClick={() => setPage(p => p - 1)}
-              className="flex-1 sm:flex-none"
+              onClick={() => handlePageChange(page - 1)}
+              className="rounded-xl h-10 px-4 min-h-[40px]"
             >
-              Previous
+              <IconChevronDown className="w-4 h-4 rotate-90 mr-2" />
+              Prev
             </Button>
-            <div className="sm:hidden flex-1 text-center font-bold text-sm">
-              {page} / {totalPages}
-            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-faint">
+              Page {page} of {totalPages}
+            </span>
             <Button 
-              variant="outline" 
+              variant="secondary" 
               size="sm" 
               disabled={page === totalPages}
-              onClick={() => setPage(p => p + 1)}
-              className="flex-1 sm:flex-none"
+              onClick={() => handlePageChange(page + 1)}
+              className="rounded-xl h-10 px-4 min-h-[40px]"
             >
               Next
+              <IconChevronDown className="w-4 h-4 -rotate-90 ml-2" />
             </Button>
           </div>
-        </div>
+        </>
       )}
 
       {/* Modals */}
-      <CloseTradeModal 
-        isOpen={modals.close} 
-        onClose={() => closeModal('close')} 
-        trade={activeTrade} 
-        onSuccess={refetch} 
-      />
-      <StrategyModal 
-        isOpen={modals.strategy} 
-        onClose={() => closeModal('strategy')} 
-        trade={activeTrade} 
-        onSuccess={refetch} 
-      />
-      <PsychologyModal 
-        isOpen={modals.psychology} 
-        onClose={() => closeModal('psychology')} 
-        trade={activeTrade} 
-        onSuccess={refetch} 
-      />
-      <ImportCSVModal 
-        isOpen={modals.import} 
-        onClose={() => closeModal('import')} 
-        onSuccess={refetch} 
-      />
-      <BulkStrategyModal 
-        isOpen={modals.bulkStrategy} 
-        onClose={() => closeModal('bulkStrategy')} 
-        selectedIds={selectedIds} 
-        onSuccess={() => {
-          setSelectedIds(new Set());
-          refetch();
-        }} 
-      />
+      <CloseTradeModal isOpen={modals.close} onClose={() => closeModal('close')} trade={activeTrade} onSuccess={refetch} />
+      <StrategyModal isOpen={modals.strategy} onClose={() => closeModal('strategy')} trade={activeTrade} onSuccess={refetch} />
+      <PsychologyModal isOpen={modals.psychology} onClose={() => closeModal('psychology')} trade={activeTrade} onSuccess={refetch} />
+      <ImportCSVModal isOpen={modals.import} onClose={() => closeModal('import')} onSuccess={refetch} />
+      <BulkStrategyModal isOpen={modals.bulkStrategy} onClose={() => closeModal('bulkStrategy')} selectedIds={selectedIds} onSuccess={() => { setSelectedIds(new Set()); refetch(); }} />
       <TradeDetailModal 
         isOpen={modals.detail} 
         onClose={() => closeModal('detail')} 
@@ -465,6 +500,7 @@ export default function Trades() {
         onEditStrategy={() => openModal('strategy', activeTrade)}
         onEditPsychology={() => openModal('psychology', activeTrade)}
         onCloseTrade={() => openModal('close', activeTrade)}
+        onDelete={() => { handleDelete(activeTrade.id); closeModal('detail'); }}
       />
     </div>
   );
@@ -495,7 +531,7 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
         exitPrice: parseFloat(formData.exitPrice),
         charges: parseFloat(formData.charges),
       });
-      toast.success('Trade closed successfully');
+      toast.success('Position closed successfully');
       onSuccess();
       onClose();
     } catch (err) {
@@ -513,39 +549,45 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
   ) : 0;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Close Trade">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="p-3 bg-card-alt rounded-xl border border-border">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-xs font-bold text-text-muted uppercase">Estimated Net P&L</span>
-            <PnlSpan value={estPnl} className="text-lg font-black" />
+    <Modal isOpen={isOpen} onClose={onClose} title="Settle Position">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card variant="flat" padding="p-5" className="border-none bg-accent/5">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[10px] font-black text-accent uppercase tracking-widest">Est. Net P&L</span>
+            <PnlSpan value={estPnl} className="text-xl font-black" />
           </div>
-          <p className="text-[10px] text-text-muted">Based on entry price of ₹{trade?.entryPrice}</p>
-        </div>
+          <div className="h-1 bg-border/50 rounded-full overflow-hidden">
+             <div className={`h-full transition-all duration-500 ${estPnl >= 0 ? 'bg-profit w-full' : 'bg-loss w-1/2'}`} />
+          </div>
+        </Card>
 
-        <Input 
-          label="Exit Price" 
-          type="number" 
-          step="0.05"
-          value={formData.exitPrice}
-          onChange={e => setFormData({...formData, exitPrice: e.target.value})}
-          required
-        />
-        <Input 
-          label="Exit Date" 
-          type="date" 
-          value={formData.exitDate}
-          onChange={e => setFormData({...formData, exitDate: e.target.value})}
-          required
-        />
-        <Input 
-          label="Brokerage & Charges" 
-          type="number" 
-          value={formData.charges}
-          onChange={e => setFormData({...formData, charges: e.target.value})}
-          required
-        />
-        <Button className="w-full" type="submit" loading={loading}>Close Position</Button>
+        <div className="space-y-4">
+          <Input 
+            label="Exit Price" 
+            type="number" 
+            step="0.05"
+            prefix="₹"
+            value={formData.exitPrice}
+            onChange={e => setFormData({...formData, exitPrice: e.target.value})}
+            required
+          />
+          <Input 
+            label="Exit Date" 
+            type="date" 
+            value={formData.exitDate}
+            onChange={e => setFormData({...formData, exitDate: e.target.value})}
+            required
+          />
+          <Input 
+            label="Total Charges" 
+            type="number" 
+            prefix="₹"
+            value={formData.charges}
+            onChange={e => setFormData({...formData, charges: e.target.value})}
+            required
+          />
+        </div>
+        <Button variant="primary" className="w-full h-12 shadow-glow-blue" type="submit" loading={loading}>Close Position</Button>
       </form>
     </Modal>
   );
@@ -578,7 +620,7 @@ function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
     setLoading(true);
     try {
       await api.put(`/trades/${trade.id}`, formData);
-      toast.success('Journal updated');
+      toast.success('Trade journal updated');
       onSuccess();
       onClose();
     } catch (err) {
@@ -589,45 +631,46 @@ function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Strategy & Notes">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Trade Journal">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <Input 
-          label="Strategy Name" 
+          label="Trading Strategy" 
           value={formData.strategy}
           onChange={e => setFormData({...formData, strategy: e.target.value})}
-          placeholder="e.g. ORB, VWAP Rejection"
+          placeholder="e.g. Mean Reversion, Breakout"
         />
         <Input 
-          label="Setup Type" 
+          label="Market Setup" 
           value={formData.setupType}
           onChange={e => setFormData({...formData, setupType: e.target.value})}
-          placeholder="e.g. Breakout, Reversal"
+          placeholder="e.g. Double Bottom, Gap Up"
         />
+        
         <div>
-          <label className="text-sm font-bold mb-1.5 block">Star Rating</label>
-          <div className="flex gap-2">
+          <label className="text-[11px] font-black text-text-faint uppercase tracking-widest mb-3 block">Confidence Rating</label>
+          <div className="flex gap-2.5">
             {[1, 2, 3, 4, 5].map(s => (
               <button 
                 key={s} 
                 type="button"
                 onClick={() => setFormData({...formData, rating: s})}
-                className={`w-10 h-10 rounded-xl text-lg transition-all ${formData.rating >= s ? 'bg-accent text-white scale-110' : 'bg-card-alt border border-border grayscale opacity-50'}`}
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg transition-all active:scale-90 ${formData.rating >= s ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : 'bg-card-alt border border-border text-text-faint grayscale opacity-40'}`}
               >
                 ⭐
               </button>
             ))}
           </div>
         </div>
-        <div>
-          <label className="text-sm font-bold mb-1.5 block">Journal Notes</label>
-          <textarea 
-            className="w-full p-3 rounded-xl bg-card-alt border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent min-h-[100px]"
-            value={formData.notes}
-            onChange={e => setFormData({...formData, notes: e.target.value})}
-            placeholder="Why did you take this trade? What went right/wrong?"
-          />
-        </div>
-        <Button className="w-full" type="submit" loading={loading}>Save Journal</Button>
+
+        <Input 
+          as="textarea"
+          label="Trade Observations"
+          value={formData.notes}
+          onChange={e => setFormData({...formData, notes: e.target.value})}
+          placeholder="What did you learn from this trade?"
+        />
+        
+        <Button variant="primary" className="w-full h-12 shadow-glow-blue" type="submit" loading={loading}>Save Entry</Button>
       </form>
     </Modal>
   );
@@ -662,7 +705,7 @@ function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
     setLoading(true);
     try {
       await api.put(`/trades/${trade.id}`, { psychology: formData });
-      toast.success('Psychology log updated');
+      toast.success('Mindset log saved');
       onSuccess();
       onClose();
     } catch (err) {
@@ -672,63 +715,71 @@ function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
     }
   };
 
-  const emotions = ['Neutral', 'Calm', 'Anxious', 'Greedy', 'Fearful', 'Confident', 'Angry'];
-  const mistakes = ['Early Entry', 'Late Entry', 'Early Exit', 'Late Exit', 'Averaging', 'Revenge Trading', 'Oversizing', 'Ignored SL'];
-
-  const toggleMistake = (m) => {
-    setFormData(prev => {
-      const next = prev.mistakeTags.includes(m) 
-        ? prev.mistakeTags.filter(t => t !== m) 
-        : [...prev.mistakeTags, m];
-      return { ...prev, mistakeTags: next };
-    });
-  };
+  const emotions = ['Neutral', 'Calm', 'Fearful', 'Greedy', 'Anxious', 'Confident', 'Bored'];
+  const mistakes = ['FOMO Entry', 'Over-trading', 'Early Exit', 'Late Exit', 'Averaging Down', 'Ignored SL', 'Chasing Price'];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Trade Psychology">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="text-sm font-bold mb-1.5 block">Emotion (Entry / Exit)</label>
-          <div className="grid grid-cols-2 gap-2">
+    <Modal isOpen={isOpen} onClose={onClose} title="Mindset Analysis">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Pre-Trade</label>
             <select 
-              className="p-2 rounded-lg bg-card-alt border border-border text-sm"
+              className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
               value={formData.emotionBefore}
               onChange={e => setFormData({...formData, emotionBefore: e.target.value})}
             >
-              <option value="">Before...</option>
+              <option value="">Feeling...</option>
               {emotions.map(e => <option key={e} value={e}>{e}</option>)}
             </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Post-Trade</label>
             <select 
-              className="p-2 rounded-lg bg-card-alt border border-border text-sm"
+              className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
               value={formData.emotionAfter}
               onChange={e => setFormData({...formData, emotionAfter: e.target.value})}
             >
-              <option value="">After...</option>
+              <option value="">Feeling...</option>
               {emotions.map(e => <option key={e} value={e}>{e}</option>)}
             </select>
           </div>
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-card-alt rounded-xl border border-border">
-          <span className="text-sm font-bold">Followed the plan?</span>
-          <button 
-            type="button"
-            onClick={() => setFormData({...formData, followedPlan: !formData.followedPlan})}
-            className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${formData.followedPlan ? 'bg-profit/20 text-profit border border-profit/30' : 'bg-loss/20 text-loss border border-loss/30'}`}
-          >
-            {formData.followedPlan ? 'Yes' : 'No'}
-          </button>
+        <div className="flex items-center justify-between p-4 bg-card-alt rounded-2xl border border-border">
+          <span className="text-sm font-black uppercase tracking-tight text-text-secondary">Execution Discipline</span>
+          <div className="flex bg-card p-1 rounded-xl border border-border">
+            <button 
+              type="button" 
+              onClick={() => setFormData({...formData, followedPlan: true})}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${formData.followedPlan ? 'bg-profit text-white shadow-lg shadow-profit/20' : 'text-text-faint'}`}
+            >
+              Followed
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setFormData({...formData, followedPlan: false})}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${!formData.followedPlan ? 'bg-loss text-white shadow-lg shadow-loss/20' : 'text-text-faint'}`}
+            >
+              Violated
+            </button>
+          </div>
         </div>
 
         <div>
-          <label className="text-sm font-bold mb-1.5 block">Common Mistakes</label>
+          <label className="text-[11px] font-black text-text-faint uppercase tracking-widest mb-3 block">Common Mistakes</label>
           <div className="flex flex-wrap gap-2">
             {mistakes.map(m => (
               <button
                 key={m}
                 type="button"
-                onClick={() => toggleMistake(m)}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border transition-all ${formData.mistakeTags.includes(m) ? 'bg-accent/20 border-accent text-accent' : 'bg-card-alt border-border text-text-muted'}`}
+                onClick={() => {
+                  const next = formData.mistakeTags.includes(m) 
+                    ? formData.mistakeTags.filter(t => t !== m) 
+                    : [...formData.mistakeTags, m];
+                  setFormData({...formData, mistakeTags: next});
+                }}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase border transition-all ${formData.mistakeTags.includes(m) ? 'bg-loss/10 border-loss/30 text-loss' : 'bg-card-alt border-border text-text-faint'}`}
               >
                 {m}
               </button>
@@ -736,16 +787,14 @@ function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
           </div>
         </div>
 
-        <div>
-          <label className="text-sm font-bold mb-1.5 block">Mindset Notes</label>
-          <textarea 
-            className="w-full p-3 rounded-xl bg-card-alt border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent min-h-[80px]"
-            value={formData.notes}
-            onChange={e => setFormData({...formData, notes: e.target.value})}
-            placeholder="Describe your mental state during the trade..."
-          />
-        </div>
-        <Button className="w-full" type="submit" loading={loading}>Save Psychology</Button>
+        <Input 
+          as="textarea"
+          label="Psychology Notes"
+          value={formData.notes}
+          onChange={e => setFormData({...formData, notes: e.target.value})}
+          placeholder="Describe your mental state during the trade..."
+        />
+        <Button variant="primary" className="w-full h-12 shadow-glow-blue" type="submit" loading={loading}>Save Log</Button>
       </form>
     </Modal>
   );
@@ -755,10 +804,6 @@ function ImportCSVModal({ isOpen, onClose, onSuccess }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) return;
@@ -767,7 +812,7 @@ function ImportCSVModal({ isOpen, onClose, onSuccess }) {
     formData.append('csv', file);
     try {
       await api.upload('/export/import', formData);
-      toast.success('Trades imported successfully');
+      toast.success('Batch import complete');
       onSuccess();
       onClose();
     } catch (err) {
@@ -778,22 +823,24 @@ function ImportCSVModal({ isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Import Trades">
-      <form onSubmit={handleUpload} className="space-y-4">
-        <div className="border-2 border-dashed border-border rounded-2xl p-8 text-center hover:border-accent transition-colors cursor-pointer relative">
+    <Modal isOpen={isOpen} onClose={onClose} title="Import Broker CSV">
+      <form onSubmit={handleUpload} className="space-y-6">
+        <div className="group border-2 border-dashed border-border rounded-3xl p-10 text-center hover:border-accent hover:bg-accent/5 transition-all cursor-pointer relative">
           <input 
             type="file" 
             accept=".csv"
-            onChange={handleFileChange}
+            onChange={e => setFile(e.target.files[0])}
             className="absolute inset-0 opacity-0 cursor-pointer"
           />
-          <div className="text-4xl mb-2">📄</div>
-          <p className="text-sm font-bold text-text-secondary">
-            {file ? file.name : 'Click or Drag CSV file here'}
+          <div className="w-16 h-16 rounded-2xl bg-card-alt border border-border flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+             <IconImport className="w-8 h-8 text-text-faint group-hover:text-accent" />
+          </div>
+          <p className="text-sm font-black text-text-primary uppercase tracking-tight">
+            {file ? file.name : 'Choose broker file'}
           </p>
-          <p className="text-xs text-text-muted mt-1">Supports Fyers, Zerodha, and generic formats</p>
+          <p className="text-xs text-text-faint mt-1">Zerodha, Fyers, AngelOne supported</p>
         </div>
-        <Button className="w-full" type="submit" disabled={!file} loading={loading}>Start Import</Button>
+        <Button variant="primary" className="w-full h-12 shadow-glow-blue" type="submit" disabled={!file} loading={loading}>Process Data</Button>
       </form>
     </Modal>
   );
@@ -810,7 +857,7 @@ function BulkStrategyModal({ isOpen, onClose, selectedIds, onSuccess }) {
       await Promise.all(Array.from(selectedIds).map(id => 
         api.put(`/trades/${id}`, { strategy })
       ));
-      toast.success(`Updated ${selectedIds.size} trades`);
+      toast.success(`Updated ${selectedIds.size} records`);
       onSuccess();
       onClose();
     } catch (err) {
@@ -821,115 +868,87 @@ function BulkStrategyModal({ isOpen, onClose, selectedIds, onSuccess }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Bulk Tag Strategy">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Tag Records">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <Input 
-          label="Strategy Name" 
+          label="Apply Strategy" 
           value={strategy}
           onChange={e => setStrategy(e.target.value)}
-          placeholder="Enter strategy for all selected trades"
+          placeholder="e.g. Mean Reversion"
           required
         />
-        <Button className="w-full" type="submit" loading={loading}>Update Trades</Button>
+        <Button variant="primary" className="w-full h-12" type="submit" loading={loading}>Bulk Update</Button>
       </form>
     </Modal>
   );
 }
 
-function TradeDetailModal({ isOpen, onClose, trade, onEditStrategy, onEditPsychology, onCloseTrade }) {
+function TradeDetailModal({ isOpen, onClose, trade, onEditStrategy, onEditPsychology, onCloseTrade, onDelete }) {
   if (!trade) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Trade Details">
-      <div className="space-y-6">
-        {/* Header Stat */}
-        <div className="flex items-center justify-between p-4 bg-card-alt rounded-2xl border border-border">
-          <div>
-            <h4 className="text-2xl font-black">{trade.symbol}</h4>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge type={trade.tradeType} />
-              <span className="text-xs text-text-muted font-bold">{trade.quantity} Qty</span>
-            </div>
-          </div>
-          <div className="text-right">
-            <PnlSpan value={trade.pnl} className="text-3xl font-black" />
-            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Net Realized P&L</p>
-          </div>
-        </div>
-
-        {/* Trade Info */}
-        <div className="grid grid-cols-2 gap-4">
-          <DetailItem label="Entry Price" value={`₹${trade.entryPrice}`} sub={fmtDate(trade.entryDate)} />
-          <DetailItem 
-            label="Exit Price" 
-            value={trade.exitPrice ? `₹${trade.exitPrice}` : 'OPEN'} 
-            sub={trade.exitDate ? fmtDate(trade.exitDate) : 'In Progress'} 
-          />
-          <DetailItem label="Strategy" value={trade.strategy || '—'} />
-          <DetailItem label="Setup" value={trade.setupType || '—'} />
-          <DetailItem label="Brokerage" value={fmtINR(trade.charges)} />
-          <DetailItem label="Rating" value={trade.rating ? `${'⭐'.repeat(trade.rating)}` : '—'} />
-        </div>
-
-        {/* Psychology Quick View */}
-        <div className="p-4 bg-accent/5 rounded-2xl border border-accent/10">
-          <div className="flex items-center justify-between mb-3">
-            <h5 className="text-sm font-black uppercase tracking-widest text-accent">Mindset Log</h5>
-            <button onClick={onEditPsychology} className="text-[10px] font-black uppercase tracking-widest text-accent hover:underline">Edit Log</button>
-          </div>
-          {trade.psychology?.emotionBefore ? (
-            <div className="space-y-3">
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <p className="text-[10px] text-text-muted uppercase font-bold">Emotion</p>
-                  <p className="text-sm font-medium">{trade.psychology.emotionBefore} → {trade.psychology.emotionAfter}</p>
-                </div>
-                <div className="flex-1">
-                  <p className="text-[10px] text-text-muted uppercase font-bold">Plan Followed</p>
-                  <p className="text-sm font-medium">{trade.psychology.followedPlan ? '✅ Yes' : '❌ No'}</p>
-                </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Record Insights">
+      <div className="space-y-8">
+        {/* Hero Section */}
+        <div className="relative p-6 bg-card-alt rounded-3xl border border-border overflow-hidden">
+          <div className="relative z-10 flex justify-between items-start">
+            <div>
+              <h4 className="text-3xl font-black font-heading tracking-tighter">{trade.symbol}</h4>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge type={trade.tradeType} />
+                <Badge type={trade.status === 'open' ? 'OPEN' : 'CLOSED'} />
               </div>
-              {trade.psychology.mistakeTags?.length > 0 && (
-                <div>
-                  <p className="text-[10px] text-text-muted uppercase font-bold mb-1">Mistakes</p>
-                  <div className="flex flex-wrap gap-1">
-                    {trade.psychology.mistakeTags.map(m => (
-                      <span key={m} className="px-2 py-0.5 rounded bg-loss/10 text-loss text-[9px] font-bold uppercase">{m}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
-          ) : (
-            <p className="text-sm text-text-muted italic">No psychology notes for this trade.</p>
-          )}
+            <div className="text-right">
+              <PnlSpan value={trade.pnl} className="text-3xl font-black font-mono block" />
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mt-1">Total Result</p>
+            </div>
+          </div>
+          <div className={`absolute -right-12 -bottom-12 w-48 h-48 rounded-full blur-[80px] opacity-10 ${trade.pnl >= 0 ? 'bg-profit' : 'bg-loss'}`} />
         </div>
 
-        {/* Notes */}
-        {trade.notes && (
-          <div>
-            <h5 className="text-xs font-black uppercase tracking-widest text-text-muted mb-2">Journal Entry</h5>
-            <p className="text-sm text-text-secondary bg-card-alt p-3 rounded-xl border border-border whitespace-pre-wrap">
-              {trade.notes}
-            </p>
-          </div>
-        )}
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <DetailRow label="Entry Price" value={`₹${trade.entryPrice}`} sub={fmtDate(trade.entryDate)} />
+          <DetailRow label="Exit Price" value={trade.exitPrice ? `₹${trade.exitPrice}` : 'PENDING'} sub={trade.exitDate ? fmtDate(trade.exitDate) : 'Still Open'} />
+          <DetailRow label="Quantity" value={trade.quantity} sub="Units / Lots" />
+          <DetailRow label="Strategy" value={trade.strategy || 'NONE'} />
+          <DetailRow label="Setup" value={trade.setupType || 'NONE'} />
+          <DetailRow label="Charges" value={fmtINR(trade.charges)} />
+        </div>
 
-        <div className="grid grid-cols-2 gap-3 pt-2">
-          {trade.status === 'open' && (
-            <Button variant="accent" className="w-full" onClick={onCloseTrade}>Close Trade</Button>
+        {/* Sub-sections */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h5 className="text-[11px] font-black uppercase tracking-[0.2em] text-text-faint">Execution Notes</h5>
+            <button onClick={onEditStrategy} className="text-accent hover:bg-accent/10 p-2 rounded-lg transition-all"><IconEdit className="w-4 h-4" /></button>
+          </div>
+          <div className="p-5 rounded-2xl bg-card-alt border border-border">
+            {trade.notes ? (
+              <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{trade.notes}</p>
+            ) : (
+              <p className="text-xs text-text-faint italic">No journal entries for this trade record.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {trade.status === 'open' ? (
+             <Button variant="primary" className="shadow-glow-blue h-12" onClick={onCloseTrade}>Close Position</Button>
+          ) : (
+            <Button variant="danger" className="h-12" onClick={onDelete}>Delete Record</Button>
           )}
-          <Button variant="outline" className="w-full" onClick={onEditStrategy}>Edit Journal</Button>
+          <Button variant="secondary" className="h-12" onClick={onEditPsychology}>View Mindset</Button>
         </div>
       </div>
     </Modal>
   );
 }
 
-const DetailItem = ({ label, value, sub }) => (
+const DetailRow = ({ label, value, sub }) => (
   <div>
-    <p className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-0.5">{label}</p>
-    <p className="text-sm font-black">{value}</p>
-    {sub && <p className="text-[10px] text-text-muted">{sub}</p>}
+    <p className="text-[9px] font-black text-text-faint uppercase tracking-[0.2em] mb-1.5">{label}</p>
+    <p className="text-base font-black text-text-primary tracking-tight">{value}</p>
+    {sub && <p className="text-[10px] font-bold text-text-faint mt-0.5">{sub}</p>}
   </div>
 );

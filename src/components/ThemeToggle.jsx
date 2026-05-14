@@ -1,24 +1,26 @@
 import React from 'react';
 import { useThemeStore } from '../store/themeStore';
+import { IconSun, IconMoon } from './ui/Icons';
 
 export function ThemeToggle({ className = '' }) {
   const { theme, toggle } = useThemeStore();
+  const isDark = theme === 'dark';
 
   return (
     <button
       onClick={toggle}
-      className={`w-8 h-8 flex items-center justify-center rounded-lg bg-card-alt border border-border hover:border-accent transition-colors ${className}`}
+      className={`relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 ring-accent/20 ${isDark ? 'bg-accent' : 'bg-slate-200'} ${className}`}
       aria-label="Toggle Theme"
     >
-      {theme === 'dark' ? (
-        <svg className="w-4 h-4 text-warning" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-        </svg>
-      ) : (
-        <svg className="w-4 h-4 text-purple" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-        </svg>
-      )}
+      <div 
+        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm flex items-center justify-center transition-transform duration-300 ${isDark ? 'translate-x-5' : 'translate-x-0'}`}
+      >
+        {isDark ? (
+          <IconSun className="w-3 h-3 text-amber-500" strokeWidth={2.5} />
+        ) : (
+          <IconMoon className="w-3 h-3 text-slate-500" strokeWidth={2.5} />
+        )}
+      </div>
     </button>
   );
 }

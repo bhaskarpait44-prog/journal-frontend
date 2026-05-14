@@ -2,13 +2,19 @@ import React from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { 
+  IconArrowUp, IconCheck, IconShieldCheck, 
+  IconPlus, IconRefresh, IconProfile 
+} from '../components/ui/Icons';
 
 export default function Pricing() {
   const navigate = useNavigate();
   const { user, isLoggedIn } = useAuthStore();
 
   const handleSelect = (plan) => {
-    localStorage.setItem('selectedPlan', plan);
+    localStorage.setItem('selectedPlan', plan.toUpperCase());
     if (!isLoggedIn()) {
       navigate('/signup');
     } else {
@@ -17,137 +23,138 @@ export default function Pricing() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#060a12] flex flex-col items-center p-6 sm:p-12 overflow-x-hidden">
+    <div className="min-h-screen w-full bg-base flex flex-col items-center p-6 md:p-12 overflow-x-hidden relative selection:bg-accent/30 selection:text-white">
+      {/* Background Decor */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[500px] bg-accent/5 blur-[120px] rounded-full pointer-events-none" />
+
       {/* Logo */}
-      <Link to="/landing" className="flex items-center gap-3 mb-10 hover:opacity-80 transition-opacity">
-        <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-            <polyline points="16 7 22 7 22 13" />
-          </svg>
+      <Link to="/landing" className="flex items-center gap-3 mb-12 sm:mb-16 relative z-10 group">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-accent to-blue-600 flex items-center justify-center shadow-glow-blue group-hover:scale-110 transition-transform shrink-0">
+          <IconArrowUp className="w-5 h-5 text-white" strokeWidth={2.5} />
         </div>
-        <span className="text-xl font-bold text-white tracking-tight font-heading">TradeLog</span>
+        <span className="text-xl sm:text-2xl font-black text-text-primary tracking-tight font-heading">TradeLog</span>
       </Link>
 
       {user && (
-        <div className="bg-profit/10 border border-profit/20 rounded-xl px-5 py-2.5 mb-6 text-sm text-profit flex items-center gap-2 animate-fade-up">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          Signed in as <strong className="font-bold">{user.email}</strong> — select a plan to continue
-        </div>
+        <Card variant="flat" padding="p-4" className="bg-profit/5 border border-profit/20 rounded-2xl mb-8 flex items-center gap-3 animate-fade-up relative z-10 w-full max-w-lg mx-auto">
+          <div className="w-8 h-8 rounded-xl bg-profit/10 flex items-center justify-center text-profit shrink-0"><IconProfile className="w-4 h-4" strokeWidth={2.5} /></div>
+          <p className="text-xs sm:text-sm font-medium text-profit leading-tight">
+            Active session: <strong className="font-black">{user.email}</strong>
+          </p>
+        </Card>
       )}
 
-      <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-accent/30 bg-accent/10 text-accent text-[11px] font-bold uppercase tracking-wider mb-6 animate-fade-up">
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </svg>
-        14-day free trial on Pro · No credit card required
+      <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-accent/20 bg-accent/5 text-accent text-[8px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-6 sm:mb-8 animate-fade-up relative z-10 text-center">
+        <IconShieldCheck className="w-3.5 h-3.5 shrink-0" strokeWidth={3} />
+        14-day Pro trial · No credit card
       </div>
 
-      <h1 className="text-4xl md:text-5xl font-extrabold text-white text-center mb-4 font-heading tracking-tight animate-fade-up">
-        Choose your plan
+      <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-text-primary text-center mb-6 font-heading tracking-tighter animate-fade-up relative z-10 leading-[1.1]">
+        Master your edge. <br />
+        Select your tier.
       </h1>
-      <p className="text-text-muted text-center max-w-[460px] mb-12 leading-relaxed animate-fade-up">
-        Both plans give you full access to your trade journal. Pro adds advanced analytics and broker sync.
+      <p className="text-text-faint text-center max-w-xl mb-12 sm:mb-16 text-base sm:text-lg font-medium animate-fade-up relative z-10 uppercase tracking-tight">
+        Precision tools for every F&O career. <br className="hidden md:block" />
+        Zero lock-in. Scale as you grow.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[760px] w-full animate-fade-up">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-5xl w-full animate-fade-up relative z-10">
         {/* STARTER */}
-        <div className="bg-[#0d1524] border border-white/10 rounded-2xl p-8 flex flex-col hover:border-white/20 transition-colors">
-          <div className="text-[11px] font-bold text-text-faint uppercase tracking-widest mb-2">Starter</div>
-          <div className="text-4xl font-extrabold text-white mb-1 font-heading">₹199<span className="text-base font-normal text-text-muted">/mo</span></div>
-          <div className="text-xs text-text-faint mb-6">Billed monthly · Cancel anytime</div>
+        <Card variant="default" padding="p-8 sm:p-10" className="flex flex-col hover:border-accent/20 hover:shadow-card-md transition-all group w-full">
+          <div className="mb-8 sm:mb-12">
+            <p className="text-[10px] font-black text-text-faint uppercase tracking-[0.3em] mb-4">Starter Plan</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl sm:text-5xl font-heading font-black text-text-primary tracking-tighter">₹199</span>
+              <span className="text-text-faint font-bold uppercase text-[10px] tracking-widest">/ Month</span>
+            </div>
+            <p className="text-[10px] font-bold text-text-faint mt-4 uppercase tracking-tighter">Ideal for beginner traders</p>
+          </div>
           
-          <div className="h-px bg-white/10 mb-6" />
-          
-          <div className="space-y-3 mb-8 flex-1">
+          <div className="space-y-4 sm:space-y-5 mb-10 sm:mb-12 flex-1 border-t border-border/50 pt-8 sm:pt-10">
             {[
-              'Trade journal (unlimited)',
-              'Basic analytics dashboard',
+              'Unlimited manual logging',
+              'Standard P&L dashboard',
               'Psychology tracking',
               'Risk management tools',
               'CSV import (all brokers)',
-              'Mobile friendly',
-              'Email support',
+              'Mobile optimized interface',
             ].map(feat => (
-              <div key={feat} className="flex items-center gap-3 text-sm text-text-secondary">
-                <svg className="w-4 h-4 text-profit shrink-0" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                {feat}
+              <div key={feat} className="flex items-center gap-4 text-sm font-medium text-text-secondary group-hover:text-text-primary transition-colors">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                   <IconCheck className="w-3 h-3 text-emerald-500" strokeWidth={3} />
+                </div>
+                <span className="line-clamp-1">{feat}</span>
               </div>
             ))}
           </div>
 
-          <Button variant="secondary" className="w-full h-11" onClick={() => handleSelect('starter')}>
-            Start Starter Plan
+          <Button variant="secondary" fullWidth className="h-14 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] border-border hover:border-accent hover:text-accent transition-all" onClick={() => handleSelect('starter')}>
+            Initialize Starter
           </Button>
-        </div>
+        </Card>
 
         {/* PRO */}
-        <div className="bg-gradient-to-b from-[#0d1e35] to-[#091422] border border-accent/40 rounded-2xl p-8 flex flex-col relative shadow-2xl shadow-accent/10 md:scale-105">
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-accent to-blue-600 text-white text-[10px] font-bold py-1 px-4 rounded-full tracking-wider whitespace-nowrap">
-            MOST POPULAR
-          </div>
-          
-          <div className="text-[11px] font-bold text-accent uppercase tracking-widest mb-2">Pro Trader</div>
-          <div className="text-4xl font-extrabold text-white mb-1 font-heading">₹699<span className="text-base font-normal text-text-muted">/mo</span></div>
-          <div className="text-xs text-text-faint mb-6">14-day free trial · then ₹699/mo</div>
-          
-          <div className="h-px bg-white/10 mb-6" />
-          
-          <div className="space-y-3 mb-8 flex-1">
-            {[
-              'Everything in Starter',
-              'Advanced strategy analytics',
-              'Strategy performance tracking',
-              'Dhan broker auto sync',
-              'AI trade insights & patterns',
-              'Equity curve & drawdown',
-              'Priority support + Discord',
-            ].map(feat => (
-              <div key={feat} className="flex items-center gap-3 text-sm text-text-secondary">
-                <svg className="w-4 h-4 text-accent shrink-0" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                {feat}
-              </div>
-            ))}
-          </div>
+        <div className="relative group p-[1px] sm:p-[2px] rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-br from-accent/40 via-blue-600/10 to-purple/30 shadow-2xl shadow-accent/10 transition-all hover:scale-[1.01] w-full">
+          <Card variant="default" padding="p-8 sm:p-10" className="h-full border-none rounded-[calc(2rem-1px)] sm:rounded-[calc(2.5rem-2px)] flex flex-col relative overflow-hidden bg-gradient-to-br from-card to-card-alt">
+             <div className="absolute top-6 right-6 sm:right-8">
+                <div className="px-3 sm:px-4 py-1.5 rounded-full bg-accent text-[8px] sm:text-[9px] font-black text-white uppercase tracking-[0.15em] sm:tracking-[0.2em] shadow-lg shadow-accent/30 animate-pulse-slow">
+                  MOST POPULAR
+                </div>
+             </div>
 
-          <Button className="w-full h-11 shadow-lg shadow-accent/20" onClick={() => handleSelect('pro')}>
-            Start Pro Plan →
-          </Button>
+             <div className="mb-8 sm:mb-12">
+              <p className="text-[10px] font-black text-accent uppercase tracking-[0.3em] mb-4">Pro Trader</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl sm:text-5xl font-heading font-black text-text-primary tracking-tighter">₹699</span>
+                <span className="text-text-faint font-bold uppercase text-[10px] tracking-widest">/ Month</span>
+              </div>
+              <p className="text-[10px] font-bold text-accent mt-4 uppercase tracking-tighter">For serious volume traders</p>
+            </div>
+
+            <div className="space-y-4 sm:space-y-5 mb-10 sm:mb-12 flex-1 border-t border-accent/10 pt-8 sm:pt-10">
+              {[
+                'Everything in Starter',
+                'Dhan Broker API Auto-Sync',
+                'Advanced deep analytics',
+                'Strategy attribution engine',
+                'Equity curve & drawdown logs',
+                'AI-driven behavior insights',
+                'Priority 1-on-1 support',
+              ].map((feat, i) => (
+                <div key={feat} className="flex items-center gap-4 text-sm font-medium text-text-secondary">
+                  <div className="w-5 h-5 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                     <IconCheck className="w-3 h-3 text-accent" strokeWidth={3} />
+                  </div>
+                  <span className={`line-clamp-1 ${i > 0 ? 'text-text-primary font-bold' : ''}`}>{feat}</span>
+                </div>
+              ))}
+            </div>
+
+            <Button variant="primary" fullWidth className="h-14 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] shadow-glow-blue" onClick={() => handleSelect('pro')}>
+              Initialize Pro Trader →
+            </Button>
+          </Card>
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mt-12 text-[11px] font-bold text-text-faint uppercase tracking-wider animate-fade-up">
-        <div className="flex items-center gap-2">
-          <svg className="w-3.5 h-3.5 text-profit" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-          SSL Encrypted Payments
+      <div className="flex flex-wrap justify-center gap-x-8 sm:gap-x-12 gap-y-6 mt-16 sm:mt-20 text-[9px] sm:text-[10px] font-black text-text-faint uppercase tracking-[0.15em] sm:tracking-[0.2em] animate-fade-up relative z-10 border-t border-border pt-10 sm:pt-12 w-full max-w-4xl">
+        <div className="flex items-center gap-2 group hover:text-profit transition-colors">
+          <IconShieldCheck className="w-4 h-4 text-profit shrink-0" strokeWidth={2.5} />
+          SSL Secure Node
         </div>
-        <div className="flex items-center gap-2">
-          <svg className="w-3.5 h-3.5 text-profit" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-          </svg>
+        <div className="flex items-center gap-2 group hover:text-profit transition-colors">
+          <IconRefresh className="w-4 h-4 text-profit shrink-0" strokeWidth={2.5} />
           Cancel Anytime
         </div>
-        <div className="flex items-center gap-2">
-          <svg className="w-3.5 h-3.5 text-profit" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M8 12l2 2 4-4" />
-          </svg>
+        <div className="flex items-center gap-2 group hover:text-profit transition-colors">
+          <IconCheck className="w-4 h-4 text-profit shrink-0" strokeWidth={3} />
           No Hidden Fees
         </div>
       </div>
 
       {!isLoggedIn() && (
-        <div className="mt-8 text-sm text-text-muted animate-fade-up">
-          Already have an account? <Link to="/login" className="text-accent font-bold hover:underline">Sign in</Link>
+        <div className="mt-10 sm:mt-12 text-xs sm:text-sm font-bold text-text-faint animate-fade-up relative z-10 uppercase tracking-widest">
+          Trading already? <Link to="/login" className="text-accent hover:text-blue-600 transition-colors ml-2 underline underline-offset-4 decoration-accent/20">Sign in</Link>
         </div>
       )}
     </div>

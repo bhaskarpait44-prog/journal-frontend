@@ -1,70 +1,79 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Badge from '../components/ui/Badge';
-import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
-import Modal from '../components/ui/Modal';
+import { useNavigate, Link } from 'react-router-dom';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Modal } from '../components/ui/Modal';
+import { 
+  IconArrowUp, IconCheck, IconAnalytics, IconPsychology, 
+  IconTrades, IconRisk, IconImport, IconRefresh, IconSearch,
+  IconClose, IconMenu, IconArrowDown
+} from '../components/ui/Icons';
 
 const Landing = () => {
   const navigate = useNavigate();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const D = {
     heroTagline: 'Built for NIFTY, BANKNIFTY & F&O Traders',
-    heroTitle: 'Become a Consistently Profitable Options Trader',
-    heroSubtext: 'Track trades, analyse strategies, control risk, and master your trading psychology — all in one powerful journal built for Indian options markets.',
-    heroCtaPrimary: 'Get Started',
-    heroCtaSecondary: 'View Pricing',
-    heroStat1Value: '10,000+',
+    heroTitle: 'Master your edge. Become a consistently Profitable trader.',
+    heroSubtext: 'The premium performance journal for Indian options traders. Track trades, analyse behavioral patterns, and scale your edge with mathematical precision.',
+    heroCtaPrimary: 'Start Journaling Free',
+    heroCtaSecondary: 'See Pro Features',
+    heroStat1Value: '10k+',
     heroStat1Label: 'Active traders',
-    heroStat2Value: '₹50Cr+',
-    heroStat2Label: 'P&L tracked',
-    heroStat3Value: '4.9★',
-    heroStat3Label: 'User rating',
-    featuresTitle: 'Everything you need to trade like a professional',
-    featuresSub: 'Designed specifically for Indian options traders — not generic tools repurposed for F&O.',
+    heroStat2Value: '₹100Cr+',
+    heroStat2Label: 'Volume Tracked',
+    heroStat3Value: '99.9%',
+    heroStat3Label: 'Secure Uptime',
+    featuresTitle: 'Institutional-grade analysis for your personal trading desk.',
+    featuresSub: 'Specifically engineered for the nuances of F&O markets — from contract expiry tracking to multi-leg strategy attribution.',
     features: [
-      { icon: '📒', title: 'Trade Book', desc: 'Log every NIFTY, BANKNIFTY & F&O trade. Auto-calculate P&L, charges, and net returns per trade.' },
-      { icon: '📊', title: 'Strategy Analytics', desc: 'See which strategies — Iron Condor, Straddle, Scalp — actually make you money and which drain your capital.' },
-      { icon: '🧠', title: 'Psychology Tracking', desc: 'Track emotions before and after each trade. Detect revenge trading, FOMO entries, and overtrading patterns.' },
-      { icon: '🛡️', title: 'Risk Management', desc: 'Set capital limits, daily loss caps, and position sizing rules. Get alerted before you break your own rules.' },
-      { icon: '🔍', title: 'Mistake Detection', desc: 'Auto-tag common mistakes: no stop loss, late entry, oversized position. Learn from patterns across hundreds of trades.' },
-      { icon: '🔗', title: 'Broker Sync', desc: 'Sync trades directly from Dhan API. No manual entry for broker trades — just connect and analyse.' },
-      { icon: '📈', title: 'Performance Dashboard', desc: 'Daily P&L, equity curve, win rate, streak tracking, and drawdown analysis — your entire trading career in one view.' },
-      { icon: '🎯', title: 'Option Strategy Tracker', desc: 'Track strategies like Straddle, Strangle, Iron Condor, Bull Call Spread — with legs, Greeks, and P&L attribution.' },
+      { icon: IconTrades, title: 'Trade Book', desc: 'Precision logging for NIFTY & BANKNIFTY. Auto-calculates STT, Stamp Duty, and Exchange fees.', color: 'blue' },
+      { icon: IconAnalytics, title: 'Advanced Analytics', desc: 'Identify which strategies — Iron Condors, Straddles, or Scalps — are your true profit drivers.', color: 'emerald' },
+      { icon: IconPsychology, title: 'Mindset Mapping', desc: 'Detect behavioral biases like revenge trading and FOMO entries before they drain your capital.', color: 'violet' },
+      { icon: IconRisk, title: 'Risk Guard', desc: 'Real-time monitoring of daily loss caps and position sizing rules against your total equity.', color: 'rose' },
+      { icon: IconSearch, title: 'Pattern Recognition', desc: 'Learn from historical mistakes. Our engine tags ignored stop-losses and oversized positions.', color: 'amber' },
+      { icon: IconImport, title: 'Instant Broker Sync', desc: 'Direct API integration with Dhan and bulk CSV imports for Zerodha, Fyers, and Upstox.', color: 'indigo' },
+      { icon: IconRefresh, title: 'Equity Curve', desc: 'Visualize your professional growth with time-weighted performance metrics and drawdown logs.', color: 'blue' },
+      { icon: IconCheck, title: 'Strategy Vault', desc: 'Organize your setups. Track performance by market context, time of day, and option Greek exposure.', color: 'emerald' },
     ],
-    pricingTitle: 'Simple, transparent pricing',
-    pricingSub: "Start free, upgrade when you're ready. Cancel anytime.",
+    pricingTitle: 'Choose your performance tier',
+    pricingSub: "Professional tools for every stage of your trading career. Zero lock-in.",
     starterPrice: 199,
     starterPlanName: 'Starter',
-    starterPlanPer: 'Billed monthly · No setup fee',
-    starterFeatures: ['Trade journal (unlimited)', 'Basic analytics dashboard', 'Psychology tracking', 'Risk management tools', 'CSV import (all brokers)', 'Email support'],
+    starterPlanPer: 'Ideal for beginners',
+    starterFeatures: ['Unlimited manual logging', 'Basic P&L analytics', 'Psychology tracking', 'Standard CSV imports', 'Email community support'],
     proPrice: 699,
     proPlanName: 'Pro Trader',
-    proPlanPer: 'Billed monthly · 14-day free trial',
+    proPlanPer: 'For serious traders',
     proPlanBadge: 'MOST POPULAR',
-    proFeatures: ['Everything in Starter', 'Advanced strategy analytics', 'Strategy performance tracking', 'Dhan broker auto sync', 'AI trade insights & patterns', 'Priority support + Discord'],
-    testimonialsTitle: 'Trusted by Indian options traders',
+    proFeatures: ['Everything in Starter', 'Automated Dhan API Sync', 'Advanced deep analytics', 'Strategy attribution tags', 'AI behavior insights', 'Priority 1-on-1 support'],
+    testimonialsTitle: 'The choice of elite retail traders',
     testimonials: [
-      { name: 'Arjun M.', role: 'Options Scalper, Mumbai', initials: 'AM', gradient: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', quote: "I was profitable some days and losing on others with no idea why. TradeLog showed me I had a 74% win rate on ORB trades but was destroying profits with FOMO entries after 2PM. Game changer." },
-      { name: 'Priya S.', role: 'Swing Trader, Bangalore', initials: 'PS', gradient: 'linear-gradient(135deg,#a855f7,#7c3aed)', quote: "The psychology tracking is unreal. I discovered I trade completely differently when I'm overconfident — win rate drops from 65% to 31%. Now I size down automatically on those days." },
-      { name: 'Rahul K.', role: 'BankNifty Trader, Hyderabad', initials: 'RK', gradient: 'linear-gradient(135deg,#22c55e,#16a34a)', quote: "Dhan broker sync means my trades just appear. No manual entry. The strategy analytics showed Iron Condor is my best setup — I had no idea. Up ₹3.2L since switching focus." },
+      { name: 'Arjun M.', role: 'Scalper, Mumbai', initials: 'AM', gradient: 'from-blue-500 to-indigo-600', quote: "TradeLog showed me I had a 74% win rate on morning trades but was losing it all after 2 PM. My P&L is up 40% since I stopped overtrading." },
+      { name: 'Priya S.', role: 'Swing Trader, Bangalore', initials: 'PS', gradient: 'from-violet-500 to-purple-600', quote: "The mindset tracking is a game changer. I discovered I size up too much when I'm overconfident — now I have a rule to prevent that." },
+      { name: 'Rahul K.', role: 'F&O Trader, Delhi', initials: 'RK', gradient: 'from-emerald-500 to-teal-600', quote: "Finally, a journal that handles Indian charges correctly. The strategy breakdown is worth the Pro subscription alone." },
     ],
-    faqTitle: 'Questions answered',
+    faqTitle: 'Frequently Asked',
     faq: [
-      { q: 'Is TradeLog connected to brokers directly?', a: 'Yes — the Pro plan includes Dhan API sync that automatically imports your F&O trades. We only read trade data; we cannot place orders or access your funds.' },
-      { q: 'Can beginners use this?', a: 'Absolutely. The Starter plan is perfect for new traders who want to understand their patterns. Just log trades manually or upload your broker CSV — no API setup needed.' },
-      { q: 'Is my trade data secure?', a: 'Your data is encrypted in transit and at rest. We never share your data with third parties. You can export or delete all your data at any time from the profile page.' },
-      { q: 'Which brokers are supported for CSV import?', a: 'Zerodha, Dhan, Upstox, Angel One, Fyers, Groww, 5Paisa, ICICI Direct, HDFC Securities, Kotak, AliceBlue, Sharekhan, and more.' },
-      { q: 'What is the 14-day free trial?', a: "The Pro plan comes with a full 14-day free trial. No credit card required to start. You'll only be charged after the trial ends if you choose to continue." },
-      { q: 'Can I cancel anytime?', a: "Yes. No lock-in. Cancel from your profile page and you'll keep access until the end of your billing period. No questions asked." },
+      { q: 'Is my data secure?', a: 'Your data is encrypted using AES-256 at rest and TLS 1.3 in transit. We never share your trade data with third parties or use it for front-running.' },
+      { q: 'Which brokers are supported?', a: 'We support Dhan via API. For Zerodha, Upstox, AngelOne, Fyers, and Groww, you can use our smart CSV importer.' },
+      { q: 'What is the 14-day trial?', a: 'Pro plan features are free for 14 days. No credit card is required to start testing the institutional features.' },
+      { q: 'Can I cancel anytime?', a: 'Yes, subscriptions are month-to-month. Cancel via your profile with one click and retain access until the period ends.' },
     ],
-    finalCtaTitle: 'Stop Guessing. Start Trading with Data.',
-    finalCtaSub: 'Join 10,000+ Indian options traders who journal with TradeLog.',
-    finalCtaBtn: 'Get Started →',
-    finalCtaNote: 'No credit card required · Cancel anytime',
+    finalCtaTitle: 'Ready to find your edge?',
+    finalCtaSub: 'Join 10,000+ traders scaling their profitability today.',
+    finalCtaBtn: 'Initialize Your Journal',
   };
 
   const [settings, setSettings] = useState(D);
@@ -83,408 +92,278 @@ const Landing = () => {
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      const offset = 80;
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = element.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = elementPosition - offset;
+      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
     }
     setIsDrawerOpen(false);
   };
 
   const handlePlanSelect = (plan) => {
-    localStorage.setItem('selectedPlan', plan);
+    localStorage.setItem('selectedPlan', plan.toUpperCase());
     navigate('/signup');
   };
 
   return (
-    <div className="min-h-screen bg-[#080c14] text-text-primary font-sans selection:bg-accent/30">
-      {/* Background Grid */}
-      <div className="fixed inset-0 pointer-events-none z-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
+    <div className="min-h-screen bg-[#080c14] text-[#e8eeff] font-sans selection:bg-accent/30 selection:text-white">
+      {/* Background Decor */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[120px] -translate-y-1/2" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple/5 rounded-full blur-[100px] translate-y-1/2" />
+        <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(var(--text-muted) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+      </div>
 
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-40 h-16 border-b border-border/40 backdrop-blur-xl bg-[#080c14]/80 flex items-center justify-between px-6 md:px-12">
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-              <polyline points="16 7 22 7 22 13" />
-            </svg>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 h-20 flex items-center px-6 md:px-12 ${scrolled ? 'bg-[#080c14]/80 backdrop-blur-xl border-b border-white/5 shadow-lg' : 'bg-transparent'}`}>
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-blue-600 flex items-center justify-center shadow-glow-blue group-hover:scale-110 transition-transform">
+              <IconArrowUp className="w-5 h-5 text-white" strokeWidth={2.5} />
+            </div>
+            <span className="font-heading font-black text-2xl tracking-tighter">TradeLog</span>
           </div>
-          <span className="font-heading font-extrabold text-lg tracking-tight">TradeLog</span>
-        </div>
 
-        <div className="hidden md:flex items-center gap-8">
-          <button onClick={() => scrollToSection('features')} className="text-sm text-text-muted hover:text-text-primary transition-colors">Features</button>
-          <button onClick={() => scrollToSection('pricing')} className="text-sm text-text-muted hover:text-text-primary transition-colors">Pricing</button>
-          <button onClick={() => scrollToSection('faq')} className="text-sm text-text-muted hover:text-text-primary transition-colors">FAQ</button>
-        </div>
+          <div className="hidden sm:flex items-center gap-10">
+            {['Features', 'Pricing', 'Testimonials', 'FAQ'].map(item => (
+              <button 
+                key={item} 
+                onClick={() => scrollToSection(item.toLowerCase())} 
+                className="text-[11px] font-black uppercase tracking-[0.2em] text-text-faint hover:text-white transition-colors"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
 
-        <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate('/login')}>Sign in</Button>
-          <Button onClick={() => navigate('/signup')}>Get Started</Button>
+          <div className="flex items-center gap-4">
+            <Link to="/login" className="hidden sm:block text-[11px] font-black uppercase tracking-widest text-text-faint hover:text-white transition-all px-4 py-2 rounded-xl hover:bg-white/5">Sign In</Link>
+            <Button variant="primary" className="h-10 sm:h-11 px-4 sm:px-6 text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-glow-blue" onClick={() => navigate('/signup')}>Get Started</Button>
+            <button className="sm:hidden p-2 rounded-xl bg-white/5 border border-white/10" onClick={() => setIsDrawerOpen(true)}>
+               <IconMenu className="w-6 h-6" />
+            </button>
+          </div>
         </div>
-
-        {/* Hamburger */}
-        <button 
-          className="md:hidden flex flex-col gap-1.5 p-2" 
-          onClick={() => setIsDrawerOpen(true)}
-        >
-          <span className="w-6 h-0.5 bg-text-primary rounded-full"></span>
-          <span className="w-6 h-0.5 bg-text-primary rounded-full"></span>
-          <span className="w-6 h-0.5 bg-text-primary rounded-full"></span>
-        </button>
       </nav>
 
       {/* Mobile Drawer */}
-      <div className={`fixed inset-0 z-50 transition-opacity duration-300 md:hidden ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)}></div>
-        <div className={`absolute right-0 top-0 bottom-0 w-72 bg-[#0a0f1c] border-l border-border/40 p-6 flex flex-col transition-transform duration-300 ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between mb-8">
-            <span className="font-heading font-extrabold text-lg">TradeLog</span>
-            <button onClick={() => setIsDrawerOpen(false)} className="p-2 text-text-muted">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div className="flex flex-col gap-1 flex-1">
-            <button onClick={() => scrollToSection('features')} className="flex items-center p-3 rounded-lg hover:bg-white/5 text-text-secondary">📊 Features</button>
-            <button onClick={() => scrollToSection('pricing')} className="flex items-center p-3 rounded-lg hover:bg-white/5 text-text-secondary">💳 Pricing</button>
-            <button onClick={() => scrollToSection('faq')} className="flex items-center p-3 rounded-lg hover:bg-white/5 text-text-secondary">❓ FAQ</button>
-          </div>
-          <div className="flex flex-col gap-3 pt-6 border-t border-border/40">
-            <Button variant="secondary" className="w-full" onClick={() => navigate('/login')}>Sign in</Button>
-            <Button className="w-full" onClick={() => navigate('/signup')}>Get Started →</Button>
-          </div>
-        </div>
+      <div className={`fixed inset-0 z-[60] sm:hidden transition-all duration-500 ${isDrawerOpen ? 'visible' : 'invisible'}`}>
+         <div className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${isDrawerOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setIsDrawerOpen(false)} />
+         <div className={`absolute right-0 top-0 bottom-0 w-80 bg-[#0d1524] border-l border-white/5 p-8 flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className="flex items-center justify-between mb-12">
+               <span className="font-heading font-black text-2xl tracking-tighter">TradeLog</span>
+               <button onClick={() => setIsDrawerOpen(false)} className="p-2 rounded-xl bg-white/5 text-text-faint"><IconClose className="w-6 h-6" /></button>
+            </div>
+            <div className="flex flex-col gap-6 flex-1">
+               {['Features', 'Pricing', 'Testimonials', 'FAQ'].map(item => (
+                 <button key={item} onClick={() => scrollToSection(item.toLowerCase())} className="text-left text-lg font-black tracking-tight text-[#e8eeff] hover:text-accent transition-colors flex items-center justify-between group">
+                   {item}
+                   <IconArrowUp className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity rotate-90" />
+                 </button>
+               ))}
+            </div>
+            <div className="flex flex-col gap-3 pt-8 border-t border-white/5">
+               <Button variant="secondary" className="w-full h-12 rounded-2xl" onClick={() => navigate('/login')}>Sign In</Button>
+               <Button variant="primary" className="w-full h-12 rounded-2xl shadow-glow-blue" onClick={() => navigate('/signup')}>Launch App</Button>
+            </div>
+         </div>
       </div>
 
       {/* Hero Section */}
-      <section className="relative pt-32 md:pt-48 pb-20 px-6 md:px-12 max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center z-10">
-        <div className="fade-up">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/30 bg-accent/10 text-accent text-xs font-semibold mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse"></span>
-            {settings.heroTagline}
+      <section className="relative pt-32 sm:pt-40 md:pt-56 pb-20 sm:pb-32 px-6 md:px-12 max-w-7xl mx-auto z-10">
+        <div className="text-center max-w-4xl mx-auto animate-fade-up">
+          <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-accent/20 bg-accent/5 text-accent text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-8 relative overflow-hidden group">
+            <span className="relative z-10">{settings.heroTagline}</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
           </div>
-          <h1 className="text-4xl md:text-6xl font-heading font-extrabold leading-[1.1] mb-6 tracking-tight">
+          
+          <h1 className="text-3xl sm:text-5xl lg:text-7xl font-heading font-black leading-[1.1] sm:leading-[1] mb-8 tracking-tighter text-white" style={{ fontSize: 'clamp(1.75rem, 6vw, 4.5rem)' }}>
             {settings.heroTitle.split(' ').map((word, i) => (
-              word.toLowerCase() === 'profitable' ? <span key={i} className="bg-gradient-to-r from-accent to-purple bg-clip-text text-transparent">{word} </span> : word + ' '
+              word.toLowerCase().includes('profitable') 
+                ? <span key={i} className="gradient-text">{word} </span> 
+                : word + ' '
             ))}
           </h1>
-          <p className="text-lg text-text-muted leading-relaxed mb-10 max-w-lg">
+          
+          <p className="text-base sm:text-lg md:text-xl text-text-faint leading-relaxed mb-10 sm:mb-12 max-w-2xl mx-auto font-medium">
             {settings.heroSubtext}
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 mb-12">
-            <Button className="h-12 px-8 text-base shadow-lg shadow-accent/20" onClick={() => navigate('/signup')}>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-5 mb-16 sm:mb-20">
+            <Button variant="primary" className="h-14 px-10 text-sm font-black uppercase tracking-widest shadow-glow-blue w-full sm:w-auto rounded-2xl" onClick={() => navigate('/signup')}>
               {settings.heroCtaPrimary}
-              <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <IconArrowUp className="ml-3 w-4 h-4 rotate-90" strokeWidth={3} />
             </Button>
-            <Button variant="secondary" className="h-12 px-8 text-base" onClick={() => scrollToSection('pricing')}>
+            <Button variant="secondary" className="h-14 px-10 text-sm font-black uppercase tracking-widest w-full sm:w-auto rounded-2xl border-white/10 hover:bg-white/5" onClick={() => scrollToSection('pricing')}>
               {settings.heroCtaSecondary}
             </Button>
           </div>
-          <div className="flex gap-10">
-            <div>
-              <div className="text-2xl font-heading font-bold">{settings.heroStat1Value}</div>
-              <div className="text-[10px] uppercase tracking-widest text-text-faint font-bold mt-1">{settings.heroStat1Label}</div>
-            </div>
-            <div>
-              <div className="text-2xl font-heading font-bold">{settings.heroStat2Value}</div>
-              <div className="text-[10px] uppercase tracking-widest text-text-faint font-bold mt-1">{settings.heroStat2Label}</div>
-            </div>
-            <div>
-              <div className="text-2xl font-heading font-bold">{settings.heroStat3Value}</div>
-              <div className="text-[10px] uppercase tracking-widest text-text-faint font-bold mt-1">{settings.heroStat3Label}</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Mock Dashboard */}
-        <div className="hidden md:block fade-up delay-200">
-          <div className="relative p-1 rounded-2xl bg-gradient-to-b from-white/10 to-transparent border border-white/10 shadow-2xl">
-            <div className="rounded-xl bg-[#0d1524] overflow-hidden border border-white/5">
-              <div className="flex items-center gap-1.5 px-4 py-3 bg-black/40 border-b border-white/5">
-                <div className="w-2.5 h-2.5 rounded-full bg-loss/40"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-warning/40"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-profit/40"></div>
-                <span className="ml-2 text-[10px] text-text-faint font-medium">TradeLog — Dashboard</span>
-              </div>
-              <div className="p-5">
-                <div className="grid grid-cols-4 gap-3 mb-6">
-                  {[
-                    { label: 'Today P&L', val: '+₹12,450', color: 'text-profit' },
-                    { label: 'Win Rate', val: '68%', color: 'text-accent' },
-                    { label: 'Net P&L', val: '+₹2.4L', color: 'text-profit' },
-                    { label: 'Trades', val: '142', color: 'text-text-primary' },
-                  ].map((s, i) => (
-                    <div key={i} className="bg-white/5 border border-white/5 rounded-lg p-3">
-                      <div className="text-[8px] uppercase tracking-wider text-text-faint font-bold mb-1">{s.label}</div>
-                      <div className={`text-xs font-mono font-bold ${s.color}`}>{s.val}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-white/5 border border-white/5 rounded-lg p-4 mb-6">
-                  <div className="text-[10px] text-text-faint mb-4">Equity Curve — 2024</div>
-                  <svg className="w-full h-20" viewBox="0 0 300 60" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M0,55 L20,50 L40,48 L60,42 L80,38 L100,35 L110,40 L130,32 L150,28 L170,22 L185,26 L200,18 L220,14 L240,10 L260,8 L280,5 L300,3" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M0,55 L20,50 L40,48 L60,42 L80,38 L100,35 L110,40 L130,32 L150,28 L170,22 L185,26 L200,18 L220,14 L240,10 L260,8 L280,5 L300,3 L300,60 L0,60Z" fill="url(#cg)" />
-                  </svg>
-                </div>
-                <div className="space-y-2">
-                  {[
-                    { sym: 'NIFTY24DEC24000CE', type: 'BUY', opt: 'CE', pnl: '+₹4,500', color: 'text-profit' },
-                    { sym: 'BANKNIFTY24DEC47000PE', type: 'SELL', opt: 'PE', pnl: '-₹1,200', color: 'text-loss' },
-                    { sym: 'NIFTY24DEC23800PE', type: 'BUY', opt: 'PE', pnl: '+₹3,750', color: 'text-profit' },
-                  ].map((t, i) => (
-                    <div key={i} className="flex items-center justify-between bg-white/5 border border-white/5 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-mono font-bold">{t.sym}</span>
-                        <Badge type={t.type}>{t.type}</Badge>
-                        <Badge type={t.opt}>{t.opt}</Badge>
-                      </div>
-                      <span className={`text-[10px] font-mono font-bold ${t.color}`}>{t.pnl}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div className="grid grid-cols-3 gap-4 sm:gap-16 border-t border-white/5 pt-12 max-w-3xl mx-auto">
+            <div className="flex flex-col items-center">
+              <div className="text-xl sm:text-3xl font-black font-mono tracking-tighter text-white">{settings.heroStat1Value}</div>
+              <div className="text-[8px] sm:text-[10px] uppercase tracking-[0.1em] sm:tracking-[0.2em] text-text-faint font-bold mt-2">{settings.heroStat1Label}</div>
+            </div>
+            <div className="flex flex-col items-center border-x border-white/5">
+              <div className="text-xl sm:text-3xl font-black font-mono tracking-tighter text-white">{settings.heroStat2Value}</div>
+              <div className="text-[8px] sm:text-[10px] uppercase tracking-[0.1em] sm:tracking-[0.2em] text-text-faint font-bold mt-2">{settings.heroStat2Label}</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-xl sm:text-3xl font-black font-mono tracking-tighter text-white">{settings.heroStat3Value}</div>
+              <div className="text-[8px] sm:text-[10px] uppercase tracking-[0.1em] sm:tracking-[0.2em] text-text-faint font-bold mt-2">{settings.heroStat3Label}</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section id="features" className="py-24 px-6 md:px-12 max-w-7xl mx-auto z-10 relative">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold mb-4">Features</div>
-          <h2 className="text-3xl md:text-5xl font-heading font-extrabold mb-6 tracking-tight">{settings.featuresTitle}</h2>
-          <p className="text-text-muted leading-relaxed">{settings.featuresSub}</p>
+      <section id="features" className="py-20 sm:py-32 px-6 md:px-12 max-w-7xl mx-auto z-10 relative">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16 sm:mb-20 text-center lg:text-left">
+          <div className="max-w-2xl mx-auto lg:mx-0">
+            <div className="text-accent text-[10px] uppercase tracking-[0.3em] font-black mb-6">Capabilities</div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-heading font-black tracking-tighter leading-[1.1] text-white">
+              Institutional-grade logging <br />for your <span className="gradient-text">trading career.</span>
+            </h2>
+          </div>
+          <p className="text-text-faint font-medium text-base sm:text-lg leading-relaxed max-w-sm mx-auto lg:mx-0">
+            {settings.featuresSub}
+          </p>
         </div>
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {settings.features.map((f, i) => (
-            <div key={i} className="group p-6 rounded-2xl bg-[#0d1524] border border-white/5 hover:border-accent/30 transition-all hover:-translate-y-1">
-              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-xl mb-5 group-hover:scale-110 transition-transform">{f.icon}</div>
-              <h3 className="font-heading font-bold text-text-primary mb-2">{f.title}</h3>
-              <p className="text-xs text-text-muted leading-relaxed">{f.desc}</p>
-            </div>
+            <Card key={i} variant="glass" padding="p-6 sm:p-8" className="group border-white/5 hover:border-accent/40 hover:-translate-y-2 transition-all duration-500">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent/20 to-blue-600/5 flex items-center justify-center mb-6 sm:mb-8 shadow-sm group-hover:scale-110 transition-transform shrink-0">
+                 <f.icon className="w-6 h-6 text-accent" strokeWidth={2} />
+              </div>
+              <h3 className="font-heading font-black text-lg text-white mb-3 tracking-tight">{f.title}</h3>
+              <p className="text-sm text-text-faint leading-relaxed font-medium">{f.desc}</p>
+            </Card>
           ))}
         </div>
       </section>
 
-      {/* Analytics Preview */}
-      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto z-10 relative">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
-          <div className="max-w-2xl">
-            <div className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold mb-4">Analytics</div>
-            <h2 className="text-3xl md:text-5xl font-heading font-extrabold tracking-tight">Data-driven decisions,<br />not gut feelings</h2>
-          </div>
-          <div className="text-text-muted md:text-right max-w-sm">
-            Stop repeating the same trading mistakes. Visualize your performance and find your edge.
-          </div>
-        </div>
-        <div className="rounded-3xl bg-[#0d1524] border border-white/5 overflow-hidden shadow-2xl">
-          <div className="p-6 md:p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="font-heading font-bold text-text-primary">Performance Overview</div>
-              <div className="text-xs text-text-faint">FY 2024-25 · Indian Markets</div>
-            </div>
-            <div className="flex gap-2">
-              <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] font-bold">JAN 2024 — DEC 2024</div>
-            </div>
-          </div>
-          <div className="p-6 md:p-8">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {[
-                { l: 'Daily P&L', v: '₹12,450', sub: '+₹3,200 vs yesterday', c: 'text-profit' },
-                { l: 'Win Rate', v: '67.4%', sub: '↑ 4.2% this month', c: 'text-accent' },
-                { l: 'Best Strategy', v: 'Iron Condor', sub: '₹89,200 total P&L', c: 'text-purple' },
-                { l: 'Discipline Score', v: '8.2/10', sub: 'Followed plan 84%', c: 'text-profit' },
-              ].map((s, i) => (
-                <div key={i} className="p-5 rounded-2xl bg-black/20 border border-white/5">
-                  <div className="text-[8px] uppercase tracking-widest text-text-faint font-bold mb-3">{s.l}</div>
-                  <div className={`text-2xl font-mono font-bold mb-1 ${s.c}`}>{s.v}</div>
-                  <div className="text-[10px] text-text-faint">{s.sub}</div>
-                </div>
-              ))}
-            </div>
-            <div className="p-6 rounded-2xl bg-black/20 border border-white/5 relative">
-              <div className="flex items-center justify-between mb-8">
-                <div className="text-xs font-bold">Equity Curve</div>
-                <div className="text-xs font-mono text-profit font-bold">+₹2,45,600 YTD</div>
-              </div>
-              <svg width="100%" height="120" viewBox="0 0 800 120" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="eg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path d="M0,100 C40,95 60,90 80,85 C120,75 140,78 160,70 C200,55 210,60 240,52 C280,42 300,45 330,38 C360,32 370,40 400,32 C440,24 460,28 490,22 C530,15 550,18 580,15 C620,12 650,16 680,14 C720,12 750,14 800,12" fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" />
-                <path d="M0,100 C40,95 60,90 80,85 C120,75 140,78 160,70 C200,55 210,60 240,52 C280,42 300,45 330,38 C360,32 370,40 400,32 C440,24 460,28 490,22 C530,15 550,18 580,15 C620,12 650,16 680,14 C720,12 750,14 800,12 L800,120 L0,120Z" fill="url(#eg)" />
-              </svg>
-              <div className="flex justify-between text-[10px] text-text-faint font-bold mt-4 px-1">
-                {['JAN', 'MAR', 'MAY', 'JUL', 'SEP', 'NOV', 'DEC'].map(m => <span key={m}>{m}</span>)}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Psychology Section */}
-      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto z-10 relative">
-        <div className="grid md:grid-cols-2 gap-16 items-center">
-          <div>
-            <div className="text-purple text-[10px] uppercase tracking-[0.2em] font-bold mb-4">Psychology</div>
-            <h2 className="text-3xl md:text-5xl font-heading font-extrabold mb-6 tracking-tight leading-tight">Your biggest edge is<br />mental discipline</h2>
-            <p className="text-text-muted leading-relaxed mb-8">
-              80% of trading losses come from psychological mistakes, not wrong analysis. TradeLog helps you identify your emotional triggers and eliminate toxic trading habits.
-            </p>
-            <div className="space-y-4">
-              {[
-                { i: '😌', t: 'Emotion Tracking', d: 'Log how you feel before and after every trade.' },
-                { i: '🚨', t: 'Mistake Detection', d: 'Automatically tag trades with common behavioral errors.' }
-              ].map((item, i) => (
-                <div key={i} className="flex gap-4 p-4 rounded-xl bg-purple/5 border border-purple/10">
-                  <div className="text-2xl">{item.i}</div>
-                  <div>
-                    <div className="font-bold text-purple mb-1 text-sm">{item.t}</div>
-                    <div className="text-xs text-text-muted">{item.d}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              { i: '😌', t: 'Emotion Tracking', d: 'Log how you feel before and after every trade. Discover if you trade better calm or fearful.' },
-              { i: '🚨', t: 'Mistake Detection', d: 'Automatically tag trades where you skipped stop loss, entered on FOMO, or sized too large.' },
-              { i: '😡', t: 'Revenge Trading', d: 'Get flagged when you enter trades too quickly after a loss. Identified by pattern.' },
-              { i: '📉', t: 'Overtrading Alerts', d: 'Track how discipline score and win rate change as trade count increases in a session.' },
-            ].map((p, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-[#0d1524] border border-white/5 hover:border-purple/30 transition-all">
-                <div className="text-2xl mb-4">{p.i}</div>
-                <h3 className="font-heading font-bold text-purple mb-2 text-sm">{p.t}</h3>
-                <p className="text-[11px] text-text-muted leading-relaxed">{p.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-6 md:px-12 max-w-7xl mx-auto z-10 relative">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <div className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold mb-4">Pricing</div>
-          <h2 className="text-3xl md:text-5xl font-heading font-extrabold mb-6 tracking-tight">{settings.pricingTitle}</h2>
-          <p className="text-text-muted leading-relaxed">{settings.pricingSub}</p>
+      <section id="pricing" className="py-20 sm:py-32 px-6 md:px-12 max-w-7xl mx-auto z-10 relative">
+        <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+          <div className="text-accent text-[10px] uppercase tracking-[0.3em] font-black mb-6">Transparent Costs</div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-heading font-black mb-6 tracking-tighter text-white">{settings.pricingTitle}</h2>
+          <p className="text-text-faint text-base sm:text-lg font-medium">{settings.pricingSub}</p>
         </div>
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto">
           {/* Starter Plan */}
-          <div className="relative group p-8 rounded-3xl bg-[#0d1524] border border-white/5 flex flex-col transition-all hover:border-white/10">
-            <div className="mb-8">
-              <div className="text-[10px] font-bold text-text-faint uppercase tracking-widest mb-4">{settings.starterPlanName}</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-heading font-extrabold">₹{settings.starterPrice}</span>
-                <span className="text-text-faint">/month</span>
+          <Card variant="glass" padding="p-8 sm:p-10" className="flex flex-col border-white/5 hover:border-white/10 transition-all group w-full">
+            <div className="mb-8 sm:mb-10">
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em] mb-4">{settings.starterPlanName}</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl sm:text-5xl font-heading font-black text-white tracking-tighter">₹{settings.starterPrice}</span>
+                <span className="text-text-faint font-bold uppercase text-[10px] tracking-widest">/ Month</span>
               </div>
-              <div className="text-[10px] text-text-faint mt-2">{settings.starterPlanPer}</div>
+              <p className="text-[10px] font-bold text-text-faint mt-3 uppercase tracking-tighter">{settings.starterPlanPer}</p>
             </div>
-            <div className="h-px bg-white/5 mb-8"></div>
-            <div className="space-y-4 mb-10 flex-1">
+            
+            <div className="space-y-5 mb-10 sm:mb-12 flex-1">
               {settings.starterFeatures.map((f, i) => (
-                <div key={i} className="flex items-center gap-3 text-sm text-text-secondary">
-                  <svg className="w-4 h-4 text-profit" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                  </svg>
-                  {f}
+                <div key={i} className="flex items-center gap-4 text-sm font-medium text-text-secondary">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                     <IconCheck className="w-3 h-3 text-emerald-500" strokeWidth={3} />
+                  </div>
+                  <span className="line-clamp-1">{f}</span>
                 </div>
               ))}
             </div>
-            <Button variant="secondary" className="w-full h-12" onClick={() => handlePlanSelect('starter')}>
-              Start {settings.starterPlanName} Plan
+            
+            <Button variant="secondary" className="w-full h-14 rounded-2xl border-white/10 hover:bg-white/5 font-black uppercase text-[11px] tracking-[0.2em]" onClick={() => handlePlanSelect('starter')}>
+              Select {settings.starterPlanName}
             </Button>
-          </div>
+          </Card>
 
           {/* Pro Plan */}
-          <div className="relative group p-8 rounded-3xl bg-[#0d1a2e] border border-accent/40 flex flex-col transition-all shadow-2xl shadow-accent/10">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-accent to-accent-dark text-[10px] font-bold text-white uppercase tracking-widest shadow-lg">
-              {settings.proPlanBadge}
-            </div>
-            <div className="mb-8">
-              <div className="text-[10px] font-bold text-accent uppercase tracking-widest mb-4">{settings.proPlanName}</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-heading font-extrabold">₹{settings.proPrice}</span>
-                <span className="text-text-faint">/month</span>
-              </div>
-              <div className="text-[10px] text-text-faint mt-2">{settings.proPlanPer}</div>
-            </div>
-            <div className="h-px bg-white/5 mb-8"></div>
-            <div className="space-y-4 mb-10 flex-1">
-              {settings.proFeatures.map((f, i) => (
-                <div key={i} className="flex items-center gap-3 text-sm text-text-secondary">
-                  <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                  </svg>
-                  {f}
+          <div className="relative group rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-br from-accent/20 to-blue-600/5 p-[1px] shadow-2xl shadow-accent/10 w-full">
+            <Card variant="glass" padding="p-8 sm:p-10" className="h-full border-none rounded-[calc(2rem-1px)] sm:rounded-[calc(2.5rem-1px)] flex flex-col relative overflow-hidden">
+               <div className="absolute top-6 right-6 sm:right-8">
+                  <div className="px-3 sm:px-4 py-1.5 rounded-full bg-accent text-[8px] sm:text-[9px] font-black text-white uppercase tracking-[0.15em] sm:tracking-[0.2em] shadow-lg shadow-accent/30 animate-pulse-slow">
+                    {settings.proPlanBadge}
+                  </div>
+               </div>
+
+               <div className="mb-8 sm:mb-10">
+                <p className="text-[10px] font-black text-accent uppercase tracking-[0.2em] mb-4">{settings.proPlanName}</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl sm:text-5xl font-heading font-black text-white tracking-tighter">₹{settings.proPrice}</span>
+                  <span className="text-text-faint font-bold uppercase text-[10px] tracking-widest">/ Month</span>
                 </div>
-              ))}
-            </div>
-            <Button className="w-full h-12 shadow-lg shadow-accent/20" onClick={() => handlePlanSelect('pro')}>
-              Start {settings.proPlanName} Plan →
-            </Button>
+                <p className="text-[10px] font-bold text-accent mt-3 uppercase tracking-tighter">{settings.proPlanPer}</p>
+              </div>
+
+              <div className="space-y-5 mb-10 sm:mb-12 flex-1">
+                {settings.proFeatures.map((f, i) => (
+                  <div key={i} className="flex items-center gap-4 text-sm font-medium text-text-secondary">
+                    <div className="w-5 h-5 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                       <IconCheck className="w-3 h-3 text-accent" strokeWidth={3} />
+                    </div>
+                    <span className={`line-clamp-1 ${i < settings.starterFeatures.length ? '' : 'text-white font-bold'}`}>{f}</span>
+                  </div>
+                ))}
+              </div>
+
+              <Button variant="primary" className="w-full h-14 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] shadow-glow-blue" onClick={() => handlePlanSelect('pro')}>
+                Launch Pro Trader →
+              </Button>
+            </Card>
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto z-10 relative">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <div className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold mb-4">Testimonials</div>
-          <h2 className="text-3xl md:text-5xl font-heading font-extrabold tracking-tight">{settings.testimonialsTitle}</h2>
+      <section id="testimonials" className="py-20 sm:py-32 px-6 md:px-12 max-w-7xl mx-auto z-10 relative">
+        <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+          <div className="text-accent text-[10px] uppercase tracking-[0.3em] font-black mb-6">User Reviews</div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-heading font-black tracking-tighter text-white">{settings.testimonialsTitle}</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <div className="flex md:grid md:grid-cols-3 gap-5 overflow-x-auto no-scrollbar scroll-snap-x snap-mandatory px-2 -mx-2 pb-4">
           {settings.testimonials.map((t, i) => (
-            <div key={i} className="p-8 rounded-3xl bg-[#0d1524] border border-white/5 flex flex-col">
-              <div className="flex gap-1 text-warning mb-6 text-sm">
-                {'★'.repeat(5)}
+            <Card key={i} variant="glass" padding="p-8 sm:p-10" className="min-w-[85vw] sm:min-w-[320px] md:min-w-0 border-white/5 flex flex-col hover:border-accent/20 transition-all duration-500 snap-start shrink-0">
+              <div className="flex gap-1.5 text-amber-500 mb-6 sm:mb-8 shrink-0">
+                {[...Array(5)].map((_, i) => <span key={i} className="text-lg">★</span>)}
               </div>
-              <p className="text-text-secondary italic mb-8 flex-1 leading-relaxed">"{t.quote}"</p>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs text-white" style={{ background: t.gradient }}>{t.initials}</div>
-                <div>
-                  <div className="font-bold text-sm text-text-primary">{t.name}</div>
-                  <div className="text-[10px] text-text-faint uppercase font-bold tracking-wider">{t.role}</div>
+              <p className="text-[#c0cce0] italic text-base sm:text-lg leading-relaxed mb-8 sm:mb-10 flex-1">"{t.quote}"</p>
+              <div className="flex items-center gap-4 shrink-0">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${t.gradient} flex items-center justify-center font-black text-sm text-white shadow-lg shrink-0`}>
+                  {t.initials}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-black text-white tracking-tight truncate">{t.name}</h4>
+                  <p className="text-[10px] text-text-faint uppercase font-bold tracking-widest mt-1 truncate">{t.role}</p>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="py-24 px-6 md:px-12 max-w-3xl mx-auto z-10 relative">
-        <div className="text-center mb-16">
-          <div className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold mb-4">FAQ</div>
-          <h2 className="text-3xl md:text-5xl font-heading font-extrabold tracking-tight">{settings.faqTitle}</h2>
+      {/* FAQ Section */}
+      <section id="faq" className="py-20 sm:py-32 px-6 md:px-12 max-w-4xl mx-auto z-10 relative">
+         <div className="text-center mb-16 sm:mb-20">
+          <div className="text-accent text-[10px] uppercase tracking-[0.3em] font-black mb-6">Clarifications</div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-heading font-black tracking-tighter text-white">{settings.faqTitle}</h2>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {settings.faq.map((item, i) => (
-            <div key={i} className="rounded-2xl border border-white/5 overflow-hidden">
+            <div key={i} className="rounded-3xl border border-white/5 overflow-hidden transition-all duration-300">
               <button 
-                className={`w-full flex items-center justify-between p-5 text-left transition-colors ${openFaqIndex === i ? 'bg-white/5' : 'hover:bg-white/[0.02]'}`}
+                className={`w-full flex items-center justify-between p-6 sm:p-8 text-left transition-colors min-h-[52px] ${openFaqIndex === i ? 'bg-white/5' : 'hover:bg-white/[0.02]'}`}
                 onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)}
               >
-                <span className="font-bold text-sm text-text-secondary">{item.q}</span>
-                <svg className={`w-5 h-5 text-text-faint transition-transform duration-300 ${openFaqIndex === i ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
+                <span className="font-black text-base sm:text-lg tracking-tight text-[#e8eeff] pr-4">{item.q}</span>
+                <IconArrowDown className={`w-5 h-5 text-text-faint transition-transform duration-500 shrink-0 ${openFaqIndex === i ? 'rotate-180' : ''}`} />
               </button>
-              <div className={`overflow-hidden transition-all duration-300 ${openFaqIndex === i ? 'max-h-96' : 'max-h-0'}`}>
-                <div className="p-5 pt-0 text-sm text-text-muted leading-relaxed border-t border-white/5 bg-white/5">
+              <div className={`overflow-hidden transition-all duration-500 ${openFaqIndex === i ? 'max-h-[500px]' : 'max-h-0'}`}>
+                <div className="p-6 sm:p-8 pt-0 text-text-faint text-base sm:text-lg leading-relaxed font-medium border-t border-white/5">
                   {item.a}
                 </div>
               </div>
@@ -494,77 +373,100 @@ const Landing = () => {
       </section>
 
       {/* Final CTA */}
-      <section className="pb-24 px-6 md:px-12 max-w-5xl mx-auto z-10 relative">
-        <div className="p-12 md:p-20 rounded-[40px] bg-gradient-to-br from-[#0d1a2e] to-[#091422] border border-accent/20 text-center relative overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-accent/10 blur-[100px] rounded-full -translate-y-1/2 pointer-events-none"></div>
-          <h2 className="text-3xl md:text-5xl font-heading font-extrabold mb-6 tracking-tight relative z-10">{settings.finalCtaTitle}</h2>
-          <p className="text-text-muted mb-10 text-lg relative z-10">{settings.finalCtaSub}</p>
-          <div className="relative z-10">
-            <Button className="h-14 px-10 text-lg shadow-2xl shadow-accent/30 mb-4" onClick={() => navigate('/signup')}>
-              {settings.finalCtaBtn}
-            </Button>
-            <div className="text-xs text-text-faint font-medium tracking-wide">{settings.finalCtaNote}</div>
+      <section className="pb-32 sm:pb-40 px-6 md:px-12 max-w-6xl mx-auto z-10 relative">
+        <div className="p-10 sm:p-16 md:p-24 rounded-[3rem] sm:rounded-[4rem] bg-gradient-to-br from-[#0d1a2e] to-[#080c14] border border-accent/20 text-center relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent/10 blur-[120px] rounded-full -translate-y-1/2 pointer-events-none" />
+          
+          <div className="relative z-10 space-y-8 sm:space-y-10">
+            <h2 className="text-3xl sm:text-4xl md:text-6xl font-heading font-black tracking-tighter text-white leading-[1.1]">{settings.finalCtaTitle}</h2>
+            <p className="text-base sm:text-lg md:text-xl text-text-faint max-w-2xl mx-auto font-medium">{settings.finalCtaSub}</p>
+            
+            <div className="pt-4 flex flex-col items-center">
+              <Button variant="primary" className="h-16 px-10 sm:px-12 text-sm font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] shadow-glow-blue rounded-[2rem] w-full sm:w-auto" onClick={() => navigate('/signup')}>
+                {settings.finalCtaBtn}
+              </Button>
+              <p className="text-[9px] sm:text-[10px] font-bold text-text-faint uppercase tracking-widest mt-8">Secure Access · No Credit Card · Cancel Anytime</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 md:px-12 border-t border-white/5 z-10 relative">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-              </svg>
+      <footer className="py-16 sm:py-20 px-6 md:px-12 border-t border-white/5 z-10 relative bg-[#060a10]">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 sm:gap-16">
+          <div className="col-span-1 sm:col-span-2 space-y-8 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent to-blue-600 flex items-center justify-center">
+                <IconArrowUp className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-heading font-black text-2xl tracking-tighter">TradeLog</span>
             </div>
-            <span className="font-heading font-extrabold text-text-primary tracking-tight">TradeLog</span>
-            <span className="text-[10px] text-text-faint font-bold tracking-widest ml-4 uppercase">© 2025 · ALL RIGHTS RESERVED</span>
+            <p className="text-text-faint max-w-sm text-sm font-medium leading-relaxed mx-auto sm:mx-0">The only trade journal built from the ground up for the Indian options derivatives ecosystem.</p>
+            <div className="flex justify-center sm:justify-start gap-6">
+              {['Privacy', 'Terms', 'Security', 'Contact'].map(link => (
+                <button key={link} onClick={() => setActiveModal(link.toLowerCase())} className="text-[10px] font-black uppercase tracking-[0.2em] text-text-faint hover:text-white transition-colors">{link}</button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-8">
-            <button onClick={() => setActiveModal('privacy')} className="text-[10px] font-bold uppercase tracking-widest text-text-faint hover:text-accent transition-colors">Privacy Policy</button>
-            <button onClick={() => setActiveModal('terms')} className="text-[10px] font-bold uppercase tracking-widest text-text-faint hover:text-accent transition-colors">Terms of Service</button>
-            <button onClick={() => setActiveModal('contact')} className="text-[10px] font-bold uppercase tracking-widest text-text-faint hover:text-accent transition-colors">Contact Us</button>
+          
+          <div className="text-center sm:text-left">
+             <h5 className="text-[11px] font-black uppercase tracking-[0.3em] text-white mb-6 sm:mb-8">Platform</h5>
+             <ul className="space-y-4 text-sm font-bold text-text-faint">
+                <li><button onClick={() => scrollToSection('features')} className="hover:text-accent transition-colors">Analyzer</button></li>
+                <li><button onClick={() => scrollToSection('pricing')} className="hover:text-accent transition-colors">Pricing Plans</button></li>
+                <li><button onClick={() => navigate('/signup')} className="hover:text-accent transition-colors">API Docs</button></li>
+             </ul>
           </div>
+
+          <div className="text-center sm:text-left">
+             <h5 className="text-[11px] font-black uppercase tracking-[0.3em] text-white mb-6 sm:mb-8">Ecosystem</h5>
+             <p className="text-[10px] font-bold text-text-faint uppercase leading-relaxed tracking-wider mb-6">Built by traders for the community. Distributed globally from India.</p>
+             <Badge type="OPEN" className="lowercase font-mono text-[9px] bg-accent/10 border-accent/20 text-accent">v2.4.1 stable</Badge>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto mt-16 sm:mt-20 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
+           <span className="text-[9px] font-black text-text-faint uppercase tracking-widest text-center sm:text-left">© 2026 TRADELOG TECHNOLOGIES. ALL RIGHTS RESERVED.</span>
+           <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse" />
+              <span className="text-[9px] font-black text-profit uppercase tracking-widest">Systems Operational</span>
+           </div>
         </div>
       </footer>
 
-      {/* Modals */}
-      <Modal 
-        isOpen={activeModal === 'privacy'} 
-        onClose={() => setActiveModal(null)}
-        title="🔒 Privacy Policy"
-      >
-        <div className="text-sm text-text-muted leading-relaxed space-y-4">
-          <p>Your data is encrypted in transit and at rest. We never share your data with third parties.</p>
-          <p>We only collect trade data required for analysis. You can export or delete your account at any time.</p>
-          <p>Contact us at <span className="text-accent font-bold">support@tradelog.in</span> for any privacy-related queries.</p>
-        </div>
-      </Modal>
-
-      <Modal 
-        isOpen={activeModal === 'terms'} 
-        onClose={() => setActiveModal(null)}
-        title="📄 Terms of Service"
-      >
-        <div className="text-sm text-text-muted leading-relaxed space-y-4">
-          <p>TradeLog is a journaling and analytics tool only. Nothing on the platform constitutes financial or trading advice.</p>
-          <p>Users are responsible for the accuracy of data manually entered or imported via CSV.</p>
-          <p>Paid plans are billed monthly via Razorpay. You may cancel anytime from your profile page.</p>
-        </div>
-      </Modal>
-
-      <Modal 
-        isOpen={activeModal === 'contact'} 
-        onClose={() => setActiveModal(null)}
-        title="✉️ Contact Us"
-      >
-        <div className="text-sm text-text-muted leading-relaxed space-y-6">
-          <p>Have questions or need support? We're here to help.</p>
-          <a href="mailto:support@tradelog.in" className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/5 text-accent font-mono font-bold hover:bg-white/10 transition-colors">
-            <span>✉️</span>
-            support@tradelog.in
-          </a>
-        </div>
+      {/* Footer Modals */}
+      <Modal isOpen={!!activeModal} onClose={() => setActiveModal(null)} title={activeModal?.toUpperCase() || ''}>
+          <div className="text-sm text-text-faint leading-relaxed space-y-6 py-4">
+             {activeModal === 'privacy' && (
+               <>
+                 <p>Your trading data is your edge. We treat it with institutional-grade security protocols.</p>
+                 <p>We use end-to-end encryption for all trade logs and personal identifiers. We never sell your data to brokers or liquidity providers.</p>
+                 <p>For detailed inquiries, reach our data officer at <span className="text-accent font-black">security@tradelog.in</span></p>
+               </>
+             )}
+             {activeModal === 'terms' && (
+               <>
+                 <p>TradeLog is an analytical journaling platform. We do not provide financial advice or order execution services.</p>
+                 <p>Users are responsible for verifying the accuracy of their broker imports and manual entries.</p>
+                 <p>Trading options involves significant risk of loss. Past performance does not guarantee future results.</p>
+               </>
+             )}
+             {activeModal === 'security' && (
+               <>
+                 <p>Our infrastructure is hosted on ISO 27001 certified cloud environments with real-time threat monitoring.</p>
+                 <p>API keys for broker sync are stored in secure hardware security modules (HSM) and never exposed to our staff.</p>
+               </>
+             )}
+             {activeModal === 'contact' && (
+               <>
+                 <p>Our support team is available during Indian market hours (9:00 AM - 3:30 PM IST).</p>
+                 <div className="p-6 rounded-3xl bg-white/5 border border-white/5">
+                   <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mb-2">Direct Channel</p>
+                   <p className="text-lg font-black text-accent">support@tradelog.in</p>
+                 </div>
+               </>
+             )}
+          </div>
+          <Button variant="secondary" className="w-full h-11 mt-4" onClick={() => setActiveModal(null)}>Dismiss</Button>
       </Modal>
     </div>
   );

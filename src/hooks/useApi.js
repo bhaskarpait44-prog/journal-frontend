@@ -1,30 +1,33 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../lib/api';
 
 export function useApi(path, options = {}) {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(!options.skip);
+  const [loading, setLoading] = useState(!!path && !options.skip);
   const [error, setError] = useState(null);
+  const pathRef = useRef(path);
 
-  const fetchData = useCallback(async () => {
-    if (!path) return;
+  const fetchData = useCallback(async (overridePath) => {
+    const target = overridePath || pathRef.current;
+    if (!target) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await api.get(path);
+      const result = await api.get(target);
       setData(result);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [path]);
+  }, []);
 
   useEffect(() => {
-    if (!options.skip) {
-      fetchData();
+    pathRef.current = path;
+    if (!options.skip && path) {
+      fetchData(path);
     }
-  }, [fetchData, options.skip]);
+  }, [path, options.skip, fetchData]);
 
-  return { data, loading, error, refetch: fetchData };
+  return { data, loading, error, refetch: () => fetchData(pathRef.current) };
 }

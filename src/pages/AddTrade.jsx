@@ -1,16 +1,20 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
-import { fmtINR, buildSymbol } from '../lib/utils';
-import { useApi } from '../hooks/useApi';
+import { buildSymbol, fmtINR } from '../lib/utils';
 
 // UI Components
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
-import Input from '../components/ui/Input';
-import TabBar from '../components/ui/TabBar';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
+import { TabBar } from '../components/ui/TabBar';
+import { 
+  IconSearch, IconArrowUp, IconArrowDown, IconDollar, 
+  IconRefresh, IconCheck, IconPsychology, IconPlus, 
+  IconImport, IconEye, IconEyeOff, IconChevronDown 
+} from '../components/ui/Icons';
 
 // Constants
 const STRATEGIES = [
@@ -20,30 +24,30 @@ const STRATEGIES = [
 ];
 
 const EMOTIONS_BEFORE = [
-  { value: 'calm', label: '😌 Calm' },
-  { value: 'confident', label: '💪 Confident' },
-  { value: 'overconfident', label: '🤩 Overconfident' },
-  { value: 'fearful', label: '😨 Fearful' },
-  { value: 'frustrated', label: '😤 Frustrated' },
-  { value: 'revenge', label: '😡 Revenge' },
+  { value: 'calm', label: '😌', name: 'Calm' },
+  { value: 'confident', label: '💪', name: 'Confident' },
+  { value: 'overconfident', label: '🤩', name: 'Hyped' },
+  { value: 'fearful', label: '😨', name: 'Fearful' },
+  { value: 'frustrated', label: '😤', name: 'Frustrated' },
+  { value: 'revenge', label: '😡', name: 'Revenge' },
 ];
 
 const EMOTIONS_AFTER = [
-  { value: 'satisfied', label: '😊 Satisfied' },
-  { value: 'neutral', label: '😐 Neutral' },
-  { value: 'disappointed', label: '😞 Disappointed' },
-  { value: 'regret', label: '😔 Regret' },
-  { value: 'angry', label: '😠 Angry' },
+  { value: 'satisfied', label: '😊', name: 'Satisfied' },
+  { value: 'neutral', label: '😐', name: 'Neutral' },
+  { value: 'disappointed', label: '😞', name: 'Disappointed' },
+  { value: 'regret', label: '😔', name: 'Regret' },
+  { value: 'angry', label: '😠', name: 'Angry' },
 ];
 
 const MISTAKE_TAGS = [
-  { value: 'no_stoploss', label: 'No Stop Loss', color: '#ef4444' },
-  { value: 'revenge_trade', label: 'Revenge Trade', color: '#f97316' },
-  { value: 'fomo_entry', label: 'FOMO Entry', color: '#eab308' },
-  { value: 'overtrading', label: 'Overtrading', color: '#a855f7' },
-  { value: 'oversized_position', label: 'Oversized Position', color: '#ec4899' },
-  { value: 'late_entry', label: 'Late Entry', color: '#3b82f6' },
-  { value: 'early_exit', label: 'Early Exit', color: '#06b6d4' },
+  { value: 'no_stoploss', label: 'No Stop Loss' },
+  { value: 'revenge_trade', label: 'Revenge Trade' },
+  { value: 'fomo_entry', label: 'FOMO Entry' },
+  { value: 'overtrading', label: 'Overtrading' },
+  { value: 'oversized_position', label: 'Oversized' },
+  { value: 'late_entry', label: 'Late Entry' },
+  { value: 'early_exit', label: 'Early Exit' },
 ];
 
 const FALLBACK_SYMBOLS = [
@@ -55,7 +59,6 @@ const FALLBACK_SYMBOLS = [
   { symbol: 'BANKEX', lotSize: 15 },
 ];
 
-// Helper for charges
 const EXCHANGE_RATES = {
   NSE: { exchangePct: 0.0003554 },
   BSE: { exchangePct: 0.0003250 },
@@ -78,9 +81,31 @@ function calcZerodhaFOOptions(entryPrice, lotSize, lots, tradeType, exchange) {
   return { brokerage, stt, exchangeTxn, gst, sebi, stampDuty, total, turnover, exchange };
 }
 
-// --- Sub-components ---
+// --- Sections ---
+
+function FormSection({ title, icon: Icon, children, accent = "blue" }) {
+  const accents = {
+    blue: "border-l-accent",
+    green: "border-l-profit",
+    amber: "border-l-amber-500",
+    purple: "border-l-purple"
+  };
+  return (
+    <Card variant="default" padding="p-0" className={`overflow-hidden border-l-4 ${accents[accent] || accents.blue}`}>
+      <div className="px-6 py-4 border-b border-border bg-card-alt/30 flex items-center gap-2.5">
+        <Icon className="w-4 h-4 text-text-muted" strokeWidth={2.5} />
+        <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary">{title}</h3>
+      </div>
+      <div className="p-6">
+        {children}
+      </div>
+    </Card>
+  );
+}
 
 function PsychologySection({ data, onChange, required = false }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   const toggleMistake = (tag) => {
     const next = data.mistakeTags.includes(tag)
       ? data.mistakeTags.filter((t) => t !== tag)
@@ -89,114 +114,131 @@ function PsychologySection({ data, onChange, required = false }) {
   };
 
   return (
-    <Card className="border-accent/20 bg-accent/5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-xl">🧠</span>
-        <div>
-          <h3 className="text-sm font-bold text-accent flex items-center gap-2">
-            Trade Psychology
-            {required && <Badge type="SELL" className="text-[8px]">REQUIRED</Badge>}
-          </h3>
-          <p className="text-[10px] text-text-muted">Log emotions & mistakes to build behavioral insights</p>
+    <Card variant="flat" padding="p-0" className="overflow-hidden border border-border">
+      <button 
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-6 py-5 flex items-center justify-between hover:bg-card-alt transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-500">
+            <IconPsychology className="w-6 h-6" />
+          </div>
+          <div className="text-left">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-black uppercase tracking-widest text-text-primary">Trade Psychology</h3>
+              {required && <Badge type="OPEN" className="text-[8px] bg-violet-500/10 text-violet-400 border-violet-500/20">Optional</Badge>}
+            </div>
+            <p className="text-[10px] font-bold text-text-faint uppercase tracking-tight">Log your mental state & performance</p>
+          </div>
         </div>
-      </div>
+        <IconChevronDown className={`w-5 h-5 text-text-faint transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+      </button>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="text-xs font-bold mb-1.5 block text-accent">Emotion Before {required && '*'}</label>
-          <select
-            className="w-full h-10 px-3 rounded-lg bg-card border border-accent/20 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            value={data.emotionBefore}
-            onChange={(e) => onChange({ emotionBefore: e.target.value })}
-            required={required}
-          >
-            <option value="">Select...</option>
-            {EMOTIONS_BEFORE.map((e) => (
-              <option key={e.value} value={e.value}>{e.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-bold mb-1.5 block text-accent">Emotion After</label>
-          <select
-            className="w-full h-10 px-3 rounded-lg bg-card border border-accent/20 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            value={data.emotionAfter}
-            onChange={(e) => onChange({ emotionAfter: e.target.value })}
-          >
-            <option value="">Select...</option>
-            {EMOTIONS_AFTER.map((e) => (
-              <option key={e.value} value={e.value}>{e.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+      {isExpanded && (
+        <div className="px-6 pb-8 space-y-8 animate-fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Entry Emotion</label>
+              <div className="grid grid-cols-6 gap-2">
+                {EMOTIONS_BEFORE.map((e) => (
+                  <button
+                    key={e.value}
+                    type="button"
+                    title={e.name}
+                    onClick={() => onChange({ emotionBefore: e.value })}
+                    className={`h-12 rounded-2xl flex items-center justify-center text-xl transition-all ${data.emotionBefore === e.value ? 'bg-accent text-white shadow-glow-blue scale-110' : 'bg-card-alt border border-border grayscale opacity-40 hover:grayscale-0 hover:opacity-100'}`}
+                  >
+                    {e.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Exit Emotion</label>
+              <div className="grid grid-cols-5 gap-2">
+                {EMOTIONS_AFTER.map((e) => (
+                  <button
+                    key={e.value}
+                    type="button"
+                    title={e.name}
+                    onClick={() => onChange({ emotionAfter: e.value })}
+                    className={`h-12 rounded-2xl flex items-center justify-center text-xl transition-all ${data.emotionAfter === e.value ? 'bg-accent text-white shadow-glow-blue scale-110' : 'bg-card-alt border border-border grayscale opacity-40 hover:grayscale-0 hover:opacity-100'}`}
+                  >
+                    {e.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-1.5">
-          <label className="text-xs font-bold text-accent">Discipline Rating</label>
-          <span className="text-xs font-mono font-bold text-accent">{data.disciplineRating} / 10</span>
-        </div>
-        <input
-          type="range"
-          min="1"
-          max="10"
-          value={data.disciplineRating}
-          onChange={(e) => onChange({ disciplineRating: parseInt(e.target.value) })}
-          className="w-full accent-accent"
-        />
-        <div className="flex justify-between text-[10px] text-text-muted mt-1">
-          <span>Poor</span>
-          <span>Perfect</span>
-        </div>
-      </div>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Execution Discipline</label>
+              <span className="text-xs font-mono font-black text-accent bg-accent/5 px-3 py-1 rounded-full">{data.disciplineRating} / 10</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              value={data.disciplineRating}
+              onChange={(e) => onChange({ disciplineRating: parseInt(e.target.value) })}
+              className="w-full h-2 bg-card-alt rounded-lg appearance-none cursor-pointer accent-accent"
+            />
+          </div>
 
-      <div className="flex items-center justify-between p-3 bg-card rounded-xl border border-accent/10 mb-4">
-        <div>
-          <p className="text-xs font-bold">Followed Trading Plan?</p>
-          <p className="text-[10px] text-text-muted">Did you stick to your rules?</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => onChange({ followedPlan: !data.followedPlan })}
-          className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
-            data.followedPlan
-              ? 'bg-profit/20 text-profit border border-profit/30'
-              : 'bg-loss/20 text-loss border border-loss/30'
-          }`}
-        >
-          {data.followedPlan ? 'Yes' : 'No'}
-        </button>
-      </div>
+          <div className="flex items-center justify-between p-5 bg-card-alt rounded-3xl border border-border">
+            <div>
+              <p className="text-sm font-black text-text-primary uppercase tracking-tight">Followed Strategy Rules?</p>
+              <p className="text-[10px] font-bold text-text-faint uppercase tracking-tighter">Did you stick to your predefined plan?</p>
+            </div>
+            <div className="flex bg-card p-1 rounded-2xl border border-border shadow-inner">
+               <button
+                  type="button"
+                  onClick={() => onChange({ followedPlan: true })}
+                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${data.followedPlan ? 'bg-profit text-white shadow-lg shadow-profit/20' : 'text-text-faint'}`}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange({ followedPlan: false })}
+                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${!data.followedPlan ? 'bg-loss text-white shadow-lg shadow-loss/20' : 'text-text-faint'}`}
+                >
+                  No
+                </button>
+            </div>
+          </div>
 
-      <div className="mb-4">
-        <label className="text-xs font-bold mb-1.5 block text-accent">Mistake Tags</label>
-        <div className="flex flex-wrap gap-1.5">
-          {MISTAKE_TAGS.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => toggleMistake(m.value)}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border transition-all ${
-                data.mistakeTags.includes(m.value)
-                  ? 'bg-accent/20 border-accent text-accent'
-                  : 'bg-card border-border text-text-muted'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-      </div>
+          <div className="space-y-3">
+            <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Identify Mistakes</label>
+            <div className="flex flex-wrap gap-2">
+              {MISTAKE_TAGS.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => toggleMistake(m.value)}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border transition-all duration-200 ${
+                    data.mistakeTags.includes(m.value)
+                      ? 'bg-loss/10 border-loss/30 text-loss shadow-sm'
+                      : 'bg-card-alt border-border text-text-faint hover:border-text-faint hover:text-text-muted'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <div>
-        <label className="text-xs font-bold mb-1.5 block text-accent">Psychology Notes</label>
-        <textarea
-          className="w-full p-3 rounded-xl bg-card border border-accent/20 text-sm focus:outline-none focus:ring-2 focus:ring-accent min-h-[60px]"
-          placeholder="What were you thinking? What could you do better?"
-          value={data.notes}
-          onChange={(e) => onChange({ notes: e.target.value })}
-        />
-      </div>
+          <Input
+            as="textarea"
+            label="Mental Reflections"
+            placeholder="Write down your thought process, what you felt, and what you could improve..."
+            value={data.notes}
+            onChange={(e) => onChange({ notes: e.target.value })}
+          />
+        </div>
+      )}
     </Card>
   );
 }
@@ -238,7 +280,6 @@ function ManualEntryTab() {
     notes: '',
   });
 
-  // Fetch NSE Symbols
   useEffect(() => {
     api.get('/nse/fno-symbols').then((data) => {
       if (data?.symbols?.length) setNseSymbols(data.symbols);
@@ -281,7 +322,6 @@ function ManualEntryTab() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.underlying) return toast.error('Please select an underlying symbol');
-    if (!psychology.emotionBefore) return toast.error('Emotion Before is required');
 
     setLoading(true);
     try {
@@ -300,7 +340,7 @@ function ManualEntryTab() {
         symbol: buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType) || form.underlying,
       };
       await api.post('/trades', payload);
-      toast.success('Trade added successfully');
+      toast.success('Trade logged successfully');
       navigate('/trades');
     } catch (err) {
       toast.error(err.message);
@@ -310,292 +350,297 @@ function ManualEntryTab() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-24 sm:pb-0">
-      {/* Symbol & Setup */}
-      <Card title="1. Symbol & Setup">
-        <div className="space-y-4">
-          <div className="relative">
-            <Input
-              label="Underlying Symbol *"
-              placeholder="Search NIFTY, BANKNIFTY, RELIANCE..."
-              value={search || form.underlying}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setShowDropdown(true);
-              }}
-              onFocus={() => setShowDropdown(true)}
-            />
-            {showDropdown && filteredSymbols.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-xl shadow-2xl max-height-[200px] overflow-y-auto">
-                {filteredSymbols.map((s) => (
-                  <div
-                    key={s.symbol}
-                    className="p-3 hover:bg-card-alt cursor-pointer flex justify-between items-center"
-                    onClick={() => {
-                      setForm({ ...form, underlying: s.symbol, lotSize: s.lotSize });
-                      setSearch(s.symbol);
-                      setShowDropdown(false);
-                    }}
-                  >
-                    <span className="font-bold">{s.symbol}</span>
-                    <span className="text-xs text-text-muted">Lot: {s.lotSize}</span>
+    <form onSubmit={handleSubmit} className="space-y-8 pb-32 sm:pb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-8">
+          {/* Symbol & Setup */}
+          <FormSection title="Symbol & Configuration" icon={IconSearch} accent="blue">
+            <div className="space-y-6">
+              <div className="relative">
+                <Input
+                  label="Asset / Underlying *"
+                  placeholder="e.g. NIFTY, BANKNIFTY"
+                  prefix={<IconSearch className="w-4 h-4" />}
+                  value={search || form.underlying}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                />
+                {showDropdown && filteredSymbols.length > 0 && (
+                  <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-2xl shadow-card-lg max-h-[220px] overflow-y-auto no-scrollbar animate-scale-in origin-top">
+                    {filteredSymbols.map((s) => (
+                      <div
+                        key={s.symbol}
+                        className="px-4 py-3 hover:bg-card-alt cursor-pointer flex justify-between items-center transition-colors group min-h-[44px]"
+                        onClick={() => {
+                          setForm({ ...form, underlying: s.symbol, lotSize: s.lotSize });
+                          setSearch(s.symbol);
+                          setShowDropdown(false);
+                        }}
+                      >
+                        <span className="font-black text-sm text-text-primary group-hover:text-accent transition-colors">{s.symbol}</span>
+                        <span className="text-[10px] font-black text-text-faint bg-card-alt px-2 py-1 rounded-lg">LOT: {s.lotSize}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold mb-1.5 block">Option Type *</label>
-              <div className="flex rounded-lg overflow-hidden border border-border">
-                <button
-                  type="button"
-                  className={`flex-1 py-2 text-xs font-bold ${form.optionType === 'CE' ? 'bg-profit/20 text-profit' : 'bg-card'}`}
-                  onClick={() => setForm({ ...form, optionType: 'CE' })}
-                >📈 CE</button>
-                <button
-                  type="button"
-                  className={`flex-1 py-2 text-xs font-bold ${form.optionType === 'PE' ? 'bg-loss/20 text-loss' : 'bg-card'}`}
-                  onClick={() => setForm({ ...form, optionType: 'PE' })}
-                >📉 PE</button>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-bold mb-1.5 block">Trade Type *</label>
-              <div className="flex rounded-lg overflow-hidden border border-border">
-                <button
-                  type="button"
-                  className={`flex-1 py-2 text-xs font-bold ${form.tradeType === 'BUY' ? 'bg-accent/20 text-accent' : 'bg-card'}`}
-                  onClick={() => setForm({ ...form, tradeType: 'BUY' })}
-                >BUY</button>
-                <button
-                  type="button"
-                  className={`flex-1 py-2 text-xs font-bold ${form.tradeType === 'SELL' ? 'bg-accent/20 text-accent' : 'bg-card'}`}
-                  onClick={() => setForm({ ...form, tradeType: 'SELL' })}
-                >SELL</button>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Strike Price *"
-              type="number"
-              value={form.strikePrice}
-              onChange={(e) => setForm({ ...form, strikePrice: e.target.value })}
-              placeholder="e.g. 22500"
-            />
-            <Input
-              label="Expiry Date *"
-              type="date"
-              value={form.expiryDate}
-              onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-            />
-          </div>
-          
-          {form.underlying && form.expiryDate && form.strikePrice && (
-            <div className="p-2 bg-card-alt rounded-lg border border-border text-center">
-              <span className="text-[10px] text-text-muted uppercase tracking-widest block mb-1">Generated Symbol</span>
-              <span className="font-mono font-bold text-accent">
-                {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType)}
-              </span>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Quantity & Exchange */}
-      <Card title="2. Quantity & Exchange">
-        <div className="grid grid-cols-3 gap-4">
-          <Input
-            label="Lot Size *"
-            type="number"
-            value={form.lotSize}
-            onChange={(e) => setForm({ ...form, lotSize: e.target.value })}
-          />
-          <Input
-            label="Quantity (lots) *"
-            type="number"
-            value={form.quantity}
-            onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-          />
-          <div>
-            <label className="text-xs font-bold mb-1.5 block">Exchange</label>
-            <div className="flex rounded-lg overflow-hidden border border-border">
-              <button
-                type="button"
-                className={`flex-1 py-2 text-xs font-bold ${form.exchange === 'NSE' ? 'bg-accent/20 text-accent' : 'bg-card'}`}
-                onClick={() => setForm({ ...form, exchange: 'NSE' })}
-              >NSE</button>
-              <button
-                type="button"
-                className={`flex-1 py-2 text-xs font-bold ${form.exchange === 'BSE' ? 'bg-accent/20 text-accent' : 'bg-card'}`}
-                onClick={() => setForm({ ...form, exchange: 'BSE' })}
-              >BSE</button>
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 p-3 bg-accent/5 rounded-xl border border-accent/10 flex justify-between items-center">
-          <span className="text-xs text-text-muted">Total Units</span>
-          <span className="font-mono font-bold text-accent">{(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0)}</span>
-        </div>
-      </Card>
-
-      {/* Entry & Exit */}
-      <Card title="3. Entry & Exit">
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-bold mb-1.5 block">Trade Status</label>
-            <div className="flex gap-2">
-              {['OPEN', 'CLOSED', 'EXPIRED'].map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${
-                    form.status === s
-                      ? s === 'OPEN' ? 'bg-warning/20 text-warning border-warning/30' : 
-                        s === 'CLOSED' ? 'bg-profit/20 text-profit border-profit/30' : 
-                        'bg-text-muted/20 text-text-muted border-text-muted/30'
-                      : 'bg-card border-border text-text-muted'
-                  }`}
-                  onClick={() => setForm({ ...form, status: s, exitPrice: s === 'EXPIRED' ? '0' : form.exitPrice })}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Entry Price *"
-              type="number"
-              step="0.05"
-              value={form.entryPrice}
-              onChange={(e) => setForm({ ...form, entryPrice: e.target.value })}
-            />
-            <Input
-              label="Entry Date *"
-              type="date"
-              value={form.entryDate}
-              onChange={(e) => setForm({ ...form, entryDate: e.target.value })}
-            />
-          </div>
-
-          {(form.status === 'CLOSED' || form.status === 'EXPIRED') && (
-            <div className="grid grid-cols-2 gap-4 animate-fade-in">
-              <Input
-                label="Exit Price"
-                type="number"
-                step="0.05"
-                value={form.exitPrice}
-                onChange={(e) => setForm({ ...form, exitPrice: e.target.value })}
-                disabled={form.status === 'EXPIRED'}
-              />
-              <Input
-                label="Exit Date"
-                type="date"
-                value={form.exitDate}
-                onChange={(e) => setForm({ ...form, exitDate: e.target.value })}
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Stop Loss"
-              type="number"
-              step="0.05"
-              value={form.stopLoss}
-              onChange={(e) => setForm({ ...form, stopLoss: e.target.value })}
-            />
-            <Input
-              label="Target"
-              type="number"
-              step="0.05"
-              value={form.target}
-              onChange={(e) => setForm({ ...form, target: e.target.value })}
-            />
-          </div>
-
-          <div className="p-4 bg-card-alt rounded-2xl border border-border">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold">Estimated Charges</span>
-                <Badge className="text-[8px] bg-accent/10 text-accent border-accent/20">AUTO · {form.exchange}</Badge>
-              </div>
-              <span className="font-mono font-bold text-loss">
-                {charges ? `-₹${charges.total.toFixed(2)}` : '₹0.00'}
-              </span>
-            </div>
-            
-            {charges && (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[10px] text-text-muted">
-                <div className="flex justify-between"><span>Brokerage</span><span>₹{charges.brokerage.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>STT</span><span>₹{charges.stt.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Exchange</span><span>₹{charges.exchangeTxn.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>GST (18%)</span><span>₹{charges.gst.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>SEBI / Stamp</span><span>₹{(charges.sebi + charges.stampDuty).toFixed(2)}</span></div>
-                <div className="flex justify-between font-bold text-text-secondary pt-1 border-t border-border mt-1">
-                  <span>Total</span><span>₹{charges.total.toFixed(2)}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Contract Type</label>
+                  <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+                    <button
+                      type="button"
+                      className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'CE' ? 'bg-violet-500/10 text-violet-400 shadow-sm border border-violet-500/20' : 'text-text-faint hover:text-text-muted'}`}
+                      onClick={() => setForm({ ...form, optionType: 'CE' })}
+                    >Call (CE)</button>
+                    <button
+                      type="button"
+                      className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'PE' ? 'bg-amber-500/10 text-amber-400 shadow-sm border border-amber-500/20' : 'text-text-faint hover:text-text-muted'}`}
+                      onClick={() => setForm({ ...form, optionType: 'PE' })}
+                    >Put (PE)</button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Trade Side</label>
+                  <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+                    <button
+                      type="button"
+                      className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'BUY' ? 'bg-profit/10 text-profit shadow-sm border border-profit/20' : 'text-text-faint hover:text-text-muted'}`}
+                      onClick={() => setForm({ ...form, tradeType: 'BUY' })}
+                    >BUY</button>
+                    <button
+                      type="button"
+                      className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'SELL' ? 'bg-loss/10 text-loss shadow-sm border border-loss/20' : 'text-text-faint hover:text-text-muted'}`}
+                      onClick={() => setForm({ ...form, tradeType: 'SELL' })}
+                    >SELL</button>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
 
-          {pnlPreview && (
-            <div className={`p-4 rounded-2xl border flex justify-between items-center animate-fade-up ${
-              pnlPreview.net >= 0 ? 'bg-profit/10 border-profit/20' : 'bg-loss/10 border-loss/20'
-            }`}>
-              <div>
-                <p className="text-[10px] uppercase font-bold tracking-widest opacity-60">Estimated Net P&L</p>
-                <p className={`text-xl font-black ${pnlPreview.net >= 0 ? 'text-profit' : 'text-loss'}`}>
-                  {pnlPreview.net >= 0 ? '+' : ''}{pnlPreview.net.toFixed(2)}
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Strike Price *"
+                  type="number"
+                  prefix="₹"
+                  value={form.strikePrice}
+                  onChange={(e) => setForm({ ...form, strikePrice: e.target.value })}
+                  placeholder="22500"
+                />
+                <Input
+                  label="Expiry Date *"
+                  type="date"
+                  value={form.expiryDate}
+                  onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+                />
               </div>
-              <div className="text-right text-[10px] font-bold opacity-60">
-                <p>Gross: {pnlPreview.gross.toFixed(2)}</p>
-                <p>Charges: -{charges?.total.toFixed(2)}</p>
-              </div>
+              
+              {form.underlying && form.expiryDate && form.strikePrice && (
+                <div className="p-4 bg-accent/5 rounded-2xl border border-accent/20 text-center animate-fade-up">
+                  <span className="text-[10px] text-text-faint font-black uppercase tracking-widest block mb-1">Contract Symbol</span>
+                  <span className="font-mono font-black text-accent text-lg tracking-tight">
+                    {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType)}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </Card>
+          </FormSection>
 
-      {/* Strategy & Notes */}
-      <Card title="4. Strategy & Notes">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold mb-1.5 block">Strategy</label>
-              <select
-                className="w-full h-10 px-3 rounded-lg bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                value={form.strategy}
-                onChange={(e) => setForm({ ...form, strategy: e.target.value })}
-              >
-                <option value="">Select strategy...</option>
-                {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+          {/* Size & Exchange */}
+          <FormSection title="Volume & Marketplace" icon={IconRefresh} accent="purple">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <Input
+                label="Contract Lot Size *"
+                type="number"
+                value={form.lotSize}
+                onChange={(e) => setForm({ ...form, lotSize: e.target.value })}
+              />
+              <Input
+                label="Number of Lots *"
+                type="number"
+                value={form.quantity}
+                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+              />
             </div>
-            <Input
-              label="Tags"
-              placeholder="expiry, scalp, etc."
-              value={form.tags}
-              onChange={(e) => setForm({ ...form, tags: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold mb-1.5 block">Trade Notes</label>
-            <textarea
-              className="w-full p-3 rounded-xl bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent min-h-[80px]"
-              placeholder="Rationale, setup, lessons learned..."
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            />
-          </div>
+            <div className="mt-6 flex bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+               <button
+                  type="button"
+                  className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all h-11 ${form.exchange === 'NSE' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
+                  onClick={() => setForm({ ...form, exchange: 'NSE' })}
+                >NSE Exchange</button>
+                <button
+                  type="button"
+                  className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all h-11 ${form.exchange === 'BSE' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
+                  onClick={() => setForm({ ...form, exchange: 'BSE' })}
+                >BSE Exchange</button>
+            </div>
+            <div className="mt-6 p-4 bg-card-alt/50 rounded-2xl border border-border flex justify-between items-center">
+              <span className="text-[10px] font-black text-text-faint uppercase tracking-widest">Calculated Net Units</span>
+              <span className="font-mono font-black text-text-primary text-xl tracking-tighter">{(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0)}</span>
+            </div>
+          </FormSection>
         </div>
-      </Card>
+
+        <div className="space-y-8">
+          {/* Entry & Result */}
+          <FormSection title="Execution & Outcome" icon={IconDollar} accent="green">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Trade Status</label>
+                <div className="grid grid-cols-3 gap-2 bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+                  {['OPEN', 'CLOSED', 'EXPIRED'].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`h-11 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        form.status === s
+                          ? s === 'OPEN' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 
+                            s === 'CLOSED' ? 'bg-profit text-white shadow-lg shadow-profit/20' : 
+                            'bg-slate-500 text-white shadow-lg shadow-slate-500/20'
+                          : 'text-text-faint hover:text-text-muted hover:bg-card/50'
+                      }`}
+                      onClick={() => setForm({ ...form, status: s, exitPrice: s === 'EXPIRED' ? '0' : form.exitPrice })}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Entry Price *"
+                  type="number"
+                  step="0.05"
+                  prefix={<span className="pointer-events-none">₹</span>}
+                  value={form.entryPrice}
+                  onChange={(e) => setForm({ ...form, entryPrice: e.target.value })}
+                />
+                <Input
+                  label="Entry Date *"
+                  type="date"
+                  value={form.entryDate}
+                  onChange={(e) => setForm({ ...form, entryDate: e.target.value })}
+                />
+              </div>
+
+              {(form.status === 'CLOSED' || form.status === 'EXPIRED') && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-scale-in origin-top">
+                  <Input
+                    label="Exit Price"
+                    type="number"
+                    step="0.05"
+                    prefix={<span className="pointer-events-none">₹</span>}
+                    value={form.exitPrice}
+                    onChange={(e) => setForm({ ...form, exitPrice: e.target.value })}
+                    disabled={form.status === 'EXPIRED'}
+                  />
+                  <Input
+                    label="Exit Date"
+                    type="date"
+                    value={form.exitDate}
+                    onChange={(e) => setForm({ ...form, exitDate: e.target.value })}
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Stop Loss"
+                  type="number"
+                  step="0.05"
+                  prefix={<span className="pointer-events-none">₹</span>}
+                  value={form.stopLoss}
+                  onChange={(e) => setForm({ ...form, stopLoss: e.target.value })}
+                />
+                <Input
+                  label="Take Profit"
+                  type="number"
+                  step="0.05"
+                  prefix={<span className="pointer-events-none">₹</span>}
+                  value={form.target}
+                  onChange={(e) => setForm({ ...form, target: e.target.value })}
+                />
+              </div>
+
+              {/* Charges Card */}
+              <div className="p-6 bg-card-alt rounded-3xl border border-border space-y-4">
+                <div className="flex justify-between items-center border-b border-border pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-loss/10 flex items-center justify-center text-loss"><IconDollar className="w-4 h-4" /></div>
+                    <span className="text-xs font-black uppercase tracking-widest text-text-secondary">Fees & Tax</span>
+                  </div>
+                  <span className="font-mono font-black text-loss text-lg">
+                    {charges ? `-${fmtINR(charges.total)}` : '₹0.00'}
+                  </span>
+                </div>
+                
+                {charges && (
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[10px] font-bold text-text-faint uppercase tracking-tighter">
+                    <div className="flex justify-between"><span>Brokerage</span><span className="font-mono text-text-muted">₹{charges.brokerage.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>STT</span><span className="font-mono text-text-muted">₹{charges.stt.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Exchange</span><span className="font-mono text-text-muted">₹{charges.exchangeTxn.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Govt Tax (GST)</span><span className="font-mono text-text-muted">₹{charges.gst.toFixed(2)}</span></div>
+                    <div className="flex justify-between sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-x-8"><span>Other Levies</span><span className="font-mono text-text-muted text-right">₹{(charges.sebi + charges.stampDuty).toFixed(2)}</span></div>
+                  </div>
+                )}
+              </div>
+
+              {pnlPreview && (
+                <div className={`p-6 rounded-3xl border-2 flex justify-between items-center animate-fade-up shadow-lg ${
+                  pnlPreview.net >= 0 ? 'bg-profit/10 border-profit/20 shadow-profit/10' : 'bg-loss/10 border-loss/20 shadow-loss/10'
+                }`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary opacity-60">Settlement Summary</p>
+                    <p className={`text-2xl sm:text-3xl font-mono font-black tracking-tighter mt-1 truncate ${pnlPreview.net >= 0 ? 'text-profit' : 'text-loss'}`}>
+                      {pnlPreview.net >= 0 ? '+' : ''}{fmtINR(pnlPreview.net, true)}
+                    </p>
+                  </div>
+                  <div className="text-right space-y-1 ml-4">
+                    <p className="text-[10px] font-black uppercase text-text-primary whitespace-nowrap">GROSS: {pnlPreview.gross.toFixed(2)}</p>
+                    <p className="text-[10px] font-black uppercase text-text-faint whitespace-nowrap">FEES: -{charges?.total.toFixed(2)}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </FormSection>
+
+          {/* Strategy Section */}
+          <FormSection title="Strategy & Categorization" icon={IconPlus} accent="amber">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Select Strategy</label>
+                  <select
+                    className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
+                    value={form.strategy}
+                    onChange={(e) => setForm({ ...form, strategy: e.target.value })}
+                  >
+                    <option value="">No Strategy</option>
+                    {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <Input
+                  label="Search Tags"
+                  placeholder="expiry, scalp, volatile..."
+                  value={form.tags}
+                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                />
+              </div>
+              <Input
+                as="textarea"
+                label="Observation Journal"
+                placeholder="Market context, trade rationale, exit logic, etc."
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
+            </div>
+          </FormSection>
+        </div>
+      </div>
 
       {/* Psychology */}
       <PsychologySection
@@ -604,15 +649,17 @@ function ManualEntryTab() {
         required
       />
 
-      {/* Desktop Submit */}
+      {/* Action Bar */}
       <div className="hidden sm:block">
-        <Button className="w-full py-4 text-lg" type="submit" loading={loading}>Save Trade →</Button>
+        <Button variant="primary" className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-glow-blue" type="submit" loading={loading}>
+          Confirm & Log Trade
+        </Button>
       </div>
 
       {/* Mobile Sticky Bar */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border z-50 flex gap-3">
-        <Button variant="outline" className="flex-1" onClick={() => navigate('/trades')}>Cancel</Button>
-        <Button className="flex-[2]" type="submit" loading={loading}>Submit Trade</Button>
+      <div className="sm:hidden fixed bottom-[58px] left-0 right-0 p-3 bg-card/95 backdrop-blur-xl border-t border-border z-40 flex gap-3">
+        <Button variant="ghost" className="flex-1 h-12 rounded-2xl text-text-muted font-black uppercase text-xs" onClick={() => navigate('/trades')}>Cancel</Button>
+        <Button variant="primary" className="flex-[2] h-12 rounded-2xl shadow-glow-blue font-black uppercase text-xs" type="submit" loading={loading}>Log Trade</Button>
       </div>
     </form>
   );
@@ -624,7 +671,7 @@ function CSVImportTab() {
   const [loading, setLoading] = useState(false);
   const [strategy, setStrategy] = useState('');
   const [notes, setNotes] = useState('');
-  const [psychEnabled, setPsychEnabled] = useState(true);
+  const [psychEnabled, setPsychEnabled] = useState(false);
   const [psychology, setPsychology] = useState({
     emotionBefore: '',
     emotionAfter: '',
@@ -634,14 +681,9 @@ function CSVImportTab() {
     notes: '',
   });
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
   const handleImport = async (e) => {
     e.preventDefault();
     if (!file) return;
-    if (psychEnabled && !psychology.emotionBefore) return toast.error('Emotion Before is required for psychology');
 
     setLoading(true);
     const formData = new FormData();
@@ -656,7 +698,7 @@ function CSVImportTab() {
           api.post(`/trades/${id.id}/psychology`, psychology)
         ));
       }
-      toast.success(`Imported ${res.closed + res.open} trades!`);
+      toast.success(`Batch import successful!`);
       navigate('/trades');
     } catch (err) {
       toast.error(err.message);
@@ -666,75 +708,79 @@ function CSVImportTab() {
   };
 
   return (
-    <form onSubmit={handleImport} className="space-y-6 pb-24 sm:pb-0">
-      <Card title="Upload CSV">
-        <div className="border-2 border-dashed border-border rounded-2xl p-8 text-center hover:border-accent transition-colors cursor-pointer relative">
+    <form onSubmit={handleImport} className="space-y-8 pb-32 lg:pb-0">
+      <Card variant="default" className="border-dashed border-2 p-0 overflow-hidden">
+        <div className="p-12 text-center relative group cursor-pointer">
           <input
             type="file"
             accept=".csv"
-            onChange={handleFileChange}
-            className="absolute inset-0 opacity-0 cursor-pointer"
+            onChange={e => setFile(e.target.files[0])}
+            className="absolute inset-0 opacity-0 cursor-pointer z-10"
           />
-          <div className="text-4xl mb-2">📥</div>
-          <p className="text-sm font-bold text-text-secondary">
-            {file ? file.name : 'Click or Drag CSV file here'}
-          </p>
-          <p className="text-xs text-text-muted mt-1">Supports Zerodha, Fyers, Upstox, etc.</p>
-        </div>
-      </Card>
-
-      <Card title="Batch Tags">
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-bold mb-1.5 block">Strategy</label>
-            <select
-              className="w-full h-10 px-3 rounded-lg bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-              value={strategy}
-              onChange={(e) => setStrategy(e.target.value)}
-            >
-              <option value="">No strategy...</option>
-              {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+          <div className="w-20 h-20 rounded-3xl bg-accent/10 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform shadow-sm">
+            <IconImport className="w-10 h-10 text-accent" strokeWidth={2} />
           </div>
-          <textarea
-            className="w-full p-3 rounded-xl bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent min-h-[60px]"
-            placeholder="Notes for all trades in this batch..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
+          <h3 className="text-xl font-black font-heading text-text-primary tracking-tight">
+            {file ? file.name : 'Select Broker CSV'}
+          </h3>
+          <p className="text-sm font-bold text-text-faint mt-2 uppercase tracking-tighter">Supports Zerodha, Fyers, Upstox</p>
         </div>
       </Card>
 
-      <div className="flex items-center justify-between p-4 bg-accent/5 rounded-2xl border border-accent/10">
-        <div>
-          <h4 className="text-sm font-black uppercase tracking-widest text-accent">Log Psychology?</h4>
-          <p className="text-[10px] text-text-muted">Apply psychology data to all imported trades</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <FormSection title="Batch Categorization" icon={IconPlus}>
+           <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Apply Strategy</label>
+                <select
+                  className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
+                  value={strategy}
+                  onChange={(e) => setStrategy(e.target.value)}
+                >
+                  <option value="">None</option>
+                  {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <Input
+                as="textarea"
+                label="Batch Observations"
+                placeholder="Log notes for all imported records..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+           </div>
+        </FormSection>
+
+        <div className="space-y-6">
+          <div className="flex items-center justify-between p-6 bg-card-alt rounded-3xl border border-border">
+            <div>
+              <h4 className="text-sm font-black uppercase tracking-widest text-text-primary">Batch Psychology?</h4>
+              <p className="text-[10px] font-bold text-text-faint uppercase tracking-tight mt-1">Apply mindset data to all imports</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPsychEnabled(!psychEnabled)}
+              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                psychEnabled ? 'bg-accent text-white shadow-glow-blue' : 'bg-card border border-border text-text-faint'
+              }`}
+            >
+              {psychEnabled ? 'Active' : 'Off'}
+            </button>
+          </div>
+
+          {psychEnabled && (
+            <PsychologySection
+              data={psychology}
+              onChange={(val) => setPsychology({ ...psychology, ...val })}
+            />
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => setPsychEnabled(!psychEnabled)}
-          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-            psychEnabled ? 'bg-accent text-white' : 'bg-card border border-border text-text-muted'
-          }`}
-        >
-          {psychEnabled ? 'Enabled' : 'Disabled'}
-        </button>
       </div>
 
-      {psychEnabled && (
-        <PsychologySection
-          data={psychology}
-          onChange={(val) => setPsychology({ ...psychology, ...val })}
-        />
-      )}
-
-      <div className="hidden sm:block">
-        <Button className="w-full py-4 text-lg" type="submit" disabled={!file} loading={loading}>Start Import</Button>
-      </div>
-
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border z-50 flex gap-3">
-        <Button variant="outline" className="flex-1" onClick={() => navigate('/trades')}>Cancel</Button>
-        <Button className="flex-[2]" type="submit" disabled={!file} loading={loading}>Import Trades</Button>
+      <div className="hidden lg:block">
+        <Button variant="primary" className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-glow-blue" type="submit" disabled={!file} loading={loading}>
+          Execute Import Process
+        </Button>
       </div>
     </form>
   );
@@ -765,21 +811,15 @@ function BrokerAPITab() {
 
   const handleSync = async (e) => {
     e.preventDefault();
-    if (!form.clientId || !form.accessToken) return toast.error('Client ID and Access Token are required');
-    if (psychEnabled && !psychology.emotionBefore) return toast.error('Emotion Before is required for psychology');
+    if (!form.clientId || !form.accessToken) return toast.error('API credentials required');
 
     setLoading(true);
     try {
-      const res = await api.post('/trades/import/broker', {
-        ...form,
-        broker: 'dhan',
-      });
+      const res = await api.post('/trades/import/broker', { ...form, broker: 'dhan' });
       if (psychEnabled && res.tradeIds?.length) {
-         await Promise.allSettled(res.tradeIds.map(id => 
-          api.post(`/trades/${id.id}/psychology`, psychology)
-        ));
+         await Promise.allSettled(res.tradeIds.map(id => api.post(`/trades/${id.id}/psychology`, psychology)));
       }
-      toast.success(`Synced ${res.count || 0} trades from Dhan!`);
+      toast.success(`Synced ${res.count || 0} records from Dhan!`);
       navigate('/trades');
     } catch (err) {
       toast.error(err.message);
@@ -789,124 +829,89 @@ function BrokerAPITab() {
   };
 
   return (
-    <form onSubmit={handleSync} className="space-y-6 pb-24 sm:pb-0">
-      <Card title="Dhan API Credentials">
-        <div className="space-y-4">
-          <Input
-            label="Client ID *"
-            value={form.clientId}
-            onChange={(e) => setForm({ ...form, clientId: e.target.value })}
-            placeholder="Your Dhan Client ID"
-          />
+    <form onSubmit={handleSync} className="space-y-8 pb-32 lg:pb-0">
+      <Card variant="default" className="p-0 overflow-hidden border-l-4 border-l-blue-500">
+        <div className="px-6 py-4 border-b border-border bg-card-alt/30 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center text-accent"><IconPlus className="w-4 h-4" /></div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary">Dhan API Credentials</h3>
+          </div>
+          <Badge type="OPEN" className="lowercase font-mono text-[10px]">dhan.co/api</Badge>
+        </div>
+        <div className="p-8 space-y-6">
+          <Input label="Client ID" value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} placeholder="Your 10-digit ID" />
           <div className="relative">
             <Input
-              label="Access Token *"
+              label="Access Token"
               type={showToken ? 'text' : 'password'}
               value={form.accessToken}
               onChange={(e) => setForm({ ...form, accessToken: e.target.value })}
-              placeholder="Paste your access token"
+              placeholder="Paste your active session token"
+              suffix={
+                <button type="button" onClick={() => setShowToken(!showToken)} className="text-text-faint hover:text-accent">
+                  {showToken ? <IconEyeOff className="w-4 h-4" /> : <IconEye className="w-4 h-4" />}
+                </button>
+              }
             />
-            <button
-              type="button"
-              className="absolute right-3 top-[32px] text-text-muted hover:text-accent"
-              onClick={() => setShowToken(!showToken)}
-            >
-              {showToken ? '🙈' : '👁️'}
-            </button>
           </div>
-          <div className="p-3 bg-warning/5 border border-warning/20 rounded-xl flex gap-3">
-            <span className="text-xl">⚠️</span>
-            <p className="text-[10px] text-warning font-medium leading-relaxed">
-              Dhan access tokens expire daily. Please generate a fresh token from your Dhan portal before syncing.
+          <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex gap-3 items-start">
+            <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex-shrink-0 flex items-center justify-center text-amber-500 mt-0.5">!</div>
+            <p className="text-[10px] text-amber-600 font-bold uppercase leading-relaxed tracking-tight">
+              Tokens expire daily. Refresh your token in the Dhan portal before initiating sync.
             </p>
           </div>
         </div>
       </Card>
 
-      <Card title="Import Settings">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="From Date"
-              type="date"
-              value={form.fromDate}
-              onChange={(e) => setForm({ ...form, fromDate: e.target.value })}
-            />
-            <Input
-              label="To Date"
-              type="date"
-              value={form.toDate}
-              onChange={(e) => setForm({ ...form, toDate: e.target.value })}
-            />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <FormSection title="Sync Window" icon={IconCalendar}>
+           <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="From Date" type="date" value={form.fromDate} onChange={(e) => setForm({ ...form, fromDate: e.target.value })} />
+                <Input label="To Date" type="date" value={form.toDate} onChange={(e) => setForm({ ...form, toDate: e.target.value })} />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[7, 30, 90].map(days => (
+                  <button
+                    key={days}
+                    type="button"
+                    className="px-4 py-2 rounded-xl bg-card-alt border border-border text-[10px] font-black uppercase tracking-widest hover:border-accent hover:text-accent transition-all"
+                    onClick={() => {
+                      const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      setForm({ ...form, fromDate: from, toDate: new Date().toISOString().split('T')[0] });
+                    }}
+                  >
+                    {days} Days
+                  </button>
+                ))}
+              </div>
+           </div>
+        </FormSection>
+        
+        <FormSection title="Mindset Mapping" icon={IconPsychology}>
+          <div className="flex items-center justify-between p-4 bg-card-alt rounded-2xl border border-border">
+            <span className="text-xs font-black uppercase tracking-widest text-text-secondary">Apply Psychology?</span>
+            <button
+              type="button"
+              onClick={() => setPsychEnabled(!psychEnabled)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
+                psychEnabled ? 'bg-accent text-white shadow-glow-blue' : 'bg-card border border-border text-text-faint'
+              }`}
+            >
+              {psychEnabled ? 'ON' : 'OFF'}
+            </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {[7, 30, 90].map(days => (
-              <button
-                key={days}
-                type="button"
-                className="px-3 py-1.5 rounded-lg bg-card-alt border border-border text-[10px] font-bold hover:border-accent"
-                onClick={() => {
-                  const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                  setForm({ ...form, fromDate: from, toDate: new Date().toISOString().split('T')[0] });
-                }}
-              >
-                Last {days} Days
-              </button>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold mb-1.5 block">Strategy</label>
-              <select
-                className="w-full h-10 px-3 rounded-lg bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                value={form.strategy}
-                onChange={(e) => setForm({ ...form, strategy: e.target.value })}
-              >
-                <option value="">No strategy...</option>
-                {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+          {psychEnabled && (
+            <div className="mt-6 border-t border-border pt-6">
+              <PsychologySection data={psychology} onChange={(val) => setPsychology({ ...psychology, ...val })} />
             </div>
-            <Input
-              label="Notes"
-              placeholder="Sync notes..."
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            />
-          </div>
-        </div>
-      </Card>
-
-      <div className="flex items-center justify-between p-4 bg-accent/5 rounded-2xl border border-accent/10">
-        <div>
-          <h4 className="text-sm font-black uppercase tracking-widest text-accent">Log Psychology?</h4>
-          <p className="text-[10px] text-text-muted">Apply psychology data to all synced trades</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setPsychEnabled(!psychEnabled)}
-          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-            psychEnabled ? 'bg-accent text-white' : 'bg-card border border-border text-text-muted'
-          }`}
-        >
-          {psychEnabled ? 'Enabled' : 'Disabled'}
-        </button>
+          )}
+        </FormSection>
       </div>
 
-      {psychEnabled && (
-        <PsychologySection
-          data={psychology}
-          onChange={(val) => setPsychology({ ...psychology, ...val })}
-        />
-      )}
-
-      <div className="hidden sm:block">
-        <Button className="w-full py-4 text-lg bg-accent text-white" type="submit" loading={loading}>Sync from Dhan →</Button>
-      </div>
-
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border z-50 flex gap-3">
-        <Button variant="outline" className="flex-1" onClick={() => navigate('/trades')}>Cancel</Button>
-        <Button className="flex-[2] bg-accent text-white" type="submit" loading={loading}>Sync Now</Button>
-      </div>
+      <Button variant="primary" className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-glow-blue" type="submit" loading={loading}>
+        Start Automated Sync
+      </Button>
     </form>
   );
 }
@@ -921,19 +926,23 @@ export default function AddTrade() {
   ];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-black">Add Trade</h1>
-        <p className="text-sm text-text-muted">Log manually, import CSV, or sync from broker API</p>
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-up">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-black font-heading tracking-tight text-text-primary">Log Activity</h1>
+          <p className="text-sm font-medium text-text-faint mt-1 uppercase tracking-widest">Select your preferred recording method</p>
+        </div>
       </div>
 
       <TabBar
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        variant="pills"
+        className="bg-card-alt p-1.5 rounded-2xl border border-border w-fit"
       />
 
-      <div className="mt-6">
+      <div className="mt-8">
         {activeTab === 'manual' && <ManualEntryTab />}
         {activeTab === 'csv' && <CSVImportTab />}
         {activeTab === 'broker' && <BrokerAPITab />}

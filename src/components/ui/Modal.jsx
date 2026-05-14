@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { IconClose } from './Icons';
 
 export const Modal = ({ isOpen, onClose, title, children, footer }) => {
   useEffect(() => {
@@ -14,40 +15,38 @@ export const Modal = ({ isOpen, onClose, title, children, footer }) => {
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" 
+        className="absolute inset-0 bg-black/60 backdrop-blur-md animate-fade-in" 
         onClick={onClose}
       />
       
       {/* Modal Content */}
-      <div className="relative w-full md:max-w-[420px] bg-card md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh] fade-up animate-in slide-in-from-bottom-full md:slide-in-from-bottom-0">
+      <div className="relative w-full md:w-[90vw] md:max-w-[480px] bg-card md:rounded-3xl rounded-t-3xl shadow-[0_25px_60px_rgba(0,0,0,0.5)] flex flex-col max-h-[92vh] animate-slide-up md:animate-scale-in overflow-hidden">
         {/* Handle for mobile */}
-        <div className="md:hidden flex justify-center py-2.5">
-          <div className="w-10 h-1 bg-border-strong rounded-full" />
+        <div className="md:hidden flex justify-center py-3">
+          <div className="w-10 h-1 bg-border-strong rounded-full cursor-grab active:cursor-grabbing" />
         </div>
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h3 className="text-lg font-bold text-text-primary">
+        <div className="flex items-center justify-between px-6 py-5 border-b-2 border-border">
+          <h3 className="text-xl font-bold font-heading text-text-primary">
             {title}
           </h3>
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-card-alt text-text-muted transition-colors"
+            className="p-2 rounded-xl hover:bg-card-alt text-text-muted transition-colors tap-none"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <IconClose className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto">
+        <div className="px-6 py-5 overflow-y-auto no-scrollbar">
           {children}
         </div>
 
         {footer && (
-          <div className="p-4 border-t border-border bg-card-alt/50 rounded-b-2xl">
+          <div className="px-6 py-5 border-t border-border bg-card-alt/50 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-5">
             {footer}
           </div>
         )}

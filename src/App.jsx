@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { setNavigate } from './lib/api';
@@ -36,47 +36,69 @@ import AdminSettings from './admin/views/AdminSettings.jsx';
 
 // Route Guards
 const PublicRoute = ({ children }) => {
-  const { isLoggedIn, hasSub } = useAuthStore();
-  if (isLoggedIn()) {
-    return <Navigate to={hasSub() ? '/dashboard' : '/pricing'} replace />;
-  }
+  const token = useAuthStore(s => s.token);
+  const user = useAuthStore(s => s.user);
+  const isLoggedIn = !!token;
+  const hasSub = (() => {
+    const sub = user?.subscription;
+    if (!sub || sub.status !== 'active') return false;
+    if (sub.expiry && new Date() > new Date(sub.expiry)) return false;
+    return true;
+  })();
+  if (isLoggedIn) return <Navigate to={hasSub ? '/dashboard' : '/pricing'} replace />;
   return children;
 };
 
 const ProtectedRoute = ({ children, requiresSub = true }) => {
-  const { isLoggedIn, hasSub } = useAuthStore();
-  if (!isLoggedIn()) return <Navigate to="/landing" replace />;
-  if (requiresSub && !hasSub()) return <Navigate to="/pricing" replace />;
+  const token = useAuthStore(s => s.token);
+  const user = useAuthStore(s => s.user);
+  const isLoggedIn = !!token;
+  const hasSub = (() => {
+    const sub = user?.subscription;
+    if (!sub || sub.status !== 'active') return false;
+    if (sub.expiry && new Date() > new Date(sub.expiry)) return false;
+    return true;
+  })();
+  if (!isLoggedIn) return <Navigate to="/landing" replace />;
+  if (requiresSub && !hasSub) return <Navigate to="/pricing" replace />;
   return children;
 };
 
 const AdminRoute = ({ children }) => {
-  const { isLoggedIn, isAdmin } = useAuthStore();
-  if (!isLoggedIn()) return <Navigate to="/login" replace />;
-  if (!isAdmin()) return <Navigate to="/dashboard" replace />;
+  const token = useAuthStore(s => s.token);
+  const user = useAuthStore(s => s.user);
+  if (!token) return <Navigate to="/login" replace />;
+  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
   return children;
-};
-
-// Hook to set navigate in API lib
-const ApiNavigateSetter = () => {
-  const navigate = useNavigate();
-  React.useEffect(() => {
-    setNavigate(navigate);
-  }, [navigate]);
-  return null;
 };
 
 export default function App() {
   return (
     <BrowserRouter>
-      {/* <ApiNavigateSetter /> - need to import useNavigate but can only be inside BrowserRouter */}
       <AppRoutes />
-      <Toaster position="top-right" />
+      <Toaster 
+        position="top-center" 
+        containerStyle={{ top: 16 }}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: 'var(--bg-card)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            fontSize: '13px',
+            fontWeight: '500',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.16)',
+            padding: '12px 16px',
+            maxWidth: '90vw',
+          },
+          success: { iconTheme: { primary: '#22c55e', secondary: 'white' } },
+          error:   { iconTheme: { primary: '#ef4444', secondary: 'white' } },
+        }}
+      />
     </BrowserRouter>
   );
 }
-
-import { useNavigate } from 'react-router-dom';
 
 function AppRoutes() {
   const navigate = useNavigate();

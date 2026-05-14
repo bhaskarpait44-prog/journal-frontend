@@ -1,38 +1,40 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
-import { toast } from 'react-hot-toast';
-import { useNavigate, Link } from 'react-router-dom';
+import { IconArrowUp, IconEye, IconEyeOff, IconCheck } from '../components/ui/Icons';
 
 export default function Signup() {
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  const [loading, setLoading] = React.useState(false);
-  const [showPass, setShowPass] = React.useState(false);
-  const [agreed, setAgreed] = React.useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   
-  const selectedPlan = localStorage.getItem('selectedPlan') || 'pro';
+  const selectedPlan = localStorage.getItem('selectedPlan') || 'PRO';
 
-  const [form, setForm] = React.useState({
+  const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
 
-  const [modals, setModals] = React.useState({
+  const [modals, setModals] = useState({
     terms: false,
     privacy: false
   });
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!agreed) return toast.error('Please agree to terms and privacy policy');
+    if (!agreed) return toast.error('Please agree to our policies to continue');
     if (form.password !== form.confirmPassword) return toast.error('Passwords do not match');
-    if (form.password.length < 6) return toast.error('Password too short');
+    if (form.password.length < 6) return toast.error('Password must be at least 6 characters');
 
     setLoading(true);
     try {
@@ -42,11 +44,11 @@ export default function Signup() {
         password: form.password
       });
       login(res.token, res.user);
-      toast.success('Account created! Choose your plan.');
+      toast.success('Account created! Welcome aboard.');
       navigate('/pricing');
     } catch (err) {
       if (err.message?.includes('already exists')) {
-        toast.error('Email already registered. Redirecting to login...');
+        toast.error('Email already registered');
         setTimeout(() => navigate('/login'), 1500);
       } else {
         toast.error(err.message);
@@ -56,12 +58,12 @@ export default function Signup() {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleGoogle = async (response) => {
       try {
         const res = await api.post('/auth/google', { credential: response.credential });
         login(res.token, res.user);
-        toast.success('Welcome! Choose your plan.');
+        toast.success('Successfully registered via Google');
         navigate('/pricing');
       } catch (err) {
         toast.error(err.message);
@@ -74,141 +76,210 @@ export default function Signup() {
         callback: handleGoogle,
       });
       window.google.accounts.id.renderButton(document.getElementById('g-signup-btn'), { 
-        theme: 'filled_black', 
+        theme: 'outline', 
         size: 'large', 
-        width: 340,
+        width: 320,
+        shape: 'pill',
         text: 'signup_with'
       });
     }
   }, [login, navigate]);
 
   return (
-    <div className="min-h-screen bg-[#080c14] flex flex-col items-center justify-center p-6 sm:p-12 relative overflow-hidden">
-      {/* Abstract Backgrounds */}
-      <div className="absolute top-[-10%] right-[-10%] w-[400px] h-[400px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-purple/5 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-base flex overflow-hidden">
+      {/* Left Panel - Brand Experience */}
+      <div className="hidden lg:flex flex-col justify-between w-[480px] bg-sidebar p-12 border-r border-border relative">
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, var(--text-muted) 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+        
+        <div className="absolute top-[-10%] right-[-10%] w-[400px] h-[400px] bg-accent/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] bg-purple/5 rounded-full blur-[100px]" />
+        
+        <Link to="/" className="flex items-center gap-3 relative z-10 group">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-accent to-blue-600 flex items-center justify-center shadow-glow-blue group-hover:scale-110 transition-transform">
+            <IconArrowUp className="w-6 h-6 text-white" strokeWidth={2.5} />
+          </div>
+          <span className="text-2xl font-black font-heading text-text-primary tracking-tight">TradeLog</span>
+        </Link>
 
-      <Link to="/landing" className="absolute top-6 left-6 w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-text-muted hover:text-text-primary transition-colors">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
-      </Link>
-
-      <div className="w-full max-w-[440px] bg-[#0d1524] border border-border/50 rounded-2xl p-8 shadow-2xl relative z-10 animate-fade-up">
-        {/* Header */}
-        <div className="flex flex-col items-center mb-8">
-          <Link to="/landing" className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-            </div>
-            <span className="text-xl font-bold text-white tracking-tight">TradeLog</span>
-          </Link>
+        <div className="space-y-8 relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-widest">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+            Build Your Trading Edge
+          </div>
           
-          {selectedPlan && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-wider mb-4 animate-pulse">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-              {selectedPlan} Plan Selected
-            </div>
-          )}
+          <h1 className="text-4xl font-black font-heading text-text-primary leading-tight tracking-tighter">
+            Stop guessing. <br />
+            Start <span className="gradient-text">executing</span> with <br />
+            mathematical precision.
+          </h1>
+          
+          <p className="text-text-secondary text-lg leading-relaxed font-medium">
+            Join the elite club of data-driven traders who treat their journal as their most valuable asset.
+          </p>
 
-          <h2 className="text-2xl font-bold text-text-primary tracking-tight">Create your account</h2>
-          <p className="text-text-muted mt-2 text-sm text-center">Join 10,000+ traders mastering their edge.</p>
+          <div className="space-y-4 pt-6">
+            <FeatureItem label="Advanced P&L Analytics" />
+            <FeatureItem label="Psychological Pattern Mapping" />
+            <FeatureItem label="NSE/BSE Broker Integration" />
+            <FeatureItem label="Unlimited Cloud Storage" />
+          </div>
         </div>
 
-        <div id="g-signup-btn" className="w-full flex justify-center mb-6" />
-
-        <div className="flex items-center gap-4 text-text-faint mb-6">
-          <div className="flex-1 h-px bg-border/30" />
-          <span className="text-[9px] font-bold uppercase tracking-widest">or register with email</span>
-          <div className="flex-1 h-px bg-border/30" />
+        <div className="text-text-faint text-[10px] font-bold uppercase tracking-widest relative z-10">
+          SECURE ENCRYPTION · ISO 27001 COMPLIANT
         </div>
-
-        <form onSubmit={handleSignup} className="space-y-4">
-          <Input 
-            label="Full Name" 
-            placeholder="Arjun Sharma" 
-            required 
-            value={form.name} 
-            onChange={e => setForm({ ...form, name: e.target.value })} 
-          />
-          <Input 
-            label="Email Address" 
-            type="email" 
-            placeholder="you@example.com" 
-            required 
-            value={form.email} 
-            onChange={e => setForm({ ...form, email: e.target.value })} 
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <Input 
-              label="Password" 
-              type="password" 
-              placeholder="Min 6 chars" 
-              required 
-              value={form.password} 
-              onChange={e => setForm({ ...form, password: e.target.value })} 
-            />
-            <Input 
-              label="Confirm" 
-              type="password" 
-              placeholder="Repeat it" 
-              required 
-              value={form.confirmPassword} 
-              onChange={e => setForm({ ...form, confirmPassword: e.target.value })} 
-            />
-          </div>
-
-          <div className="flex items-start gap-3 p-3 rounded-xl bg-base/40 border border-border/50">
-            <input 
-              type="checkbox" 
-              id="agreed" 
-              checked={agreed} 
-              onChange={e => setAgreed(e.target.checked)}
-              className="mt-1 w-4 h-4 rounded bg-card border-border text-accent focus:ring-accent focus:ring-offset-base" 
-            />
-            <label htmlFor="agreed" className="text-[11px] text-text-muted leading-relaxed cursor-pointer select-none">
-              I agree to the <button type="button" onClick={() => setModals({ ...modals, terms: true })} className="text-accent font-bold hover:underline">Terms of Service</button> and <button type="button" onClick={() => setModals({ ...modals, privacy: true })} className="text-accent font-bold hover:underline">Privacy Policy</button>. I consent to TradeLog processing my data.
-            </label>
-          </div>
-
-          <Button type="submit" loading={loading} className="w-full h-12 text-base shadow-lg shadow-accent/20">
-            Create Account & Continue →
-          </Button>
-        </form>
-
-        <p className="text-center mt-6 text-sm text-text-muted">
-          Already have an account? <Link to="/login" className="text-accent font-bold hover:underline">Sign in</Link>
-        </p>
       </div>
 
-      {/* Terms Modal */}
-      <Modal open={modals.terms} onClose={() => setModals({ ...modals, terms: false })} title="Terms of Service" dismissible>
-        <div className="space-y-4 text-xs text-text-muted leading-relaxed h-[60vh] overflow-y-auto pr-2">
-          <p className="font-bold text-text-primary">1. Acceptance of Terms</p>
-          <p>By creating a TradeLog account, you agree to be bound by these terms. TradeLog is a journaling and analytics tool only.</p>
-          <p className="font-bold text-text-primary">2. Not Financial Advice</p>
-          <p>Nothing on this platform constitutes financial or trading advice. Trading options carries high risk.</p>
-          <p className="font-bold text-text-primary">3. Subscription</p>
-          <p>Paid plans are billed monthly. You may cancel at any time from your profile.</p>
-          {/* ... more terms */}
+      {/* Right Panel - Registration Interface */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 relative animate-fade-in overflow-y-auto custom-scrollbar">
+        {/* Mobile Header */}
+        <div className="lg:hidden absolute top-6 left-0 right-0 px-6 sm:px-10 flex justify-between items-center">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent to-blue-600 flex items-center justify-center shadow-glow-blue">
+              <IconArrowUp className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-black font-heading text-text-primary tracking-tight">TradeLog</span>
+          </Link>
         </div>
-        <div className="mt-6 flex gap-3">
-          <Button onClick={() => { setAgreed(true); setModals({ ...modals, terms: false }); }} className="flex-1">I Agree</Button>
-          <Button variant="secondary" onClick={() => setModals({ ...modals, terms: false })} className="flex-1">Close</Button>
+
+        <div className="w-full max-w-[400px] space-y-8 py-10 lg:py-0 animate-fade-up">
+          <div className="text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-widest mb-4">
+              <IconCheck className="w-3 h-3" strokeWidth={3} />
+              {selectedPlan} Plan
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black font-heading text-text-primary tracking-tight">Create Account</h2>
+            <p className="text-text-muted mt-3 font-medium text-sm">Already a member? <Link to="/login" className="text-accent font-black hover:underline underline-offset-4 decoration-accent/30">Sign in here</Link></p>
+          </div>
+
+          <div className="space-y-4">
+            <div id="g-signup-btn" className="w-full flex justify-center hover:scale-[1.02] transition-transform duration-200 overflow-hidden" />
+            
+            <div className="flex items-center gap-4 text-text-faint py-2">
+              <div className="flex-1 h-px bg-border/50" />
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] whitespace-nowrap">Identity Details</span>
+              <div className="flex-1 h-px bg-border/50" />
+            </div>
+
+            <form onSubmit={handleSignup} className="space-y-4 sm:space-y-5">
+              <Input 
+                label="Full Name" 
+                placeholder="Arjun Sharma" 
+                required 
+                value={form.name} 
+                onChange={e => setForm({ ...form, name: e.target.value })} 
+                className="h-11"
+              />
+              <Input 
+                label="Email Address" 
+                type="email" 
+                placeholder="arjun@trader.com" 
+                required 
+                value={form.email} 
+                onChange={e => setForm({ ...form, email: e.target.value })} 
+                className="h-11"
+              />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-text-faint uppercase tracking-widest ml-1">Password</label>
+                  <div className="relative group">
+                    <Input 
+                      type={showPass ? 'text' : 'password'} 
+                      placeholder="••••••••" 
+                      required 
+                      value={form.password} 
+                      onChange={e => setForm({ ...form, password: e.target.value })} 
+                      className="h-11 pr-10"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPass(!showPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-faint group-hover:text-text-muted transition-colors"
+                    >
+                      {showPass ? <IconEyeOff className="w-3.5 h-3.5" /> : <IconEye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-text-faint uppercase tracking-widest ml-1">Confirm</label>
+                  <Input 
+                    type="password" 
+                    placeholder="••••••••" 
+                    required 
+                    value={form.confirmPassword} 
+                    onChange={e => setForm({ ...form, confirmPassword: e.target.value })} 
+                    className="h-11"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-card-alt border border-border transition-all hover:border-accent/30 group">
+                <input 
+                  type="checkbox" 
+                  id="agreed" 
+                  checked={agreed} 
+                  onChange={e => setAgreed(e.target.checked)}
+                  className="mt-1 w-4.5 h-4.5 rounded-lg bg-card border-border text-accent focus:ring-accent/20 cursor-pointer shrink-0" 
+                />
+                <label htmlFor="agreed" className="text-[10px] sm:text-[11px] text-text-muted leading-relaxed cursor-pointer select-none">
+                  I agree to the <button type="button" onClick={() => setModals({ ...modals, terms: true })} className="text-text-primary font-black hover:text-accent underline underline-offset-2">Terms</button> and <button type="button" onClick={() => setModals({ ...modals, privacy: true })} className="text-text-primary font-black hover:text-accent underline underline-offset-2">Privacy Policy</button>.
+                </label>
+              </div>
+
+              <Button variant="primary" type="submit" loading={loading} fullWidth className="h-14 text-sm font-black uppercase tracking-widest shadow-glow-blue mt-4">
+                Initialize Account →
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <Modal isOpen={modals.terms} onClose={() => setModals({ ...modals, terms: false })} title="Terms of Service">
+        <div className="space-y-6 text-sm text-text-secondary leading-relaxed max-h-[50vh] overflow-y-auto pr-2 no-scrollbar">
+          <section>
+            <h4 className="font-black text-text-primary uppercase tracking-wider mb-2">1. Usage Agreement</h4>
+            <p>By creating a TradeLog account, you agree to be bound by these terms. TradeLog is a journaling and analytics tool only.</p>
+          </section>
+          <section>
+            <h4 className="font-black text-text-primary uppercase tracking-wider mb-2">2. Liability Waiver</h4>
+            <p>Trading financial instruments involves significant risk. TradeLog is not responsible for any financial losses.</p>
+          </section>
+          <section>
+            <h4 className="font-black text-text-primary uppercase tracking-wider mb-2">3. Data Ownership</h4>
+            <p>You retain 100% ownership of your logged data.</p>
+          </section>
+        </div>
+        <div className="mt-8 flex flex-col gap-3">
+          <Button variant="primary" className="w-full h-11" onClick={() => { setAgreed(true); setModals({ ...modals, terms: false }); }}>I Accept These Terms</Button>
+          <Button variant="ghost" className="w-full h-11" onClick={() => setModals({ ...modals, terms: false })}>Review Later</Button>
         </div>
       </Modal>
 
-      {/* Privacy Modal */}
-      <Modal open={modals.privacy} onClose={() => setModals({ ...modals, privacy: false })} title="Privacy Policy" dismissible>
-        <div className="space-y-4 text-xs text-text-muted leading-relaxed h-[60vh] overflow-y-auto pr-2">
-          <p className="font-bold text-text-primary">1. Data Collection</p>
-          <p>We collect your email, name, and trade logs to provide analytics. We never sell your data.</p>
-          <p className="font-bold text-text-primary">2. Data Security</p>
-          <p>Your data is encrypted in transit and at rest. You own your data and can delete it anytime.</p>
-          {/* ... more privacy info */}
+      <Modal isOpen={modals.privacy} onClose={() => setModals({ ...modals, privacy: false })} title="Privacy Commitment">
+        <div className="space-y-6 text-sm text-text-secondary leading-relaxed max-h-[50vh] overflow-y-auto pr-2 no-scrollbar">
+          <section>
+            <h4 className="font-black text-text-primary uppercase tracking-wider mb-2">1. Data Collection</h4>
+            <p>We only collect necessary identifiers (name, email) and your trade logs.</p>
+          </section>
+          <section>
+            <h4 className="font-black text-text-primary uppercase tracking-wider mb-2">2. Encryption</h4>
+            <p>Your password is hashed using industry-standard bcrypt.</p>
+          </section>
         </div>
-        <div className="mt-6">
-          <Button variant="secondary" onClick={() => setModals({ ...modals, privacy: false })} className="w-full">Close</Button>
+        <div className="mt-8">
+          <Button variant="secondary" className="w-full h-11" onClick={() => setModals({ ...modals, privacy: false })}>I Understand</Button>
         </div>
       </Modal>
     </div>
   );
 }
+
+const FeatureItem = ({ label }) => (
+  <div className="flex items-center gap-3 text-text-secondary">
+    <div className="w-5 h-5 rounded-full bg-profit/10 flex items-center justify-center text-profit">
+       <IconCheck className="w-3.5 h-3.5" strokeWidth={3} />
+    </div>
+    <span className="text-sm font-bold tracking-tight">{label}</span>
+  </div>
+);
