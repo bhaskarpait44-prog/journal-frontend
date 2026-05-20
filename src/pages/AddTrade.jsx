@@ -13,7 +13,7 @@ import { TabBar } from '../components/ui/TabBar';
 import { 
   IconSearch, IconArrowUp, IconArrowDown, IconDollar, 
   IconRefresh, IconCheck, IconPsychology, IconPlus, 
-  IconImport, IconEye, IconEyeOff, IconChevronDown 
+  IconImport, IconEye, IconEyeOff, IconChevronDown, IconCalendar
 } from '../components/ui/Icons';
 
 // Constants
@@ -83,7 +83,7 @@ function calcZerodhaFOOptions(entryPrice, lotSize, lots, tradeType, exchange) {
 
 // --- Sections ---
 
-function FormSection({ title, icon: Icon, children, accent = "blue" }) {
+function FormSection({ title, icon: Icon, children, accent = "blue", action }) {
   const accents = {
     blue: "border-l-accent",
     green: "border-l-profit",
@@ -92,9 +92,12 @@ function FormSection({ title, icon: Icon, children, accent = "blue" }) {
   };
   return (
     <Card variant="default" padding="p-0" className={`overflow-hidden border-l-4 ${accents[accent] || accents.blue}`}>
-      <div className="px-6 py-4 border-b border-border bg-card-alt/30 flex items-center gap-2.5">
-        <Icon className="w-4 h-4 text-text-muted" strokeWidth={2.5} />
-        <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary">{title}</h3>
+      <div className="px-6 py-4 border-b border-border bg-card-alt/30 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <Icon className="w-4 h-4 text-text-muted" strokeWidth={2.5} />
+          <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary">{title}</h3>
+        </div>
+        {action && <div>{action}</div>}
       </div>
       <div className="p-6">
         {children}
@@ -249,6 +252,7 @@ function ManualEntryTab() {
   const [nseSymbols, setNseSymbols] = useState(FALLBACK_SYMBOLS);
   const [showDropdown, setShowDropdown] = useState(false);
   const [search, setSearch] = useState('');
+  const [templates, setTemplates] = useState([]);
 
   const [form, setForm] = useState({
     underlying: '',
@@ -284,6 +288,16 @@ function ManualEntryTab() {
     api.get('/nse/fno-symbols').then((data) => {
       if (data?.symbols?.length) setNseSymbols(data.symbols);
     }).catch(() => {});
+    
+    api.get('/profile/templates').then((data) => {
+      if (Array.isArray(data)) setTemplates(data);
+    }).catch(() => {});
+    
+    const handler = (e) => {
+      if (!e.target.closest('.symbol-dropdown-wrapper')) setShowDropdown(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const filteredSymbols = useMemo(() => {
@@ -351,12 +365,65 @@ function ManualEntryTab() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 pb-32 sm:pb-8">
+      {templates.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <span className="text-[10px] font-black text-text-faint uppercase tracking-widest mr-2">Templates:</span>
+          {templates.map(t => (
+            <div key={t.name} className="flex items-center bg-card border border-border rounded-lg pl-3 pr-1 py-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setForm(prev => ({ ...prev, underlying: t.underlying, lotSize: t.lotSize, optionType: t.optionType, exchange: t.exchange, strategy: t.strategy || prev.strategy }));
+                  setSearch(t.underlying);
+                }}
+                className="text-xs font-bold text-text-primary hover:text-accent mr-2"
+              >
+                {t.name}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await api.delete(`/profile/templates/${t.name}`);
+                    setTemplates(res);
+                  } catch (e) { toast.error('Failed to delete template'); }
+                }}
+                className="w-5 h-5 flex items-center justify-center text-text-faint hover:text-loss rounded-md hover:bg-loss/10"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-8">
           {/* Symbol & Setup */}
-          <FormSection title="Symbol & Configuration" icon={IconSearch} accent="blue">
+          <FormSection 
+            title="Symbol & Configuration" 
+            icon={IconSearch} 
+            accent="blue"
+            action={
+              <button 
+                type="button" 
+                onClick={async () => {
+                  const name = window.prompt('Enter template name:');
+                  if (!name) return;
+                  try {
+                    const res = await api.post('/profile/templates', { name, underlying: form.underlying, lotSize: form.lotSize, optionType: form.optionType, exchange: form.exchange, strategy: form.strategy });
+                    setTemplates(res);
+                    toast.success('Template saved');
+                  } catch (e) { toast.error('Failed to save template'); }
+                }}
+                className="text-[10px] font-black text-accent uppercase tracking-widest hover:text-blue-400 bg-accent/10 px-2 py-1 rounded-md transition-colors"
+              >
+                Save Template
+              </button>
+            }
+          >
             <div className="space-y-6">
-              <div className="relative">
+              <div className="relative symbol-dropdown-wrapper">
                 <Input
                   label="Asset / Underlying *"
                   placeholder="e.g. NIFTY, BANKNIFTY"

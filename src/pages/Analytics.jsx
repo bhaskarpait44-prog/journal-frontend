@@ -4,6 +4,7 @@ import { useThemeStore } from '../store/themeStore';
 import { fmtINR, fmtDate } from '../lib/utils';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { PnlSpan } from '../components/ui/PnlSpan';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -93,8 +94,8 @@ const Analytics = () => {
   }, [chartPoints]);
 
   const chartTheme = useMemo(() => ({
-    grid: theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
-    text: theme === 'dark' ? '#7a90b0' : '#64748b',
+    grid: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+    text: theme === 'dark' ? '#94a3b8' : '#475569',
     tooltipBg: theme === 'dark' ? '#0d1525' : '#ffffff',
     tooltipBorder: theme === 'dark' ? '#1a2a40' : '#e2e8f0',
     profit: '#22c55e',
@@ -165,6 +166,11 @@ const Analytics = () => {
         </div>
       </div>
 
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-[9px] font-black text-text-faint uppercase tracking-[0.3em]">Performance Metrics</span>
+        <div className="h-px flex-1 bg-border/50" />
+      </div>
+
       {/* Primary Metric Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         <MetricCard label="Net Result" value={fmtINR(summary?.totalPnl || 0, true)} sub={`${summary?.totalTrades || 0} trades`} icon={IconDollar} color={summary?.totalPnl >= 0 ? 'text-profit' : 'text-loss'} />
@@ -172,6 +178,12 @@ const Analytics = () => {
         <MetricCard label="Profit Factor" value={(summary?.profitFactor || 0).toFixed(2)} sub="Gross W/L" icon={IconAnalytics} color="text-purple" />
         <MetricCard label="Efficiency" value={fmtINR(summary?.expectancy || 0, true)} sub="Avg. result" icon={IconRefresh} color={summary?.expectancy >= 0 ? 'text-profit' : 'text-loss'} />
         <MetricCard label="Drawdown" value={(summary?.recoveryFactor || 0).toFixed(2)} sub="Recovery" icon={IconArrowDown} color="text-amber-500" />
+      </div>
+
+      <div className="flex items-center gap-3 -my-2">
+        <div className="h-px flex-1 bg-border/50" />
+        <span className="text-[9px] font-black text-text-faint uppercase tracking-[0.3em]">Risk Metrics</span>
+        <div className="h-px flex-1 bg-border/50" />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -256,7 +268,7 @@ const Analytics = () => {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-3xl sm:text-4xl font-black font-heading tracking-tighter">{summary?.winRate?.toFixed(0)}%</span>
+                    <span className="text-3xl sm:text-4xl font-black font-heading tracking-tighter">{(summary?.winRate ?? 0).toFixed(0)}%</span>
                     <span className="text-[10px] font-black text-text-faint uppercase tracking-widest mt-1">Win Rate</span>
                   </div>
                 </div>

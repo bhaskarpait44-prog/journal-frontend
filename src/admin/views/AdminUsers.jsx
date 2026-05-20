@@ -54,7 +54,7 @@ export default function AdminUsers() {
     setViewModal(true);
     setDetailsLoading(true);
     try {
-      const res = await api.get(`/admin/users/${user._id}`);
+      const res = await api.get(`/admin/users/${user.id}`);
       setUserDetails(res);
     } catch (err) {
       toast.error(err.message);
@@ -74,9 +74,9 @@ export default function AdminUsers() {
 
   const submitUpgrade = async () => {
     try {
-      await api.put(`/admin/users/${selectedUser._id}`, {
-        'subscription.plan': upgradeForm.plan,
-        'subscription.status': upgradeForm.status,
+      await api.put(`/admin/users/${selectedUser.id}`, {
+        plan: upgradeForm.plan,
+        subStatus: upgradeForm.status,
       });
       toast.success('User updated');
       setUpgradeModal(false);
@@ -89,7 +89,7 @@ export default function AdminUsers() {
   const handleDelete = async (user) => {
     if (!window.confirm(`Delete user "${user.name}"?`)) return;
     try {
-      await api.delete(`/admin/users/${user._id}`);
+      await api.delete(`/admin/users/${user.id}`);
       toast.success('User deleted');
       fetchUsers();
     } catch (err) {
@@ -166,7 +166,7 @@ export default function AdminUsers() {
                 ))
               ) : data.users.length > 0 ? (
                 data.users.map(u => (
-                  <tr key={u._id} className="hover:bg-white/[0.02] transition-colors group">
+                  <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-xs font-bold text-white border border-white/5">
@@ -297,7 +297,7 @@ export default function AdminUsers() {
               <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                 {userDetails.trades?.length > 0 ? (
                   userDetails.trades.map(t => (
-                    <div key={t._id} className="flex justify-between items-center py-2 border-b border-white/5">
+                    <div key={t.id} className="flex justify-between items-center py-2 border-b border-white/5">
                       <span className="text-sm font-medium text-slate-200">{t.symbol}</span>
                       <span className={`text-sm font-mono font-bold ${t.netPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                         ₹{t.netPnl.toFixed(0)}

@@ -326,7 +326,19 @@ export default function Trades() {
                           <Badge type="OPEN">OPEN</Badge>
                         ) : (
                           <>
-                            <div className="text-sm font-black text-text-primary">₹{trade.exitPrice}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-black text-text-primary">₹{trade.exitPrice}</span>
+                              {trade.exitReason && (
+                                <Badge className={
+                                  trade.exitReason === 'TARGET_HIT'   ? 'bg-profit/10 text-profit border-profit/20' :
+                                  trade.exitReason === 'STOPLOSS_HIT' ? 'bg-loss/10 text-loss border-loss/20' :
+                                                                        'bg-card-alt text-text-faint border-border'
+                                }>
+                                  {trade.exitReason === 'TARGET_HIT'   ? '🎯 Target' :
+                                   trade.exitReason === 'STOPLOSS_HIT' ? '🛑 SL Hit' : 'Manual'}
+                                </Badge>
+                              )}
+                            </div>
                             <div className="text-[10px] font-medium text-text-faint uppercase tracking-tighter">{fmtDate(trade.exitDate)}</div>
                           </>
                         )}
@@ -334,11 +346,19 @@ export default function Trades() {
                       <td className="p-4 text-right">
                         <PnlSpan value={trade.pnl} className="text-sm font-black" />
                         <div className="text-[9px] font-bold text-text-faint mt-0.5">
-                          {trade.charges > 0 ? `NET OF ${fmtINR(trade.charges)} CHG` : 'ZERO CHARGES'}
+                          {trade.charges > 0 ? `NET OF ${fmtINR(trade.charges)} CHG` : ''}
                         </div>
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                          {trade.status === 'open' && (
+                            <button
+                              onClick={() => openModal('close', trade)}
+                              className="px-3 py-1.5 rounded-lg bg-profit/10 text-profit text-[10px] font-black uppercase tracking-widest hover:bg-profit hover:text-white transition-all"
+                            >
+                              Close
+                            </button>
+                          )}
                           <button onClick={() => openModal('strategy', trade)} className="p-2 rounded-lg hover:bg-accent/10 text-accent transition-colors" title="Journal"><IconEdit className="w-4 h-4" /></button>
                           <button onClick={() => openModal('psychology', trade)} className="p-2 rounded-lg hover:bg-violet-500/10 text-violet-500 transition-colors" title="Psychology"><IconPsychology className="w-4 h-4" /></button>
                           <button onClick={() => handleDelete(trade.id)} className="p-2 rounded-lg hover:bg-loss/10 text-loss transition-colors" title="Delete"><IconTrash className="w-4 h-4" /></button>

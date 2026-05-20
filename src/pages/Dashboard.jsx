@@ -10,6 +10,7 @@ import { Badge } from '../components/ui/Badge';
 import { PnlSpan } from '../components/ui/PnlSpan';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import QuickLogSheet from '../components/QuickLogSheet';
 import { 
   IconPlus, IconTrades, IconAnalytics, IconPsychology, 
   IconArrowUp, IconArrowDown, IconDollar, IconCheck, IconRefresh, IconSearch
@@ -29,10 +30,16 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { theme } = useThemeStore();
+  const [quickLogOpen, setQuickLogOpen] = React.useState(false);
   
   const { data: summary, loading: summaryLoading } = useApi('/analytics/summary');
   const { data: chartData, loading: chartLoading } = useApi('/analytics/pnl-chart?days=30');
   const { data: recentTrades, loading: tradesLoading } = useApi('/trades?limit=8');
+  const { data: announcementData } = useApi('/admin/announcement');
+  const { data: riskStatus } = useApi('/analytics/daily-risk-status');
+  const [dismissed, setDismissed] = React.useState(
+    () => sessionStorage.getItem('announcement_dismissed')
+  );
 
   const chartPoints = chartData?.chartData ?? [];
 
@@ -80,6 +87,45 @@ const Dashboard = () => {
           Add New Trade
         </Button>
       </div>
+
+      {announcementData?.announcement && !dismissed && (
+        <div className="flex items-center gap-4 p-4 rounded-2xl bg-accent/10 border border-accent/30 animate-fade-in">
+          <span className="text-xl">📢</span>
+          <p className="flex-1 text-sm font-medium text-text-primary">{announcementData.announcement}</p>
+          <button
+            onClick={() => {
+              sessionStorage.setItem('announcement_dismissed', '1');
+              setDismissed('1');
+            }}
+            className="text-text-faint hover:text-text-primary text-lg leading-none"
+          >×</button>
+        </div>
+      )}
+
+      {riskStatus?.isWarning && (
+        <div className={`flex items-center gap-4 p-4 rounded-2xl border animate-fade-in ${
+          riskStatus.isBreached 
+            ? 'bg-loss/10 border-loss/30 text-loss' 
+            : 'bg-amber-500/10 border-amber-500/30 text-amber-500'
+        }`}>
+          <span className="text-xl">{riskStatus.isBreached ? '🚨' : '⚠️'}</span>
+          <div className="flex-1">
+            <p className="text-xs font-black uppercase tracking-widest">
+              {riskStatus.isBreached ? 'Daily Loss Limit Breached' : 'Approaching Daily Loss Limit'}
+            </p>
+            <p className="text-[10px] font-bold mt-0.5">
+              Today: {fmtINR(riskStatus.todayPnl, true)} / Limit: {fmtINR(riskStatus.maxDailyLossAmount)}
+              ({riskStatus.percentUsed.toFixed(0)}% used)
+            </p>
+          </div>
+          <div className="w-24 h-2 bg-black/20 rounded-full overflow-hidden">
+            <div 
+              className={`h-full rounded-full ${riskStatus.isBreached ? 'bg-loss' : 'bg-amber-500'}`}
+              style={{ width: `${Math.min(riskStatus.percentUsed, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Hero P&L Card */}
       <div className="flex flex-col gap-4">
@@ -225,7 +271,7 @@ const Dashboard = () => {
                   <Tooltip content={<CustomTooltip theme={chartTheme} />} />
                   <Area 
                     type="monotone" 
-                    dataKey="pnl" 
+                    dataKey="cumulative" 
                     stroke={isProfitable ? '#22c55e' : '#ef4444'} 
                     strokeWidth={3}
                     fillOpacity={1} 
@@ -287,6 +333,14 @@ const Dashboard = () => {
           </div>
         </Card>
       </div>
+      <QuickLogSheet isOpen={quickLogOpen} onClose={() => setQuickLogOpen(false)} onSuccess={() => window.location.reload()} />
+      <button
+        onClick={() => setQuickLogOpen(true)}
+        className="sm:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-accent shadow-glow-blue flex items-center justify-center active:scale-95 transition-transform"
+        aria-label="Add Trade"
+      >
+        <IconPlus className="w-6 h-6 text-white" strokeWidth={2.5} />
+      </button>
     </div>
   );
 };

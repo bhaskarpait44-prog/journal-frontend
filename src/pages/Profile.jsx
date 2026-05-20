@@ -246,7 +246,7 @@ export default function Profile() {
           />
           <div className="grid grid-cols-2 gap-3 pt-4">
             <Button variant="secondary" className="h-12 rounded-2xl" onClick={() => setDeleteModal(false)}>Cancel</Button>
-            <Button variant="danger" className="h-12 rounded-2xl font-black uppercase text-[10px] tracking-widest" onClick={handleDeleteAccount}>Purge Account</Button>
+            <Button variant="danger" className="h-12 rounded-2xl font-black uppercase text-[10px] tracking-widest" onClick={handleDeleteAccount}>Yes, Delete My Account</Button>
           </div>
         </div>
       </Modal>

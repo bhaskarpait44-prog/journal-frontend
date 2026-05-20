@@ -33,6 +33,10 @@ import AdminPayments from './admin/views/AdminPayments.jsx';
 import AdminTrades from './admin/views/AdminTrades.jsx';
 import AdminAnalytics from './admin/views/AdminAnalytics.jsx';
 import AdminSettings from './admin/views/AdminSettings.jsx';
+import AdminCoupons from './admin/views/AdminCoupons.jsx';
+import AdminAuditLog from './admin/views/AdminAuditLog.jsx';
+import AdminFeatureFlags from './admin/views/AdminFeatureFlags.jsx';
+import UpgradeModal from './components/ui/UpgradeModal.jsx';
 
 // Route Guards
 const PublicRoute = ({ children }) => {
@@ -107,8 +111,10 @@ function AppRoutes() {
   }, [navigate]);
 
   return (
-    <Routes>
-      <Route path="/landing" element={<PublicRoute><Landing /></PublicRoute>} />
+    <>
+      <UpgradeModal />
+      <Routes>
+        <Route path="/landing" element={<PublicRoute><Landing /></PublicRoute>} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -136,9 +142,12 @@ function AppRoutes() {
         <Route path="trades" element={<AdminTrades />} />
         <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="coupons" element={<AdminCoupons />} />
+        <Route path="audit-log" element={<AdminAuditLog />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }

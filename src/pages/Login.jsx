@@ -3,17 +3,19 @@ import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
-import { IconArrowUp, IconEye, IconEyeOff, IconCheck } from '../components/ui/Icons';
+import { IconEye, IconEyeOff, IconPlus } from '../components/ui/Icons';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, hasSub } = useAuthStore();
+  const { login } = useAuthStore();
+  const hasSub = useAuthStore(s => s.hasSub());
   const [loading, setLoading] = useState(false);
-  const [showPass, setShowPass] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
   const [forgotModal, setForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotStep, setForgotStep] = useState(1);
@@ -24,14 +26,16 @@ export default function Login() {
     password: ''
   });
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.email || !form.password) return toast.error('Fill all fields');
+
     setLoading(true);
     try {
-      const res = await api.post('/auth/login', form);
-      login(res.token, res.user);
-      toast.success('Welcome back to TradeLog');
-      navigate(hasSub() ? '/dashboard' : '/pricing');
+      const { token, user } = await api.post('/auth/login', form);
+      login(token, user);
+      toast.success('Access Granted');
+      navigate(hasSub ? '/dashboard' : '/pricing');
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -39,16 +43,34 @@ export default function Login() {
     }
   };
 
-  const handleForgotSubmit = async () => {
-    if (!forgotEmail) return toast.error('Please enter your email');
+  const handleGoogleLogin = () => {
+    const clientUrl = window.location.origin;
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&scope=openid%20email%20profile&redirect_uri=${encodeURIComponent(clientUrl + '/login')}&prompt=select_account`;
+    window.location.href = googleAuthUrl;
+  };
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('code');
+    if (code) {
+      setLoading(true);
+      api.post('/auth/google', { code, redirectUri: window.location.origin + '/login' })
+        .then(({ token, user }) => {
+          login(token, user);
+          toast.success('Access Granted');
+          navigate(hasSub ? '/dashboard' : '/pricing');
+        })
+        .catch(err => toast.error(err.message))
+        .finally(() => setLoading(false));
+    }
+  }, [navigate, login, hasSub]);
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return toast.error('Enter your email');
     setForgotLoading(true);
     try {
-      const res = await api.post('/auth/forgot-password', { email: forgotEmail });
-      if (res.success) {
-        setForgotStep(2);
-      } else {
-        toast.error(res.message || 'Account not found');
-      }
+      await api.post('/auth/forgot-password', { email: forgotEmail });
+      setForgotStep(2);
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -56,197 +78,101 @@ export default function Login() {
     }
   };
 
-  useEffect(() => {
-    const handleGoogle = async (response) => {
-      try {
-        const res = await api.post('/auth/google', { credential: response.credential });
-        login(res.token, res.user);
-        toast.success('Successfully logged in with Google');
-        navigate(hasSub() ? '/dashboard' : '/pricing');
-      } catch (err) {
-        toast.error(err.message);
-      }
-    };
-
-    if (window.google) {
-      window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
-        callback: handleGoogle,
-      });
-      window.google.accounts.id.renderButton(document.getElementById('g-signin-btn'), { 
-        theme: 'outline', 
-        size: 'large', 
-        width: 320,
-        shape: 'pill'
-      });
-    }
-  }, [login, navigate, hasSub]);
-
   return (
-    <div className="min-h-screen bg-base flex overflow-hidden">
-      {/* Left Panel - Brand Experience */}
-      <div className="hidden lg:flex flex-col justify-between w-[480px] bg-sidebar p-12 border-r border-border relative">
-        {/* Abstract Grid Overlay */}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, var(--text-muted) 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-        
-        {/* Decorative Glows */}
-        <div className="absolute top-[-10%] right-[-10%] w-[400px] h-[400px] bg-accent/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] bg-profit/5 rounded-full blur-[100px]" />
-        
-        <Link to="/" className="flex items-center gap-3 relative z-10 group">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-accent to-blue-600 flex items-center justify-center shadow-glow-blue group-hover:scale-110 transition-transform">
-            <IconArrowUp className="w-6 h-6 text-white" strokeWidth={2.5} />
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-[420px] space-y-8 animate-fade-up">
+        {/* Logo */}
+        <div className="text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border/50 mb-6">
+             <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-faint">TradeLog Terminal</span>
           </div>
-          <span className="text-2xl font-black font-heading text-text-primary tracking-tight">TradeLog</span>
-        </Link>
-
-        <div className="space-y-8 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-widest">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-            Designed for F&O Excellence
-          </div>
-          
-          <h1 className="text-4xl font-black font-heading text-text-primary leading-tight tracking-tighter">
-            Elevate your trading <br /> 
-            <span className="gradient-text">performance</span> through <br />
-            systematic analysis.
-          </h1>
-          
-          <p className="text-text-secondary text-lg leading-relaxed font-medium">
-            Join 10,000+ Indian traders logging their journey from intuition to pure profitability.
-          </p>
-
-          <div className="grid grid-cols-2 gap-8 pt-6">
-            <div>
-              <div className="gradient-text font-mono font-black text-3xl tabular-nums">2.4M+</div>
-              <div className="text-text-faint text-[10px] font-black uppercase tracking-[0.2em] mt-1">Trades Logged</div>
-            </div>
-            <div>
-              <div className="gradient-text font-mono font-black text-3xl tabular-nums">100%</div>
-              <div className="text-text-faint text-[10px] font-black uppercase tracking-[0.2em] mt-1">Cloud Privacy</div>
-            </div>
-          </div>
-
-          {/* Testimonial Card */}
-          <div className="mt-12 p-6 glass rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-               <IconArrowUp className="w-20 h-20 text-white" />
-            </div>
-            <p className="text-sm font-medium text-white/90 leading-relaxed italic relative z-10">
-              "The deep analytics feature completely changed how I look at my win rate. It helped me realize I was over-trading on Thursdays."
-            </p>
-            <div className="flex items-center gap-3 mt-6 relative z-10">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold border-2 border-white/10 shadow-lg">AS</div>
-              <div>
-                <p className="text-xs font-black text-white">Aniket Sharma</p>
-                <p className="text-[10px] font-bold text-white/50 uppercase tracking-tighter">Verified Pro Trader</p>
-              </div>
-            </div>
-          </div>
+          <h1 className="text-4xl font-black font-heading tracking-tight text-text-primary">Welcome Back</h1>
+          <p className="text-sm font-medium text-text-faint mt-2">Connect to your secure trading environment</p>
         </div>
 
-        <div className="text-text-faint text-[10px] font-bold uppercase tracking-widest relative z-10">
-          © 2026 TRADELOG TECHNOLOGIES • SECURE & ENCRYPTED
-        </div>
-      </div>
-
-      {/* Right Panel - Form Interface */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 relative animate-fade-in">
-        {/* Mobile Header (Hidden on Desktop) */}
-        <div className="lg:hidden absolute top-6 left-0 right-0 px-6 sm:px-10 flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent to-blue-600 flex items-center justify-center shadow-glow-blue">
-              <IconArrowUp className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-black font-heading text-text-primary tracking-tight">TradeLog</span>
-          </Link>
-        </div>
-
-        <div className="w-full max-w-[400px] space-y-8 sm:space-y-10 animate-fade-up">
-          <div className="text-center lg:text-left">
-            <h2 className="text-3xl sm:text-4xl font-black font-heading text-text-primary tracking-tight">Sign In</h2>
-            <p className="text-text-muted mt-3 font-medium text-sm">New here? <Link to="/signup" className="text-accent font-black hover:underline underline-offset-4 decoration-accent/30">Create free account</Link></p>
-          </div>
-
-          <div className="space-y-4">
-            <div id="g-signin-btn" className="w-full flex justify-center hover:scale-[1.02] transition-transform duration-200 overflow-hidden" />
+        <Card variant="elevated" className="p-8 border-none shadow-glow-blue/5">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input 
+              label="Secure ID (Email)" 
+              type="email" 
+              placeholder="operator@tradelog.io" 
+              value={form.email}
+              onChange={e => setForm({...form, email: e.target.value})}
+              required
+            />
             
-            <div className="flex items-center gap-4 text-text-faint py-2">
-              <div className="flex-1 h-px bg-border/50" />
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] whitespace-nowrap">Identity Verification</span>
-              <div className="flex-1 h-px bg-border/50" />
+            <div className="space-y-1.5">
+               <div className="flex justify-between items-center">
+                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Password</label>
+                  <button type="button" onClick={() => setForgotModal(true)} className="text-[10px] font-black uppercase tracking-widest text-accent hover:text-blue-400 transition-colors">Forgot?</button>
+               </div>
+               <div className="relative">
+                <Input 
+                  type={showPassword ? 'text' : 'password'} 
+                  placeholder="••••••••" 
+                  className="pr-12"
+                  value={form.password}
+                  onChange={e => setForm({...form, password: e.target.value})}
+                  required
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-text-faint hover:text-accent transition-colors"
+                >
+                  {showPassword ? <IconEyeOff className="w-4 h-4" /> : <IconEye className="w-4 h-4" />}
+                </button>
+               </div>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-5 sm:space-y-6">
-              <Input 
-                label="Email Address" 
-                type="email" 
-                placeholder="arjun@trader.com" 
-                required 
-                value={form.email} 
-                onChange={e => setForm({ ...form, email: e.target.value })} 
-                className="h-12"
-              />
-              
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center px-1">
-                  <label className="text-[10px] font-black text-text-faint uppercase tracking-widest">Master Password</label>
-                  <button type="button" onClick={() => setForgotModal(true)} className="text-[10px] font-black text-accent hover:text-blue-600 uppercase tracking-widest">Forgot?</button>
-                </div>
-                <div className="relative group">
-                  <Input 
-                    type={showPass ? 'text' : 'password'} 
-                    placeholder="••••••••••••" 
-                    required 
-                    value={form.password} 
-                    onChange={e => setForm({ ...form, password: e.target.value })} 
-                    className="h-12 pr-12"
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-faint group-hover:text-text-muted transition-colors"
-                  >
-                    {showPass ? <IconEyeOff className="w-4 h-4" /> : <IconEye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
+            <Button variant="primary" fullWidth className="h-12 shadow-glow-blue text-sm font-black uppercase tracking-widest" type="submit" loading={loading}>
+              Establish Connection
+            </Button>
 
-              <Button variant="primary" type="submit" loading={loading} fullWidth className="h-14 text-sm font-black uppercase tracking-widest shadow-glow-blue mt-4">
-                Access System →
-              </Button>
-            </form>
-          </div>
+            <div className="relative flex items-center gap-4">
+              <div className="h-px flex-1 bg-border/50" />
+              <span className="text-[10px] font-black text-text-faint uppercase tracking-widest">or continue with</span>
+              <div className="h-px flex-1 bg-border/50" />
+            </div>
 
-          <p className="text-center text-[10px] font-bold text-text-faint uppercase tracking-tighter leading-relaxed">
-            Authorized access only. By signing in, you agree to our <br />
-            <Link to="/terms" className="text-text-muted hover:text-accent underline underline-offset-2">Terms</Link> & <Link to="/privacy" className="text-text-muted hover:text-accent underline underline-offset-2">Privacy Policy</Link>
-          </p>
-        </div>
+            <Button type="button" variant="secondary" fullWidth className="h-12 border-border/50 font-bold" onClick={handleGoogleLogin}>
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5 mr-3" />
+              Google Authentication
+            </Button>
+          </form>
+        </Card>
+
+        <p className="text-center text-sm font-medium text-text-faint">
+          New operative? <Link to="/signup" className="text-accent font-black uppercase tracking-widest hover:text-blue-400 transition-colors ml-1">Request Access</Link>
+        </p>
       </div>
 
       {/* Forgot Password Modal */}
-      <Modal isOpen={forgotModal} onClose={() => { setForgotModal(false); setForgotStep(1); }} title="Account Recovery">
+      <Modal isOpen={forgotModal} onClose={() => setForgotModal(false)} title="Security Recovery">
         {forgotStep === 1 ? (
-          <div className="space-y-6">
-            <p className="text-sm font-medium text-text-secondary leading-relaxed">Enter your registered email address and we'll send a secure link to reset your credentials.</p>
-            <Input 
-              label="Recovery Email" 
-              type="email" 
-              placeholder="arjun@trader.com" 
-              value={forgotEmail} 
-              onChange={e => setForgotEmail(e.target.value)} 
-              className="h-12"
-            />
-            <div className="flex flex-col gap-3 pt-4">
-              <Button variant="primary" className="w-full h-12 shadow-glow-blue" onClick={handleForgotSubmit} loading={forgotLoading}>Request Recovery Link</Button>
-              <Button variant="ghost" className="w-full" onClick={() => setForgotModal(false)}>Cancel</Button>
+          <form onSubmit={handleForgotPassword} className="space-y-6">
+            <div className="p-6 rounded-2xl bg-accent/5 border border-accent/10">
+              <p className="text-sm font-medium text-text-muted leading-relaxed">
+                Provide your registered email address. We will transmit a secure, time-sensitive reset link to your terminal.
+              </p>
             </div>
-          </div>
+            <Input 
+              label="Operative Email" 
+              type="email" 
+              placeholder="your@email.com" 
+              value={forgotEmail}
+              onChange={e => setForgotEmail(e.target.value)}
+              required
+            />
+            <Button variant="primary" fullWidth className="h-12 shadow-glow-blue" type="submit" loading={forgotLoading}>
+              Initialize Recovery
+            </Button>
+          </form>
         ) : (
-          <div className="text-center py-6 space-y-6">
-            <div className="w-20 h-20 rounded-3xl bg-profit/10 flex items-center justify-center mx-auto shadow-sm">
-               <IconCheck className="w-10 h-10 text-profit" strokeWidth={3} />
+          <div className="text-center space-y-6 py-4">
+            <div className="w-16 h-16 rounded-full bg-profit/10 text-profit flex items-center justify-center mx-auto">
+              <IconPlus className="w-8 h-8 rotate-45" strokeWidth={3} />
             </div>
             <div>
               <h3 className="text-2xl font-black text-text-primary tracking-tight">Recovery Sent</h3>

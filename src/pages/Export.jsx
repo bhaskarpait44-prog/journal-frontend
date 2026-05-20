@@ -215,9 +215,11 @@ export default function Export() {
             <h4 className="text-xl font-black font-heading text-text-primary">PDF Statement</h4>
             <p className="text-xs font-medium text-text-faint leading-relaxed uppercase tracking-tight">Formal P&L certificate for CA verification and banking.</p>
           </div>
-          <Button onClick={handlePdf} disabled={!previewData} fullWidth className="bg-gradient-to-r from-blue-600 to-blue-500 hover:shadow-glow-blue text-white h-14 rounded-2xl font-black uppercase text-xs tracking-widest transition-all">
-            Generate PDF
-          </Button>
+          <div title={!previewData ? "Click 'Scan & Calculate' first to enable download" : ''} className="w-full">
+            <Button onClick={handlePdf} disabled={!previewData} fullWidth className="bg-gradient-to-r from-blue-600 to-blue-500 hover:shadow-glow-blue text-white h-14 rounded-2xl font-black uppercase text-xs tracking-widest transition-all w-full">
+              Generate PDF
+            </Button>
+          </div>
         </Card>
       </div>
 

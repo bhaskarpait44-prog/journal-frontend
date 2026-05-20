@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useThemeStore } from './themeStore';
 
 export const useAuthStore = create((set, get) => ({
   token: localStorage.getItem('token'),
@@ -8,6 +9,9 @@ export const useAuthStore = create((set, get) => ({
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     set({ token, user });
+    if (user.preferences?.theme) {
+      useThemeStore.getState().setTheme(user.preferences.theme);
+    }
   },
 
   logout() {

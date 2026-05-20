@@ -267,6 +267,10 @@ export default function Risk() {
 
               {results && !results.error && (
                 <div className="space-y-5 sm:space-y-6 pt-6 animate-fade-up border-t border-white/10 mt-6 sm:mt-8">
+                  <div className="flex items-center gap-2 text-[9px] font-black text-accent uppercase tracking-widest">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                    Live Calculation
+                  </div>
                   <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <ResultItem label="Optimum Lots" value={results.maxLots} color="text-accent" isDark />
                     <ResultItem label="Total Units" value={results.maxUnits.toLocaleString()} color="text-white" isDark />

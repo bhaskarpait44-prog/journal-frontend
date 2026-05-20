@@ -1,4 +1,5 @@
 import { auth } from './lib/auth.js';
+import { toast } from './lib/toast.js';
 import { isAdminRoute, renderAdminPage, checkAdminAccess } from './admin/adminRouter.js';
 
 const routes = {};
@@ -33,18 +34,14 @@ export function initRouter() {
       setAppMode(appEl, shell, authWrap, 'admin');
       const container = document.getElementById('auth-content');
       if (!container) return;
+      
+      // BUG 3: Enforcement of admin guard on navigation
       if (!checkAdminAccess()) {
-        container.innerHTML = `
-          <div style="flex:1;display:flex;align-items:center;justify-content:center;background:#060a12;min-height:100vh">
-            <div style="text-align:center">
-              <div style="font-size:3rem;margin-bottom:1rem">🚫</div>
-              <div style="font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:0.5rem">Access Denied</div>
-              <div style="color:#475569;font-size:0.9rem;margin-bottom:1.5rem">Admin privileges required.</div>
-              <a href="#dashboard" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;padding:0.625rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:600">Back to Dashboard</a>
-            </div>
-          </div>`;
+        window.location.hash = '#dashboard';
+        toast('Access denied', 'error');
         return;
       }
+      
       container.innerHTML = '';
       renderAdminPage(hash, container);
       return;

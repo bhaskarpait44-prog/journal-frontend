@@ -43,7 +43,7 @@ const AppShell = () => {
         />
         
         <main className="flex-1 p-4 pb-[72px] sm:pb-6 min-[900px]:p-6 animate-fade-in">
-          <div className="max-w-[1400px] mx-auto min-w-0">
+          <div key={location.pathname} className="max-w-[1400px] mx-auto min-w-0 animate-fade-up">
             <Outlet />
           </div>
         </main>

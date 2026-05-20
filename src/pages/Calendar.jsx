@@ -284,11 +284,25 @@ function CalendarCell({ cell }) {
 
   return (
     <div 
-      className={`aspect-square min-h-[44px] sm:min-h-[72px] lg:min-h-[100px] rounded-xl sm:rounded-2xl md:rounded-3xl relative group transition-all duration-300 overflow-hidden cursor-pointer ${
+      className={`aspect-square min-h-[44px] sm:min-h-[72px] lg:min-h-[100px] rounded-xl sm:rounded-2xl md:rounded-3xl relative group transition-all duration-300 overflow-visible cursor-pointer ${
         isToday ? 'ring-2 sm:ring-4 ring-accent/30 bg-accent/5' : 'border border-border/20 bg-card-alt/30 hover:bg-card-alt hover:border-border/50'
       }`}
       style={data ? { backgroundColor: `rgba(${isPos ? '34, 197, 94' : '239, 68, 68'}, ${opacity})` } : {}}
     >
+      {data && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 hidden group-hover:block animate-scale-in pointer-events-none">
+          <div className="bg-card border border-border rounded-2xl shadow-card-lg p-3 min-w-[140px] text-center">
+            <p className="text-[9px] font-black text-text-faint uppercase tracking-widest mb-1">
+              {new Date(data.date).toLocaleDateString?.() ?? `Day ${day}`}
+            </p>
+            <p className={`text-sm font-black font-mono ${data.pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
+              {data.pnl >= 0 ? '+' : ''}{fmtINR(data.pnl)}
+            </p>
+            <p className="text-[9px] font-bold text-text-faint mt-1">{data.trades} trade{data.trades !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+      )}
+      
       <span className={`absolute top-1.5 left-2 sm:top-4 sm:left-5 text-[9px] sm:text-sm font-black ${data ? (isPos ? 'text-profit' : 'text-loss') : 'text-text-faint'}`}>
         {day}
       </span>
@@ -303,7 +317,7 @@ function CalendarCell({ cell }) {
       
       {/* Interactive Overlay */}
       {data && (
-        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl sm:rounded-2xl md:rounded-3xl pointer-events-none" />
       )}
       
       {isToday && (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { api } from '../../lib/api';
 import { 
@@ -6,9 +6,39 @@ import {
 } from 'recharts';
 import { Skeleton } from '../../components/ui/Skeleton';
 import Badge from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { toast } from 'react-hot-toast';
 
 export default function AdminDashboard() {
-  const { data, loading, error } = useApi('/admin/dashboard');
+  const { data, loading, error, refresh } = useApi('/admin/dashboard');
+  const [expiringUsers, setExpiringUsers] = useState([]);
+  const [expiringLoading, setExpiringLoading] = useState(true);
+
+  useEffect(() => {
+    fetchExpiring();
+  }, []);
+
+  const fetchExpiring = async () => {
+    try {
+      const res = await api.get('/admin/subscriptions/expiring?days=7');
+      setExpiringUsers(res.users);
+    } catch (err) {
+      console.error('Failed to fetch expiring users', err);
+    } finally {
+      setExpiringLoading(false);
+    }
+  };
+
+  const extendSubscription = async (userId) => {
+    try {
+      await api.post(`/admin/users/${userId}/extend-subscription`, { days: 30 });
+      toast.success('Subscription extended by 30 days');
+      fetchExpiring();
+      refresh();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
   if (loading) return <div className="space-y-6">
     <div className="h-10 w-48 bg-white/5 rounded-lg animate-pulse" />
@@ -46,6 +76,32 @@ export default function AdminDashboard() {
         <h2 className="text-2xl font-bold text-white font-heading">Platform Overview</h2>
         <p className="text-sm text-slate-500">Real-time analytics across all users and trades</p>
       </div>
+
+      {/* Expiring Soon Alert */}
+      {expiringUsers.length > 0 && (
+        <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">⚠️</span>
+              <div>
+                <h3 className="text-sm font-bold text-amber-500 uppercase tracking-wider">Expiring Soon</h3>
+                <p className="text-xs text-slate-400">{expiringUsers.length} users expiring in the next 7 days</p>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {expiringUsers.map(u => (
+              <div key={u.id} className="bg-[#0d1524] border border-white/5 rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-slate-200">{u.name}</div>
+                  <div className="text-[10px] text-slate-500">Expires: {new Date(u.subscription?.expiry).toLocaleDateString()}</div>
+                </div>
+                <Button size="sm" className="h-7 text-[10px] bg-amber-600 hover:bg-amber-700" onClick={() => extendSubscription(u.id)}>Extend 30d</Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stat Grid 1 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -144,7 +200,7 @@ export default function AdminDashboard() {
           <div className="divide-y divide-white/5">
             {(data.recentUsers || []).length > 0 ? (
               data.recentUsers.map(u => (
-                <div key={u._id} className="py-3 flex items-center justify-between">
+                <div key={u.id} className="py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-xs font-bold text-white border border-white/5">
                       {(u.name || '?')[0].toUpperCase()}

@@ -22,13 +22,14 @@ export default function Payment() {
   const { user, saveUser } = useAuthStore();
   const plan = localStorage.getItem('selectedPlan')?.toLowerCase() || 'starter';
   const P = PLANS[plan] || PLANS.starter;
-  const gst = Math.round(P.price * 0.18);
-  const total = P.price + gst;
 
   const [method, setMethod] = useState('upi');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [upiApp, setUpiApp] = useState('GPay');
+  const [coupon, setCoupon] = useState('');
+  const [couponData, setCouponData] = useState(null);
+  const [validating, setValidating] = useState(false);
 
   const [form, setForm] = useState({
     upiId: '',
@@ -37,6 +38,32 @@ export default function Payment() {
     cardExp: '',
     cardCvv: '',
   });
+
+  const basePrice = P.price;
+  const discount = couponData ? Math.round(basePrice * (couponData.discountPct / 100)) : 0;
+  const priceAfterDiscount = basePrice - discount;
+  const gst = Math.round(priceAfterDiscount * 0.18);
+  const total = priceAfterDiscount + gst;
+
+  const handleApplyCoupon = async () => {
+    if (!coupon) return;
+    setValidating(true);
+    try {
+      const res = await api.post('/subscription/validate-coupon', { code: coupon, plan });
+      if (res.valid) {
+        setCouponData({ ...res, code: coupon.toUpperCase() });
+        toast.success(`Coupon applied! ${res.discountPct}% off`);
+      } else {
+        toast.error(res.message || 'Invalid coupon');
+        setCouponData(null);
+      }
+    } catch (err) {
+      toast.error(err.message);
+      setCouponData(null);
+    } finally {
+      setValidating(false);
+    }
+  };
 
   const handleCardInput = (e, field) => {
     let v = e.target.value;
@@ -262,14 +289,53 @@ export default function Payment() {
               <div className="space-y-4 mb-8 sm:mb-10">
                 <div className="flex justify-between items-center text-sm font-medium">
                   <span className="text-text-faint uppercase tracking-widest text-[10px] font-black">Base Fee</span>
-                  <span className="text-text-primary font-mono font-bold">₹{P.price.toFixed(2)}</span>
+                  <div className="flex flex-col items-end">
+                    {couponData && <span className="text-[10px] text-text-faint line-through font-mono">₹{basePrice.toFixed(2)}</span>}
+                    <span className="text-text-primary font-mono font-bold">₹{priceAfterDiscount.toFixed(2)}</span>
+                  </div>
                 </div>
+                {couponData && (
+                  <div className="flex justify-between items-center text-sm font-medium animate-fade-in">
+                    <span className="text-profit uppercase tracking-widest text-[10px] font-black">Coupon Discount ({couponData.discountPct}%)</span>
+                    <span className="text-profit font-mono font-bold">-₹{discount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-sm font-medium">
                   <span className="text-text-faint uppercase tracking-widest text-[10px] font-black">Statutory GST (18%)</span>
                   <span className="text-text-primary font-mono font-bold">₹{gst.toFixed(2)}</span>
                 </div>
                 <div className="h-px bg-border/50 my-2" />
-                <div className="flex justify-between items-end">
+                
+                {/* Promo Code Section */}
+                {!couponData ? (
+                  <div className="flex gap-2 mt-4 animate-fade-in">
+                    <input 
+                      type="text"
+                      placeholder="PROMO CODE"
+                      value={coupon}
+                      onChange={e => setCoupon(e.target.value.toUpperCase())}
+                      className="flex-1 bg-card border border-border rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest focus:border-accent focus:outline-none transition-colors"
+                    />
+                    <Button 
+                      size="sm" 
+                      className="h-10 px-4 text-[9px] font-black" 
+                      onClick={handleApplyCoupon}
+                      loading={validating}
+                    >
+                      APPLY
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center bg-profit/10 border border-profit/20 rounded-xl px-4 py-2 mt-4 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <IconCheck className="w-3 h-3 text-profit" />
+                      <span className="text-[9px] font-black text-profit uppercase tracking-widest">{couponData.code} Applied</span>
+                    </div>
+                    <button onClick={() => setCouponData(null)} className="text-[9px] font-black text-text-faint hover:text-text-primary uppercase tracking-widest transition-colors">Remove</button>
+                  </div>
+                )}
+
+                <div className="pt-4 flex justify-between items-end">
                   <span className="text-xs font-black text-text-primary uppercase tracking-[0.2em]">Net Due</span>
                   <span className="text-2xl sm:text-3xl font-black font-mono tracking-tighter text-text-primary">₹{total.toLocaleString('en-IN')}</span>
                 </div>
