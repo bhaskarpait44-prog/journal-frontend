@@ -65,21 +65,28 @@ const EXCHANGE_RATES = {
   BSE: { exchangePct: 0.0003250 },
 };
 
-function calcZerodhaFOOptions(entryPrice, lotSize, lots, tradeType, exchange) {
+function calcZerodhaFOOptions(entryPrice, exitPrice, lotSize, lots, tradeType, exchange) {
   if (!entryPrice || !lotSize || !lots) return null;
   const qty = lotSize * lots;
-  const turnover = entryPrice * qty;
+  const entryTurnover = entryPrice * qty;
+  const exitTurnover = (exitPrice && parseFloat(exitPrice) > 0) ? parseFloat(exitPrice) * qty : 0;
+  const totalTurnover = entryTurnover + exitTurnover;
   const exchRate = (EXCHANGE_RATES[exchange] || EXCHANGE_RATES.NSE).exchangePct;
 
-  const brokerage = 20;
-  const stt = tradeType === 'SELL' ? 0.001 * turnover : 0;
-  const exchangeTxn = parseFloat((exchRate * turnover).toFixed(2));
-  const sebi = parseFloat((0.000001 * turnover).toFixed(2));
+  // STT on SELL side, Stamp on BUY side
+  const sellTurnover = tradeType === 'SELL' ? entryTurnover : exitTurnover;
+  const buyTurnover = tradeType === 'BUY' ? entryTurnover : exitTurnover;
+
+  const orders = exitTurnover > 0 ? 2 : 1;
+  const brokerage = 20 * orders;
+  const stt = parseFloat((0.001 * sellTurnover).toFixed(2));
+  const exchangeTxn = parseFloat((exchRate * totalTurnover).toFixed(2));
+  const sebi = parseFloat((0.000001 * totalTurnover).toFixed(2));
   const gst = parseFloat((0.18 * (brokerage + exchangeTxn + sebi)).toFixed(2));
-  const stampDuty = tradeType === 'BUY' ? Math.min(300, Math.floor(0.00003 * turnover)) : 0;
+  const stampDuty = Math.min(300, Math.floor(0.00003 * buyTurnover));
 
   const total = parseFloat((brokerage + stt + exchangeTxn + sebi + gst + stampDuty).toFixed(2));
-  return { brokerage, stt, exchangeTxn, gst, sebi, stampDuty, total, turnover, exchange };
+  return { brokerage, stt, exchangeTxn, gst, sebi, stampDuty, total, turnover: totalTurnover, exchange };
 }
 
 // --- Sections ---
@@ -309,14 +316,31 @@ function ManualEntryTab() {
     }
   }, [form.underlying]);
 
-  useEffect(() => {
-    if (!form.expiryDate) return;
-    const adjusted = getPreviousTradingDay(form.expiryDate);
-    if (adjusted !== form.expiryDate) {
-      setForm(prev => ({ ...prev, expiryDate: adjusted }));
-      toast(`Expiry adjusted to ${adjusted} (Previous Trading Day)`, { icon: '📅' });
+  const safeSetUnderlying = (symbol, lotSize, exchange) => {
+    const hasData = form.strikePrice || form.entryPrice || form.exitPrice;
+    if (hasData && form.underlying && form.underlying !== symbol) {
+      if (!window.confirm('Changing the underlying asset will reset your execution pricing. Continue?')) {
+        return;
+      }
     }
-  }, [form.expiryDate]);
+
+    const autoExchange = exchange || (['SENSEX', 'BANKEX'].includes(symbol) ? 'BSE' : 'NSE');
+    
+    setForm(prev => ({ 
+      ...prev, 
+      underlying: symbol, 
+      lotSize: lotSize || prev.lotSize,
+      exchange: autoExchange,
+      strikePrice: '',
+      entryPrice: '',
+      stopLoss: '',
+      target: '',
+      exitPrice: '',
+      expiryDate: '' 
+    }));
+    setSearch(symbol);
+    setShowDropdown(false);
+  };
 
   const filteredSymbols = useMemo(() => {
     const q = search.toUpperCase();
@@ -334,19 +358,25 @@ function ManualEntryTab() {
   const charges = useMemo(() => {
     const c = calcZerodhaFOOptions(
       parseFloat(form.entryPrice),
+      (form.status === 'OPEN' || form.status === 'EXPIRED') ? 0 : parseFloat(form.exitPrice),
       parseInt(form.lotSize),
       parseInt(form.quantity),
       form.tradeType,
       form.exchange
     );
     return c;
-  }, [form.entryPrice, form.lotSize, form.quantity, form.tradeType, form.exchange]);
+  }, [form.entryPrice, form.exitPrice, form.status, form.lotSize, form.quantity, form.tradeType, form.exchange]);
 
   const pnlPreview = useMemo(() => {
-    if (form.status !== 'CLOSED' || !form.entryPrice || !form.exitPrice || !form.lotSize || !form.quantity) return null;
+    const isSettled = form.status === 'CLOSED' || form.status === 'EXPIRED';
+    if (!isSettled || !form.entryPrice || !form.lotSize || !form.quantity) return null;
+
+    const exit = form.status === 'EXPIRED' ? 0 : parseFloat(form.exitPrice);
+    if (form.status === 'CLOSED' && (isNaN(exit) || !form.exitPrice)) return null;
+
     const units = form.lotSize * form.quantity;
     const mult = form.tradeType === 'BUY' ? 1 : -1;
-    const gross = mult * (parseFloat(form.exitPrice) - parseFloat(form.entryPrice)) * units;
+    const gross = mult * (exit - parseFloat(form.entryPrice)) * units;
     const net = gross - (charges?.total || 0);
     return { gross, net };
   }, [form.status, form.entryPrice, form.exitPrice, form.lotSize, form.quantity, charges]);
@@ -361,6 +391,15 @@ function ManualEntryTab() {
       if (!form.lotSize) return 'Please enter lot size';
       if (!form.quantity) return 'Please enter number of lots';
       if (!form.entryPrice) return 'Please enter entry price';
+      
+      // Date validations
+      const today = new Date().toISOString().split('T')[0];
+      if (form.entryDate > today) return 'Entry date cannot be in the future';
+      
+      if (form.status !== 'OPEN' && form.exitDate) {
+        if (form.exitDate < form.entryDate) return 'Exit date cannot be before entry date';
+        if (form.exitDate > today) return 'Exit date cannot be in the future';
+      }
     }
     if (step === 3) {
       if (!psychology.emotionBefore) return 'Please log your mindset BEFORE the trade';
@@ -370,14 +409,14 @@ function ManualEntryTab() {
   };
 
   const handleNext = (e) => {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const error = validateStep(currentStep);
     if (error) return toast.error(error);
     setCurrentStep(prev => prev + 1);
   };
 
   const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     
     // If user hits Enter on Step 1 or 2, just move to next step without full form validation
     if (currentStep < 3) {
@@ -396,19 +435,27 @@ function ManualEntryTab() {
 
     setLoading(true);
     try {
+      const finalForm = { ...form };
+      
+      // If expired, force exit price to 0 and set exit date to the trading day cutoff
+      if (finalForm.status === 'EXPIRED') {
+        finalForm.exitPrice = 0;
+        finalForm.exitDate = getPreviousTradingDay(finalForm.expiryDate);
+      }
+
       const payload = {
-        ...form,
-        strikePrice: parseFloat(form.strikePrice),
-        lotSize: parseInt(form.lotSize),
-        quantity: parseInt(form.quantity),
-        entryPrice: parseFloat(form.entryPrice),
-        exitPrice: form.exitPrice ? parseFloat(form.exitPrice) : undefined,
-        stopLoss: form.stopLoss ? parseFloat(form.stopLoss) : undefined,
-        target: form.target ? parseFloat(form.target) : undefined,
+        ...finalForm,
+        strikePrice: parseFloat(finalForm.strikePrice),
+        lotSize: parseInt(finalForm.lotSize),
+        quantity: parseInt(finalForm.quantity),
+        entryPrice: parseFloat(finalForm.entryPrice),
+        exitPrice: finalForm.exitPrice ? parseFloat(finalForm.exitPrice) : undefined,
+        stopLoss: finalForm.stopLoss ? parseFloat(finalForm.stopLoss) : undefined,
+        target: finalForm.target ? parseFloat(finalForm.target) : undefined,
         charges: charges?.total || 0,
-        tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+        tags: finalForm.tags.split(',').map((t) => t.trim()).filter(Boolean),
         psychology,
-        symbol: buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType) || form.underlying,
+        symbol: buildSymbol(finalForm.underlying, finalForm.expiryDate, finalForm.strikePrice, finalForm.optionType) || finalForm.underlying,
       };
       await api.post('/trades', payload);
       toast.success('Trade logged successfully');
@@ -490,6 +537,7 @@ function ManualEntryTab() {
                 <button 
                   type="button" 
                   onClick={async () => {
+                    if (!form.underlying) return toast.error('Select a symbol first');
                     const name = window.prompt('Enter template name:');
                     if (!name) return;
                     try {
@@ -512,11 +560,17 @@ function ManualEntryTab() {
                     prefix={<IconSearch className="w-4 h-4" />}
                     value={search}
                     onChange={(e) => {
-                      const val = e.target.value;
+                      const val = e.target.value.toUpperCase();
                       setSearch(val);
-                      if (!val) {
-                        setForm(prev => ({ ...prev, underlying: '' }));
+                      
+                      // Find if it's a known symbol to auto-set lot size
+                      const match = nseSymbols.find(s => s.symbol === val);
+                      if (match) {
+                        safeSetUnderlying(val, match.lotSize);
+                      } else {
+                        setForm(prev => ({ ...prev, underlying: val }));
                       }
+                      
                       setShowDropdown(true);
                     }}
                     onFocus={() => setShowDropdown(true)}
@@ -527,26 +581,7 @@ function ManualEntryTab() {
                         <div
                           key={s.symbol}
                           className="px-4 py-3 hover:bg-card-alt cursor-pointer flex justify-between items-center transition-colors group min-h-[44px]"
-                          onClick={() => {
-                            // Determine exchange automatically
-                            const autoExchange = ['SENSEX', 'BANKEX'].includes(s.symbol) ? 'BSE' : 'NSE';
-                            
-                            // Reset contract-specific fields when changing asset
-                            setForm(prev => ({ 
-                              ...prev, 
-                              underlying: s.symbol, 
-                              lotSize: s.lotSize,
-                              exchange: autoExchange,
-                              strikePrice: '',
-                              entryPrice: '',
-                              stopLoss: '',
-                              target: '',
-                              exitPrice: '',
-                              expiryDate: '' 
-                            }));
-                            setSearch(s.symbol);
-                            setShowDropdown(false);
-                          }}
+                          onClick={() => safeSetUnderlying(s.symbol, s.lotSize)}
                         >
                           <span className="font-black text-sm text-text-primary group-hover:text-accent transition-colors">{s.symbol}</span>
                           <span className="text-[10px] font-black text-text-faint bg-card-alt px-2 py-1 rounded-lg">LOT: {s.lotSize}</span>
@@ -707,7 +742,7 @@ function ManualEntryTab() {
                       type="date" 
                       value={form.exitDate} 
                       onChange={(e) => setForm(prev => ({ ...prev, exitDate: e.target.value }))} 
-                      disabled={form.status === 'OPEN'} 
+                      disabled={form.status === 'OPEN' || form.status === 'EXPIRED'} 
                     />
                   </div>
                   {form.status !== 'OPEN' && (
@@ -869,7 +904,10 @@ function ManualEntryTab() {
       </div>
 
       {/* Mobile Sticky Bar */}
-      <div className="sm:hidden fixed bottom-[58px] left-0 right-0 p-3 bg-card/95 backdrop-blur-xl border-t border-border z-40 flex gap-3">
+      <div 
+        className="sm:hidden fixed left-0 right-0 p-3 bg-card/95 backdrop-blur-xl border-t border-border z-40 flex gap-3"
+        style={{ bottom: 'var(--mobile-nav-height)' }}
+      >
         {currentStep > 1 ? (
           <Button type="button" variant="ghost" className="flex-1 h-12 rounded-xl text-text-muted font-black uppercase text-xs" onClick={() => setCurrentStep(prev => prev - 1)}>Back</Button>
         ) : (
@@ -914,8 +952,8 @@ function CSVImportTab() {
     try {
       const res = await api.upload('/trades/import/csv', formData);
       if (psychEnabled && res.tradeIds?.length) {
-        await Promise.allSettled(res.tradeIds.map(id => 
-          api.post(`/trades/${id.id}/psychology`, psychology)
+        await Promise.allSettled(res.tradeIds.map(trade => 
+          api.post(`/trades/${trade.id}/psychology`, psychology)
         ));
       }
       toast.success(`Batch import successful!`);
@@ -1037,7 +1075,7 @@ function BrokerAPITab() {
     try {
       const res = await api.post('/trades/import/broker', { ...form, broker: 'dhan' });
       if (psychEnabled && res.tradeIds?.length) {
-         await Promise.allSettled(res.tradeIds.map(id => api.post(`/trades/${id.id}/psychology`, psychology)));
+         await Promise.allSettled(res.tradeIds.map(trade => api.post(`/trades/${trade.id}/psychology`, psychology)));
       }
       toast.success(`Synced ${res.count || 0} records from Dhan!`);
       navigate('/trades');

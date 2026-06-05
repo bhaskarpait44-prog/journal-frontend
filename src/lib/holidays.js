@@ -107,7 +107,7 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
     let diff = d.getDay() - target;
     if (diff < 0) diff += 7;
     d.setDate(d.getDate() - diff);
-    return getPreviousTradingDay(d.toISOString().split('T')[0]);
+    return d.toISOString().split('T')[0];
   };
 
   // 1. Weekly (If applicable)
@@ -116,7 +116,7 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
     let diff = targetDay - d.getDay();
     if (diff < 0) diff += 7;
     d.setDate(d.getDate() + diff);
-    expiries.add(getPreviousTradingDay(d.toISOString().split('T')[0]));
+    expiries.add(d.toISOString().split('T')[0]);
   }
 
   // 2. Next 3 Monthly Expiries
