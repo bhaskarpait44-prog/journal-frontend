@@ -6,7 +6,6 @@ import { setNavigate } from './lib/api';
 
 // Layouts
 import AppShell from './components/layout/AppShell';
-import AdminLayout from './admin/components/AdminLayout.jsx';
 
 // Pages
 import Landing from './pages/Landing.jsx';
@@ -24,18 +23,6 @@ import Calendar from './pages/Calendar.jsx';
 import Export from './pages/Export.jsx';
 import Profile from './pages/Profile.jsx';
 import Risk from './pages/Risk.jsx';
-
-// Admin Pages
-import AdminDashboard from './admin/views/AdminDashboard.jsx';
-import AdminUsers from './admin/views/AdminUsers.jsx';
-import AdminSubscriptions from './admin/views/AdminSubscriptions.jsx';
-import AdminPayments from './admin/views/AdminPayments.jsx';
-import AdminTrades from './admin/views/AdminTrades.jsx';
-import AdminAnalytics from './admin/views/AdminAnalytics.jsx';
-import AdminSettings from './admin/views/AdminSettings.jsx';
-import AdminCoupons from './admin/views/AdminCoupons.jsx';
-import AdminAuditLog from './admin/views/AdminAuditLog.jsx';
-import AdminFeatureFlags from './admin/views/AdminFeatureFlags.jsx';
 import UpgradeModal from './components/ui/UpgradeModal.jsx';
 
 // Route Guards
@@ -65,14 +52,6 @@ const ProtectedRoute = ({ children, requiresSub = true }) => {
   })();
   if (!isLoggedIn) return <Navigate to="/landing" replace />;
   if (requiresSub && !hasSub) return <Navigate to="/pricing" replace />;
-  return children;
-};
-
-const AdminRoute = ({ children }) => {
-  const token = useAuthStore(s => s.token);
-  const user = useAuthStore(s => s.user);
-  if (!token) return <Navigate to="/login" replace />;
-  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
   return children;
 };
 
@@ -132,18 +111,6 @@ function AppRoutes() {
         <Route path="export" element={<Export />} />
         <Route path="profile" element={<Profile />} />
         <Route path="risk" element={<Risk />} />
-      </Route>
-
-      <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="subscriptions" element={<AdminSubscriptions />} />
-        <Route path="payments" element={<AdminPayments />} />
-        <Route path="trades" element={<AdminTrades />} />
-        <Route path="analytics" element={<AdminAnalytics />} />
-        <Route path="settings" element={<AdminSettings />} />
-        <Route path="coupons" element={<AdminCoupons />} />
-        <Route path="audit-log" element={<AdminAuditLog />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

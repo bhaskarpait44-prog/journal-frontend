@@ -35,11 +35,7 @@ const Dashboard = () => {
   const { data: summary, loading: summaryLoading } = useApi('/analytics/summary');
   const { data: chartData, loading: chartLoading } = useApi('/analytics/pnl-chart?days=30');
   const { data: recentTrades, loading: tradesLoading } = useApi('/trades?limit=8');
-  const { data: announcementData } = useApi('/admin/announcement');
   const { data: riskStatus } = useApi('/analytics/daily-risk-status');
-  const [dismissed, setDismissed] = React.useState(
-    () => sessionStorage.getItem('announcement_dismissed')
-  );
 
   const chartPoints = chartData?.chartData ?? [];
 
@@ -87,20 +83,6 @@ const Dashboard = () => {
           Add New Trade
         </Button>
       </div>
-
-      {announcementData?.announcement && !dismissed && (
-        <div className="flex items-center gap-4 p-4 rounded-2xl bg-accent/10 border border-accent/30 animate-fade-in">
-          <span className="text-xl">📢</span>
-          <p className="flex-1 text-sm font-medium text-text-primary">{announcementData.announcement}</p>
-          <button
-            onClick={() => {
-              sessionStorage.setItem('announcement_dismissed', '1');
-              setDismissed('1');
-            }}
-            className="text-text-faint hover:text-text-primary text-lg leading-none"
-          >×</button>
-        </div>
-      )}
 
       {riskStatus?.isWarning && (
         <div className={`flex items-center gap-4 p-4 rounded-2xl border animate-fade-in ${

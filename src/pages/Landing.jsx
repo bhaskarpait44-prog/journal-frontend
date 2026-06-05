@@ -76,18 +76,7 @@ const Landing = () => {
     finalCtaBtn: 'Initialize Your Journal',
   };
 
-  const [settings, setSettings] = useState(D);
-
-  useEffect(() => {
-    const BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + '/api' : '/api';
-    fetch(BASE + '/admin/public-settings')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (!data) return;
-        setSettings(prev => ({ ...prev, ...data.settings }));
-      })
-      .catch(() => {});
-  }, []);
+  const [settings] = useState(D);
 
   const scrollToSection = (id) => {
     const element = document.getElementById(id);

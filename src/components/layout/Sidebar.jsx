@@ -4,11 +4,11 @@ import { useAuthStore } from '../../store/authStore';
 import { 
   IconDashboard, IconTrades, IconAddTrade, IconAnalytics, 
   IconCalendar, IconRisk, IconPsychology, IconExport, 
-  IconAdmin, IconProfile, IconLogout, IconArrowUp 
+  IconProfile, IconLogout, IconArrowUp 
 } from '../ui/Icons';
 
 const Sidebar = ({ className = '' }) => {
-  const { user, logout, isAdmin } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
   const mainItems = [
@@ -94,25 +94,6 @@ const Sidebar = ({ className = '' }) => {
           <p className="px-3 mb-2 text-[9px] font-bold text-text-faint uppercase tracking-widest">Tools</p>
           <nav className="space-y-0.5">
             {toolItems.map((item) => <NavItem key={item.path} item={item} />)}
-            {isAdmin() && (
-              <NavLink
-                to="/admin"
-                className={({ isActive }) =>
-                  `group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 ${
-                    isActive
-                      ? 'bg-purple/8 text-purple font-semibold border-l-2 border-purple rounded-l-none'
-                      : 'text-text-muted hover:bg-card-alt hover:text-text-primary'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <IconAdmin className={`w-4 h-4 transition-colors ${isActive ? 'text-purple' : 'text-text-faint group-hover:text-text-muted'}`} />
-                    <span className="text-sm">Admin Panel</span>
-                  </>
-                )}
-              </NavLink>
-            )}
           </nav>
         </div>
       </div>

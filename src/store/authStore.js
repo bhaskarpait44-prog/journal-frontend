@@ -27,7 +27,6 @@ export const useAuthStore = create((set, get) => ({
   },
 
   isLoggedIn: () => !!get().token,
-  isAdmin: () => get().user?.role === 'admin',
   
   hasSub() {
     const sub = get().user?.subscription;

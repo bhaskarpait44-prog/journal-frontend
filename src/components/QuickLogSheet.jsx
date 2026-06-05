@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../lib/api';
 import { buildSymbol } from '../lib/utils';
+import { getAllAvailableExpiries } from '../lib/holidays';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import toast from 'react-hot-toast';
@@ -54,6 +55,8 @@ export default function QuickLogSheet({ isOpen, onClose, onSuccess }) {
 
     setLoading(true);
     try {
+      const expiries = getAllAvailableExpiries(form.underlying);
+      const expiry = expiries[0] || new Date().toISOString().split('T')[0];
       const payload = {
         underlying: form.underlying,
         optionType: form.optionType,
@@ -64,7 +67,8 @@ export default function QuickLogSheet({ isOpen, onClose, onSuccess }) {
         exchange: 'NSE',
         status: 'OPEN',
         entryDate: new Date().toISOString().split('T')[0],
-        symbol: form.underlying, // simplified for quick log
+        expiryDate: expiry,
+        symbol: buildSymbol(form.underlying, expiry, '0', form.optionType) || form.underlying,
       };
       await api.post('/trades', payload);
       toast.success('Trade logged');

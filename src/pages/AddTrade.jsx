@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { buildSymbol, fmtINR } from '../lib/utils';
+import { getPreviousTradingDay, isHoliday, isWeekend, getAllAvailableExpiries } from '../lib/holidays';
 
 // UI Components
 import { Card } from '../components/ui/Card';
@@ -83,26 +84,20 @@ function calcZerodhaFOOptions(entryPrice, lotSize, lots, tradeType, exchange) {
 
 // --- Sections ---
 
-function FormSection({ title, icon: Icon, children, accent = "blue", action }) {
-  const accents = {
-    blue: "border-l-accent",
-    green: "border-l-profit",
-    amber: "border-l-amber-500",
-    purple: "border-l-purple"
-  };
+function FormSection({ title, icon: Icon, children, action }) {
   return (
-    <Card variant="default" padding="p-0" className={`overflow-hidden border-l-4 ${accents[accent] || accents.blue}`}>
-      <div className="px-6 py-4 border-b border-border bg-card-alt/30 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <Icon className="w-4 h-4 text-text-muted" strokeWidth={2.5} />
-          <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary">{title}</h3>
+    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+      <div className="px-5 py-3 border-b border-border bg-card-alt/20 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="w-4 h-4 text-text-muted" />}
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-text-secondary">{title}</h3>
         </div>
-        {action && <div>{action}</div>}
+        {action && <div className="flex items-center">{action}</div>}
       </div>
-      <div className="p-6">
+      <div className="p-5">
         {children}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -117,114 +112,100 @@ function PsychologySection({ data, onChange, required = false }) {
   };
 
   return (
-    <Card variant="flat" padding="p-0" className="overflow-hidden border border-border">
+    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
       <button 
         type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-6 py-5 flex items-center justify-between hover:bg-card-alt transition-colors"
+        onClick={() => setIsExpanded(prev => !prev)}
+        className="w-full px-5 py-3 border-b border-border bg-card-alt/20 flex items-center justify-between hover:bg-card-alt/40 transition-colors"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-500">
-            <IconPsychology className="w-6 h-6" />
-          </div>
-          <div className="text-left">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black uppercase tracking-widest text-text-primary">Trade Psychology</h3>
-              {required && <Badge type="OPEN" className="text-[8px] bg-violet-500/10 text-violet-400 border-violet-500/20">Optional</Badge>}
-            </div>
-            <p className="text-[10px] font-bold text-text-faint uppercase tracking-tight">Log your mental state & performance</p>
-          </div>
+        <div className="flex items-center gap-2">
+          <IconPsychology className="w-4 h-4 text-text-muted" />
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-text-secondary">Trade Psychology & Performance</h3>
+          {required && <span className="text-[9px] font-bold text-loss ml-2">(Required)</span>}
         </div>
-        <IconChevronDown className={`w-5 h-5 text-text-faint transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+        <IconChevronDown className={`w-4 h-4 text-text-faint transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
       </button>
 
       {isExpanded && (
-        <div className="px-6 pb-8 space-y-8 animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Entry Emotion</label>
-              <div className="grid grid-cols-6 gap-2">
+        <div className="p-6 space-y-6 animate-fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Entry Mindset</label>
+              <select
+                className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
+                value={data.emotionBefore}
+                onChange={(e) => onChange({ emotionBefore: e.target.value })}
+              >
+                <option value="">Select Entry Feeling</option>
                 {EMOTIONS_BEFORE.map((e) => (
-                  <button
-                    key={e.value}
-                    type="button"
-                    title={e.name}
-                    onClick={() => onChange({ emotionBefore: e.value })}
-                    className={`h-12 rounded-2xl flex items-center justify-center text-xl transition-all ${data.emotionBefore === e.value ? 'bg-accent text-white shadow-glow-blue scale-110' : 'bg-card-alt border border-border grayscale opacity-40 hover:grayscale-0 hover:opacity-100'}`}
-                  >
-                    {e.label}
-                  </button>
+                  <option key={e.value} value={e.value}>{e.label} {e.name}</option>
                 ))}
-              </div>
+              </select>
             </div>
-            <div className="space-y-3">
-              <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Exit Emotion</label>
-              <div className="grid grid-cols-5 gap-2">
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Exit Mindset</label>
+              <select
+                className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
+                value={data.emotionAfter}
+                onChange={(e) => onChange({ emotionAfter: e.target.value })}
+              >
+                <option value="">Select Exit Feeling</option>
                 {EMOTIONS_AFTER.map((e) => (
-                  <button
-                    key={e.value}
-                    type="button"
-                    title={e.name}
-                    onClick={() => onChange({ emotionAfter: e.value })}
-                    className={`h-12 rounded-2xl flex items-center justify-center text-xl transition-all ${data.emotionAfter === e.value ? 'bg-accent text-white shadow-glow-blue scale-110' : 'bg-card-alt border border-border grayscale opacity-40 hover:grayscale-0 hover:opacity-100'}`}
-                  >
-                    {e.label}
-                  </button>
+                  <option key={e.value} value={e.value}>{e.label} {e.name}</option>
                 ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-border">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Discipline Score</label>
+                <span className="text-[10px] font-black text-accent">{data.disciplineRating} / 10</span>
               </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={data.disciplineRating}
+                onChange={(e) => onChange({ disciplineRating: parseInt(e.target.value) })}
+                className="w-full h-1.5 bg-card-alt rounded-lg appearance-none cursor-pointer accent-accent"
+              />
             </div>
-          </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Execution Discipline</label>
-              <span className="text-xs font-mono font-black text-accent bg-accent/5 px-3 py-1 rounded-full">{data.disciplineRating} / 10</span>
-            </div>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={data.disciplineRating}
-              onChange={(e) => onChange({ disciplineRating: parseInt(e.target.value) })}
-              className="w-full h-2 bg-card-alt rounded-lg appearance-none cursor-pointer accent-accent"
-            />
-          </div>
-
-          <div className="flex items-center justify-between p-5 bg-card-alt rounded-3xl border border-border">
-            <div>
-              <p className="text-sm font-black text-text-primary uppercase tracking-tight">Followed Strategy Rules?</p>
-              <p className="text-[10px] font-bold text-text-faint uppercase tracking-tighter">Did you stick to your predefined plan?</p>
-            </div>
-            <div className="flex bg-card p-1 rounded-2xl border border-border shadow-inner">
-               <button
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Plan Adherence</label>
+              <div className="flex bg-card-alt p-0.5 rounded-lg border border-border">
+                <button
                   type="button"
                   onClick={() => onChange({ followedPlan: true })}
-                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${data.followedPlan ? 'bg-profit text-white shadow-lg shadow-profit/20' : 'text-text-faint'}`}
+                  className={`flex-1 py-1.5 rounded-md text-[10px] font-black uppercase transition-all ${data.followedPlan ? 'bg-profit text-white shadow-sm' : 'text-text-faint'}`}
                 >
-                  Yes
+                  Followed Plan
                 </button>
                 <button
                   type="button"
                   onClick={() => onChange({ followedPlan: false })}
-                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${!data.followedPlan ? 'bg-loss text-white shadow-lg shadow-loss/20' : 'text-text-faint'}`}
+                  className={`flex-1 py-1.5 rounded-md text-[10px] font-black uppercase transition-all ${!data.followedPlan ? 'bg-loss text-white shadow-sm' : 'text-text-faint'}`}
                 >
-                  No
+                  Deviated
                 </button>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Identify Mistakes</label>
-            <div className="flex flex-wrap gap-2">
+          <div className="space-y-4 pt-4 border-t border-border">
+            <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Execution Mistakes</label>
+            <div className="flex flex-wrap gap-1.5">
               {MISTAKE_TAGS.map((m) => (
                 <button
                   key={m.value}
                   type="button"
                   onClick={() => toggleMistake(m.value)}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border transition-all duration-200 ${
+                  className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border transition-all ${
                     data.mistakeTags.includes(m.value)
-                      ? 'bg-loss/10 border-loss/30 text-loss shadow-sm'
-                      : 'bg-card-alt border-border text-text-faint hover:border-text-faint hover:text-text-muted'
+                      ? 'bg-loss/5 border-loss/30 text-loss'
+                      : 'bg-card border-border text-text-faint hover:text-text-muted'
                   }`}
                 >
                   {m.label}
@@ -235,23 +216,31 @@ function PsychologySection({ data, onChange, required = false }) {
 
           <Input
             as="textarea"
-            label="Mental Reflections"
-            placeholder="Write down your thought process, what you felt, and what you could improve..."
+            label="Internal Monologue / Notes"
+            placeholder="Context, triggers, or improvement areas..."
             value={data.notes}
             onChange={(e) => onChange({ notes: e.target.value })}
+            className="text-xs min-h-[100px]"
           />
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
 function ManualEntryTab() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const [nseSymbols, setNseSymbols] = useState(FALLBACK_SYMBOLS);
-  const [showDropdown, setShowDropdown] = useState(false);
+
+  const STEPS = [
+    { id: 1, name: 'Setup', icon: IconSearch, desc: 'Contract' },
+    { id: 2, name: 'Execution', icon: IconDollar, desc: 'Pricing' },
+    { id: 3, name: 'Journal', icon: IconPsychology, desc: 'Mindset' },
+  ];
   const [search, setSearch] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [templates, setTemplates] = useState([]);
 
   const [form, setForm] = useState({
@@ -273,7 +262,15 @@ function ManualEntryTab() {
     strategy: '',
     tags: '',
     notes: '',
+    exitReason: '',
   });
+
+  // Sync search with form.underlying when it changes (e.g. from templates)
+  useEffect(() => {
+    if (form.underlying && search !== form.underlying) {
+      setSearch(form.underlying);
+    }
+  }, [form.underlying]);
 
   const [psychology, setPsychology] = useState({
     emotionBefore: '',
@@ -300,9 +297,30 @@ function ManualEntryTab() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const [availableExpiries, setAvailableExpiries] = useState([]);
+  const [isManualExpiry, setIsManualExpiry] = useState(false);
+
+  useEffect(() => {
+    if (form.underlying) {
+      const expiries = getAllAvailableExpiries(form.underlying);
+      setAvailableExpiries(expiries);
+      setForm(prev => ({ ...prev, expiryDate: expiries[0] || '' }));
+      setIsManualExpiry(false); // Reset to auto whenever underlying changes
+    }
+  }, [form.underlying]);
+
+  useEffect(() => {
+    if (!form.expiryDate) return;
+    const adjusted = getPreviousTradingDay(form.expiryDate);
+    if (adjusted !== form.expiryDate) {
+      setForm(prev => ({ ...prev, expiryDate: adjusted }));
+      toast(`Expiry adjusted to ${adjusted} (Previous Trading Day)`, { icon: '📅' });
+    }
+  }, [form.expiryDate]);
+
   const filteredSymbols = useMemo(() => {
-    if (!search) return [];
     const q = search.toUpperCase();
+    if (!q) return nseSymbols.slice(0, 10);
     return nseSymbols
       .filter((s) => s.symbol.includes(q))
       .sort((a, b) => {
@@ -333,9 +351,48 @@ function ManualEntryTab() {
     return { gross, net };
   }, [form.status, form.entryPrice, form.exitPrice, form.lotSize, form.quantity, charges]);
 
+  const validateStep = (step) => {
+    if (step === 1) {
+      if (!form.underlying) return 'Please select an underlying symbol';
+      if (!form.strikePrice) return 'Please enter a strike price';
+      if (!form.expiryDate) return 'Please select an expiry date';
+    }
+    if (step === 2) {
+      if (!form.lotSize) return 'Please enter lot size';
+      if (!form.quantity) return 'Please enter number of lots';
+      if (!form.entryPrice) return 'Please enter entry price';
+    }
+    if (step === 3) {
+      if (!psychology.emotionBefore) return 'Please log your mindset BEFORE the trade';
+      if (form.status !== 'OPEN' && !psychology.emotionAfter) return 'Please log your mindset AFTER the trade';
+    }
+    return null;
+  };
+
+  const handleNext = (e) => {
+    if (e) e.preventDefault();
+    const error = validateStep(currentStep);
+    if (error) return toast.error(error);
+    setCurrentStep(prev => prev + 1);
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.underlying) return toast.error('Please select an underlying symbol');
+    if (e) e.preventDefault();
+    
+    // If user hits Enter on Step 1 or 2, just move to next step without full form validation
+    if (currentStep < 3) {
+      handleNext();
+      return;
+    }
+
+    // Full validation ONLY on final submit (Step 3)
+    for (let s = 1; s <= 3; s++) {
+      const error = validateStep(s);
+      if (error) {
+        if (s !== currentStep) setCurrentStep(s);
+        return toast.error(error);
+      }
+    }
 
     setLoading(true);
     try {
@@ -364,8 +421,32 @@ function ManualEntryTab() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 pb-32 sm:pb-8">
-      {templates.length > 0 && (
+    <form onSubmit={handleSubmit} className="space-y-4 pb-32 sm:pb-8">
+      {/* Minimal Progress UI */}
+      <div className="flex items-center justify-center gap-2 mb-2">
+        {STEPS.map((step, idx) => (
+          <React.Fragment key={step.id}>
+            <div 
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${
+                currentStep === step.id ? 'bg-accent ring-4 ring-accent/10' : 
+                currentStep > step.id ? 'bg-profit' : 'bg-border'
+              }`} 
+              title={step.name}
+            />
+            {idx < STEPS.length - 1 && (
+              <div className={`w-8 h-px transition-colors duration-500 ${currentStep > step.id ? 'bg-profit' : 'bg-border'}`} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* Step Heading - Compact */}
+      <div className="flex items-center justify-center gap-3 mb-4 animate-fade-in">
+        <span className="text-[9px] font-black text-accent bg-accent/5 border border-accent/10 px-2 py-0.5 rounded uppercase tracking-widest">Step {currentStep}/3</span>
+        <h2 className="text-sm font-black text-text-primary uppercase tracking-tight">{STEPS[currentStep-1].name} <span className="text-text-faint font-bold ml-1">/ {STEPS[currentStep-1].desc}</span></h2>
+      </div>
+
+      {templates.length > 0 && currentStep === 1 && (
         <div className="flex flex-wrap items-center gap-2 mb-6">
           <span className="text-[10px] font-black text-text-faint uppercase tracking-widest mr-2">Templates:</span>
           {templates.map(t => (
@@ -398,335 +479,407 @@ function ManualEntryTab() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-8">
-          {/* Symbol & Setup */}
-          <FormSection 
-            title="Symbol & Configuration" 
-            icon={IconSearch} 
-            accent="blue"
-            action={
-              <button 
-                type="button" 
-                onClick={async () => {
-                  const name = window.prompt('Enter template name:');
-                  if (!name) return;
-                  try {
-                    const res = await api.post('/profile/templates', { name, underlying: form.underlying, lotSize: form.lotSize, optionType: form.optionType, exchange: form.exchange, strategy: form.strategy });
-                    setTemplates(res);
-                    toast.success('Template saved');
-                  } catch (e) { toast.error('Failed to save template'); }
-                }}
-                className="text-[10px] font-black text-accent uppercase tracking-widest hover:text-blue-400 bg-accent/10 px-2 py-1 rounded-md transition-colors"
-              >
-                Save Template
-              </button>
-            }
-          >
-            <div className="space-y-6">
-              <div className="relative symbol-dropdown-wrapper">
-                <Input
-                  label="Asset / Underlying *"
-                  placeholder="e.g. NIFTY, BANKNIFTY"
-                  prefix={<IconSearch className="w-4 h-4" />}
-                  value={search || form.underlying}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setShowDropdown(true);
+        {currentStep === 1 && (
+          <div className="lg:col-span-2 animate-fade-in">
+            {/* Symbol & Setup */}
+            <FormSection 
+              title="Symbol & Configuration" 
+              icon={IconSearch} 
+              accent="blue"
+              action={
+                <button 
+                  type="button" 
+                  onClick={async () => {
+                    const name = window.prompt('Enter template name:');
+                    if (!name) return;
+                    try {
+                      const res = await api.post('/profile/templates', { name, underlying: form.underlying, lotSize: form.lotSize, optionType: form.optionType, exchange: form.exchange, strategy: form.strategy });
+                      setTemplates(res);
+                      toast.success('Template saved');
+                    } catch (e) { toast.error('Failed to save template'); }
                   }}
-                  onFocus={() => setShowDropdown(true)}
-                />
-                {showDropdown && filteredSymbols.length > 0 && (
-                  <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-2xl shadow-card-lg max-h-[220px] overflow-y-auto no-scrollbar animate-scale-in origin-top">
-                    {filteredSymbols.map((s) => (
-                      <div
-                        key={s.symbol}
-                        className="px-4 py-3 hover:bg-card-alt cursor-pointer flex justify-between items-center transition-colors group min-h-[44px]"
-                        onClick={() => {
-                          setForm({ ...form, underlying: s.symbol, lotSize: s.lotSize });
-                          setSearch(s.symbol);
-                          setShowDropdown(false);
-                        }}
-                      >
-                        <span className="font-black text-sm text-text-primary group-hover:text-accent transition-colors">{s.symbol}</span>
-                        <span className="text-[10px] font-black text-text-faint bg-card-alt px-2 py-1 rounded-lg">LOT: {s.lotSize}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Contract Type</label>
-                  <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
-                    <button
-                      type="button"
-                      className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'CE' ? 'bg-violet-500/10 text-violet-400 shadow-sm border border-violet-500/20' : 'text-text-faint hover:text-text-muted'}`}
-                      onClick={() => setForm({ ...form, optionType: 'CE' })}
-                    >Call (CE)</button>
-                    <button
-                      type="button"
-                      className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'PE' ? 'bg-amber-500/10 text-amber-400 shadow-sm border border-amber-500/20' : 'text-text-faint hover:text-text-muted'}`}
-                      onClick={() => setForm({ ...form, optionType: 'PE' })}
-                    >Put (PE)</button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Trade Side</label>
-                  <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
-                    <button
-                      type="button"
-                      className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'BUY' ? 'bg-profit/10 text-profit shadow-sm border border-profit/20' : 'text-text-faint hover:text-text-muted'}`}
-                      onClick={() => setForm({ ...form, tradeType: 'BUY' })}
-                    >BUY</button>
-                    <button
-                      type="button"
-                      className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'SELL' ? 'bg-loss/10 text-loss shadow-sm border border-loss/20' : 'text-text-faint hover:text-text-muted'}`}
-                      onClick={() => setForm({ ...form, tradeType: 'SELL' })}
-                    >SELL</button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="Strike Price *"
-                  type="number"
-                  prefix="₹"
-                  value={form.strikePrice}
-                  onChange={(e) => setForm({ ...form, strikePrice: e.target.value })}
-                  placeholder="22500"
-                />
-                <Input
-                  label="Expiry Date *"
-                  type="date"
-                  value={form.expiryDate}
-                  onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-                />
-              </div>
-              
-              {form.underlying && form.expiryDate && form.strikePrice && (
-                <div className="p-4 bg-accent/5 rounded-2xl border border-accent/20 text-center animate-fade-up">
-                  <span className="text-[10px] text-text-faint font-black uppercase tracking-widest block mb-1">Contract Symbol</span>
-                  <span className="font-mono font-black text-accent text-lg tracking-tight">
-                    {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </FormSection>
-
-          {/* Size & Exchange */}
-          <FormSection title="Volume & Marketplace" icon={IconRefresh} accent="purple">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <Input
-                label="Contract Lot Size *"
-                type="number"
-                value={form.lotSize}
-                onChange={(e) => setForm({ ...form, lotSize: e.target.value })}
-              />
-              <Input
-                label="Number of Lots *"
-                type="number"
-                value={form.quantity}
-                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-              />
-            </div>
-            <div className="mt-6 flex bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
-               <button
-                  type="button"
-                  className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all h-11 ${form.exchange === 'NSE' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
-                  onClick={() => setForm({ ...form, exchange: 'NSE' })}
-                >NSE Exchange</button>
-                <button
-                  type="button"
-                  className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all h-11 ${form.exchange === 'BSE' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
-                  onClick={() => setForm({ ...form, exchange: 'BSE' })}
-                >BSE Exchange</button>
-            </div>
-            <div className="mt-6 p-4 bg-card-alt/50 rounded-2xl border border-border flex justify-between items-center">
-              <span className="text-[10px] font-black text-text-faint uppercase tracking-widest">Calculated Net Units</span>
-              <span className="font-mono font-black text-text-primary text-xl tracking-tighter">{(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0)}</span>
-            </div>
-          </FormSection>
-        </div>
-
-        <div className="space-y-8">
-          {/* Entry & Result */}
-          <FormSection title="Execution & Outcome" icon={IconDollar} accent="green">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Trade Status</label>
-                <div className="grid grid-cols-3 gap-2 bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
-                  {['OPEN', 'CLOSED', 'EXPIRED'].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      className={`h-11 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                        form.status === s
-                          ? s === 'OPEN' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 
-                            s === 'CLOSED' ? 'bg-profit text-white shadow-lg shadow-profit/20' : 
-                            'bg-slate-500 text-white shadow-lg shadow-slate-500/20'
-                          : 'text-text-faint hover:text-text-muted hover:bg-card/50'
-                      }`}
-                      onClick={() => setForm({ ...form, status: s, exitPrice: s === 'EXPIRED' ? '0' : form.exitPrice })}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="Entry Price *"
-                  type="number"
-                  step="0.05"
-                  prefix={<span className="pointer-events-none">₹</span>}
-                  value={form.entryPrice}
-                  onChange={(e) => setForm({ ...form, entryPrice: e.target.value })}
-                />
-                <Input
-                  label="Entry Date *"
-                  type="date"
-                  value={form.entryDate}
-                  onChange={(e) => setForm({ ...form, entryDate: e.target.value })}
-                />
-              </div>
-
-              {(form.status === 'CLOSED' || form.status === 'EXPIRED') && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-scale-in origin-top">
+                  className="text-[10px] font-black text-accent uppercase tracking-widest hover:text-blue-400 bg-accent/10 px-2 py-1 rounded-md transition-colors"
+                >
+                  Save Template
+                </button>
+              }
+            >
+              <div className="space-y-6">
+                <div className="relative symbol-dropdown-wrapper">
                   <Input
-                    label="Exit Price"
+                    label="Asset / Underlying *"
+                    placeholder="e.g. NIFTY, BANKNIFTY"
+                    prefix={<IconSearch className="w-4 h-4" />}
+                    value={search}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSearch(val);
+                      if (!val) {
+                        setForm(prev => ({ ...prev, underlying: '' }));
+                      }
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                  />
+                  {showDropdown && filteredSymbols.length > 0 && (
+                    <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-2xl shadow-card-lg max-h-[220px] overflow-y-auto no-scrollbar animate-scale-in origin-top">
+                      {filteredSymbols.map((s) => (
+                        <div
+                          key={s.symbol}
+                          className="px-4 py-3 hover:bg-card-alt cursor-pointer flex justify-between items-center transition-colors group min-h-[44px]"
+                          onClick={() => {
+                            // Determine exchange automatically
+                            const autoExchange = ['SENSEX', 'BANKEX'].includes(s.symbol) ? 'BSE' : 'NSE';
+                            
+                            // Reset contract-specific fields when changing asset
+                            setForm(prev => ({ 
+                              ...prev, 
+                              underlying: s.symbol, 
+                              lotSize: s.lotSize,
+                              exchange: autoExchange,
+                              strikePrice: '',
+                              entryPrice: '',
+                              stopLoss: '',
+                              target: '',
+                              exitPrice: '',
+                              expiryDate: '' 
+                            }));
+                            setSearch(s.symbol);
+                            setShowDropdown(false);
+                          }}
+                        >
+                          <span className="font-black text-sm text-text-primary group-hover:text-accent transition-colors">{s.symbol}</span>
+                          <span className="text-[10px] font-black text-text-faint bg-card-alt px-2 py-1 rounded-lg">LOT: {s.lotSize}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Contract Type</label>
+                    <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+                      <button
+                        type="button"
+                        className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'CE' ? 'bg-violet-500/10 text-violet-400 shadow-sm border border-violet-500/20' : 'text-text-faint hover:text-text-muted'}`}
+                        onClick={() => setForm(prev => ({ ...prev, optionType: 'CE' }))}
+                      >Call (CE)</button>
+                      <button
+                        type="button"
+                        className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'PE' ? 'bg-amber-500/10 text-amber-400 shadow-sm border border-amber-500/20' : 'text-text-faint hover:text-text-muted'}`}
+                        onClick={() => setForm(prev => ({ ...prev, optionType: 'PE' }))}
+                      >Put (PE)</button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Trade Side</label>
+                    <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+                      <button
+                        type="button"
+                        className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'BUY' ? 'bg-profit/10 text-profit shadow-sm border border-profit/20' : 'text-text-faint hover:text-text-muted'}`}
+                        onClick={() => setForm(prev => ({ ...prev, tradeType: 'BUY' }))}
+                      >BUY</button>
+                      <button
+                        type="button"
+                        className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'SELL' ? 'bg-loss/10 text-loss shadow-sm border border-loss/20' : 'text-text-faint hover:text-text-muted'}`}
+                        onClick={() => setForm(prev => ({ ...prev, tradeType: 'SELL' }))}
+                      >SELL</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Strike Price *"
                     type="number"
-                    step="0.05"
-                    prefix={<span className="pointer-events-none">₹</span>}
-                    value={form.exitPrice}
-                    onChange={(e) => setForm({ ...form, exitPrice: e.target.value })}
-                    disabled={form.status === 'EXPIRED'}
+                    prefix="₹"
+                    value={form.strikePrice}
+                    onChange={(e) => setForm(prev => ({ ...prev, strikePrice: e.target.value }))}
+                    placeholder="22500"
                   />
-                  <Input
-                    label="Exit Date"
-                    type="date"
-                    value={form.exitDate}
-                    onChange={(e) => setForm({ ...form, exitDate: e.target.value })}
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="Stop Loss"
-                  type="number"
-                  step="0.05"
-                  prefix={<span className="pointer-events-none">₹</span>}
-                  value={form.stopLoss}
-                  onChange={(e) => setForm({ ...form, stopLoss: e.target.value })}
-                />
-                <Input
-                  label="Take Profit"
-                  type="number"
-                  step="0.05"
-                  prefix={<span className="pointer-events-none">₹</span>}
-                  value={form.target}
-                  onChange={(e) => setForm({ ...form, target: e.target.value })}
-                />
-              </div>
-
-              {/* Charges Card */}
-              <div className="p-6 bg-card-alt rounded-3xl border border-border space-y-4">
-                <div className="flex justify-between items-center border-b border-border pb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-loss/10 flex items-center justify-center text-loss"><IconDollar className="w-4 h-4" /></div>
-                    <span className="text-xs font-black uppercase tracking-widest text-text-secondary">Fees & Tax</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Expiry Date *</label>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsManualExpiry(prev => !prev)}
+                        className="text-[9px] font-black text-accent uppercase tracking-widest hover:underline"
+                      >
+                        {isManualExpiry ? 'Use Smart List' : 'Pick Manually'}
+                      </button>
+                    </div>
+                    {isManualExpiry ? (
+                      <Input
+                        type="date"
+                        value={form.expiryDate}
+                        onChange={(e) => setForm(prev => ({ ...prev, expiryDate: e.target.value }))}
+                        noLabel
+                      />
+                    ) : (
+                      <select
+                        className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
+                        value={form.expiryDate}
+                        onChange={(e) => setForm(prev => ({ ...prev, expiryDate: e.target.value }))}
+                      >
+                        {!form.expiryDate && <option value="">Select Expiry</option>}
+                        {availableExpiries.map((date) => {
+                          const d = new Date(date);
+                          const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+                          return <option key={date} value={date}>{label}</option>;
+                        })}
+                      </select>
+                    )}
                   </div>
-                  <span className="font-mono font-black text-loss text-lg">
-                    {charges ? `-${fmtINR(charges.total)}` : '₹0.00'}
-                  </span>
                 </div>
                 
-                {charges && (
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[10px] font-bold text-text-faint uppercase tracking-tighter">
-                    <div className="flex justify-between"><span>Brokerage</span><span className="font-mono text-text-muted">₹{charges.brokerage.toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>STT</span><span className="font-mono text-text-muted">₹{charges.stt.toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>Exchange</span><span className="font-mono text-text-muted">₹{charges.exchangeTxn.toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>Govt Tax (GST)</span><span className="font-mono text-text-muted">₹{charges.gst.toFixed(2)}</span></div>
-                    <div className="flex justify-between sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-x-8"><span>Other Levies</span><span className="font-mono text-text-muted text-right">₹{(charges.sebi + charges.stampDuty).toFixed(2)}</span></div>
+                {form.underlying && form.expiryDate && form.strikePrice && (
+                  <div className="p-4 bg-accent/5 rounded-2xl border border-accent/20 text-center animate-fade-up">
+                    <span className="text-[10px] text-text-faint font-black uppercase tracking-widest block mb-1">Contract Symbol</span>
+                    <span className="font-mono font-black text-accent text-lg tracking-tight">
+                      {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType)}
+                    </span>
                   </div>
                 )}
-              </div>
 
-              {pnlPreview && (
-                <div className={`p-6 rounded-3xl border-2 flex justify-between items-center animate-fade-up shadow-lg ${
-                  pnlPreview.net >= 0 ? 'bg-profit/10 border-profit/20 shadow-profit/10' : 'bg-loss/10 border-loss/20 shadow-loss/10'
-                }`}>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary opacity-60">Settlement Summary</p>
-                    <p className={`text-2xl sm:text-3xl font-mono font-black tracking-tighter mt-1 truncate ${pnlPreview.net >= 0 ? 'text-profit' : 'text-loss'}`}>
-                      {pnlPreview.net >= 0 ? '+' : ''}{fmtINR(pnlPreview.net, true)}
+                <div className="flex bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+                  <button
+                      type="button"
+                      className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all h-11 ${form.exchange === 'NSE' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
+                      onClick={() => setForm(prev => ({ ...prev, exchange: 'NSE' }))}
+                    >NSE Exchange</button>
+                    <button
+                      type="button"
+                      className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all h-11 ${form.exchange === 'BSE' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
+                      onClick={() => setForm(prev => ({ ...prev, exchange: 'BSE' }))}
+                    >BSE Exchange</button>
+                </div>
+              </div>
+            </FormSection>
+          </div>
+        )}
+
+        {currentStep === 2 && (
+          <>
+            <div className="space-y-6 animate-fade-in">
+              {/* Left Top: Execution Pricing */}
+              <FormSection 
+                title="Execution Pricing" 
+                icon={IconDollar}
+                action={
+                  <div className="flex bg-card-alt p-0.5 rounded-lg border border-border">
+                    {['OPEN', 'CLOSED', 'EXPIRED'].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${
+                          form.status === s
+                            ? s === 'OPEN' ? 'bg-blue-500 text-white shadow-sm' : 
+                              s === 'CLOSED' ? 'bg-profit text-white shadow-sm' : 
+                              'bg-slate-500 text-white shadow-sm'
+                            : 'text-text-faint hover:text-text-muted'
+                        }`}
+                        onClick={() => setForm(prev => ({ ...prev, status: s, exitPrice: s === 'EXPIRED' ? '0' : prev.exitPrice }))}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                }
+              >
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input label="Entry Price *" type="number" step="0.05" prefix="₹" value={form.entryPrice} onChange={(e) => setForm(prev => ({ ...prev, entryPrice: e.target.value }))} />
+                    <Input label="Entry Date *" type="date" value={form.entryDate} onChange={(e) => setForm(prev => ({ ...prev, entryDate: e.target.value }))} />
+                  </div>
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50 ${form.status === 'OPEN' ? 'opacity-40' : ''}`}>
+                    <Input 
+                      label="Exit Price" 
+                      type="number" 
+                      step="0.05" 
+                      prefix="₹" 
+                      value={form.exitPrice} 
+                      onChange={(e) => setForm(prev => ({ ...prev, exitPrice: e.target.value }))} 
+                      disabled={form.status === 'OPEN' || form.status === 'EXPIRED'} 
+                    />
+                    <Input 
+                      label="Exit Date" 
+                      type="date" 
+                      value={form.exitDate} 
+                      onChange={(e) => setForm(prev => ({ ...prev, exitDate: e.target.value }))} 
+                      disabled={form.status === 'OPEN'} 
+                    />
+                  </div>
+                  {form.status !== 'OPEN' && (
+                    <div className="space-y-1.5 animate-fade-in">
+                      <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider ml-1">Exit Reason</label>
+                      <select
+                        className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
+                        value={form.exitReason}
+                        onChange={(e) => setForm(prev => ({ ...prev, exitReason: e.target.value }))}
+                      >
+                        <option value="">Select Reason</option>
+                        <option value="TARGET_HIT">Target Hit 🎯</option>
+                        <option value="STOPLOSS_HIT">Stop Loss Hit 🛑</option>
+                        <option value="MANUAL_EXIT">Manual Exit 🚪</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </FormSection>
+
+              {/* Left Bottom: Sizing (Removed Stop Loss/Target) */}
+              <FormSection title="Position Sizing" icon={IconRefresh}>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label="Lot Size *" type="number" value={form.lotSize} onChange={(e) => setForm(prev => ({ ...prev, lotSize: e.target.value }))} />
+                    <Input label="Lots *" type="number" value={form.quantity} onChange={(e) => setForm(prev => ({ ...prev, quantity: e.target.value }))} />
+                  </div>
+                  <div className="p-4 bg-card-alt rounded-xl border border-border flex justify-between items-center">
+                    <span className="text-[10px] font-black text-text-faint uppercase">Position Exposure</span>
+                    <span className="text-xs font-black">{(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0)} Units</span>
+                  </div>
+                </div>
+              </FormSection>
+            </div>
+
+            <div className="space-y-6 animate-fade-in">
+              {/* Right Column: Settlement Realization with Detailed Taxes */}
+              <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                <div className="px-5 py-3 bg-card-alt/20 border-b border-border flex justify-between items-center">
+                  <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Settlement Realization</span>
+                  {pnlPreview && <Badge type={pnlPreview.net >= 0 ? 'BUY' : 'SELL'} className="text-[9px]">{pnlPreview.net >= 0 ? 'PROFIT' : 'LOSS'}</Badge>}
+                </div>
+                
+                <div className="p-6 space-y-8">
+                  {pnlPreview ? (
+                    <div className="text-center pb-8 border-b border-border/50">
+                      <p className="text-[10px] font-bold text-text-faint uppercase tracking-widest mb-2">Net Realized P&L</p>
+                      <p className={`text-4xl font-mono font-black tracking-tighter ${pnlPreview.net >= 0 ? 'text-profit' : 'text-loss'}`}>
+                        {pnlPreview.net >= 0 ? '+' : ''}{fmtINR(pnlPreview.net, true)}
+                      </p>
+                      <p className="text-[10px] font-bold text-text-muted mt-2 uppercase tracking-tighter">
+                        Gross: <span className={pnlPreview.gross >= 0 ? 'text-profit' : 'text-loss'}>{fmtINR(pnlPreview.gross)}</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-10 border-b border-border/50 opacity-30">
+                      <IconDollar className="w-8 h-8 mx-auto mb-2 text-text-faint" />
+                      <p className="text-[10px] font-black uppercase text-text-faint tracking-widest">Awaiting Execution</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <h5 className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">Friction Costs Breakdown</h5>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-[11px] font-bold uppercase">
+                        <span className="text-text-faint tracking-tight">Brokerage (Flat)</span>
+                        <span className="text-text-primary font-mono">₹{(charges?.brokerage || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] font-bold uppercase">
+                        <span className="text-text-faint tracking-tight">GST (18% on Bkrg+Exc+SEBI)</span>
+                        <span className="text-text-primary font-mono">₹{(charges?.gst || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] font-bold uppercase">
+                        <span className="text-text-faint tracking-tight">Exchange Txn Charges</span>
+                        <span className="text-text-primary font-mono">₹{(charges?.exchangeTxn || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] font-bold uppercase">
+                        <span className="text-text-faint tracking-tight">SEBI Turnover Fees</span>
+                        <span className="text-text-primary font-mono">₹{(charges?.sebi || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] font-bold uppercase">
+                        <span className="text-text-faint tracking-tight">STT (on SELL turnover)</span>
+                        <span className="text-text-primary font-mono">₹{(charges?.stt || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] font-bold uppercase">
+                        <span className="text-text-faint tracking-tight">Stamp Duty (on BUY turnover)</span>
+                        <span className="text-text-primary font-mono">₹{(charges?.stampDuty || 0).toFixed(2)}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center pt-3 border-t border-border/50 text-[11px] font-black uppercase text-loss">
+                        <span className="tracking-widest">Total Transaction Fees</span>
+                        <span className="font-mono">-{fmtINR(charges?.total || 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-accent/5 rounded-xl border border-accent/10">
+                    <p className="text-[9px] font-bold text-accent/60 uppercase tracking-widest text-center leading-relaxed">
+                      Calculated using 2026 {form.exchange} Regulatory Norms
                     </p>
                   </div>
-                  <div className="text-right space-y-1 ml-4">
-                    <p className="text-[10px] font-black uppercase text-text-primary whitespace-nowrap">GROSS: {pnlPreview.gross.toFixed(2)}</p>
-                    <p className="text-[10px] font-black uppercase text-text-faint whitespace-nowrap">FEES: -{charges?.total.toFixed(2)}</p>
-                  </div>
                 </div>
-              )}
-            </div>
-          </FormSection>
-
-          {/* Strategy Section */}
-          <FormSection title="Strategy & Categorization" icon={IconPlus} accent="amber">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Select Strategy</label>
-                  <select
-                    className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
-                    value={form.strategy}
-                    onChange={(e) => setForm({ ...form, strategy: e.target.value })}
-                  >
-                    <option value="">No Strategy</option>
-                    {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <Input
-                  label="Search Tags"
-                  placeholder="expiry, scalp, volatile..."
-                  value={form.tags}
-                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                />
               </div>
-              <Input
-                as="textarea"
-                label="Observation Journal"
-                placeholder="Market context, trade rationale, exit logic, etc."
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            </div>
+          </>
+        )}
+
+        {currentStep === 3 && (
+          <>
+            <div className="space-y-6 animate-fade-in">
+              <FormSection title="Categorization" icon={IconPlus}>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Strategy</label>
+                    <select
+                      className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold"
+                      value={form.strategy}
+                      onChange={(e) => setForm(prev => ({ ...prev, strategy: e.target.value }))}
+                    >
+                      <option value="">No Strategy</option>
+                      {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <Input label="Tags" placeholder="scalp, expiry..." value={form.tags} onChange={(e) => setForm(prev => ({ ...prev, tags: e.target.value }))} />
+                  <Input as="textarea" label="Journal Notes" value={form.notes} onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))} className="min-h-[120px]" />
+                </div>
+              </FormSection>
+            </div>
+
+            <div className="animate-fade-in">
+              <PsychologySection
+                data={psychology}
+                onChange={(val) => setPsychology(prev => ({ ...prev, ...val }))}
+                required
               />
             </div>
-          </FormSection>
-        </div>
+          </>
+        )}
       </div>
 
-      {/* Psychology */}
-      <PsychologySection
-        data={psychology}
-        onChange={(val) => setPsychology({ ...psychology, ...val })}
-        required
-      />
-
       {/* Action Bar */}
-      <div className="hidden sm:block">
-        <Button variant="primary" className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-glow-blue" type="submit" loading={loading}>
-          Confirm & Log Trade
-        </Button>
+      <div className="hidden sm:flex gap-4 pt-4 border-t border-border/50">
+        {currentStep > 1 && (
+          <Button type="button" variant="ghost" className="flex-1 h-12 font-black uppercase tracking-widest border border-border" onClick={() => setCurrentStep(prev => prev - 1)}>Back</Button>
+        )}
+        {currentStep < 3 ? (
+          <Button 
+            type="button"
+            variant="primary" 
+            className="flex-[2] h-12 font-black uppercase tracking-widest shadow-glow-blue" 
+            onClick={handleNext}
+          >
+            Continue
+          </Button>
+        ) : (
+          <Button variant="primary" className="flex-[2] h-12 font-black uppercase tracking-widest shadow-glow-blue" type="submit" loading={loading}>Log Trade</Button>
+        )}
       </div>
 
       {/* Mobile Sticky Bar */}
       <div className="sm:hidden fixed bottom-[58px] left-0 right-0 p-3 bg-card/95 backdrop-blur-xl border-t border-border z-40 flex gap-3">
-        <Button variant="ghost" className="flex-1 h-12 rounded-2xl text-text-muted font-black uppercase text-xs" onClick={() => navigate('/trades')}>Cancel</Button>
-        <Button variant="primary" className="flex-[2] h-12 rounded-2xl shadow-glow-blue font-black uppercase text-xs" type="submit" loading={loading}>Log Trade</Button>
+        {currentStep > 1 ? (
+          <Button type="button" variant="ghost" className="flex-1 h-12 rounded-xl text-text-muted font-black uppercase text-xs" onClick={() => setCurrentStep(prev => prev - 1)}>Back</Button>
+        ) : (
+          <Button type="button" variant="ghost" className="flex-1 h-12 rounded-xl text-text-muted font-black uppercase text-xs" onClick={() => navigate('/trades')}>Cancel</Button>
+        )}
+        {currentStep < 3 ? (
+          <Button type="button" variant="primary" className="flex-[2] h-12 rounded-xl shadow-glow-blue font-black uppercase text-xs" onClick={handleNext}>Next</Button>
+        ) : (
+          <Button variant="primary" className="flex-[2] h-12 rounded-xl shadow-glow-blue font-black uppercase text-xs" type="submit" loading={loading}>Log Trade</Button>
+        )}
       </div>
     </form>
   );
@@ -826,7 +979,7 @@ function CSVImportTab() {
             </div>
             <button
               type="button"
-              onClick={() => setPsychEnabled(!psychEnabled)}
+              onClick={() => setPsychEnabled(prev => !prev)}
               className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                 psychEnabled ? 'bg-accent text-white shadow-glow-blue' : 'bg-card border border-border text-text-faint'
               }`}
@@ -838,7 +991,7 @@ function CSVImportTab() {
           {psychEnabled && (
             <PsychologySection
               data={psychology}
-              onChange={(val) => setPsychology({ ...psychology, ...val })}
+              onChange={(val) => setPsychology(prev => ({ ...prev, ...val }))}
             />
           )}
         </div>
@@ -906,16 +1059,16 @@ function BrokerAPITab() {
           <Badge type="OPEN" className="lowercase font-mono text-[10px]">dhan.co/api</Badge>
         </div>
         <div className="p-8 space-y-6">
-          <Input label="Client ID" value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} placeholder="Your 10-digit ID" />
+          <Input label="Client ID" value={form.clientId} onChange={(e) => setForm(prev => ({ ...prev, clientId: e.target.value }))} placeholder="Your 10-digit ID" />
           <div className="relative">
             <Input
               label="Access Token"
               type={showToken ? 'text' : 'password'}
               value={form.accessToken}
-              onChange={(e) => setForm({ ...form, accessToken: e.target.value })}
+              onChange={(e) => setForm(prev => ({ ...prev, accessToken: e.target.value }))}
               placeholder="Paste your active session token"
               suffix={
-                <button type="button" onClick={() => setShowToken(!showToken)} className="text-text-faint hover:text-accent">
+                <button type="button" onClick={() => setShowToken(prev => !prev)} className="text-text-faint hover:text-accent">
                   {showToken ? <IconEyeOff className="w-4 h-4" /> : <IconEye className="w-4 h-4" />}
                 </button>
               }
@@ -934,8 +1087,8 @@ function BrokerAPITab() {
         <FormSection title="Sync Window" icon={IconCalendar}>
            <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <Input label="From Date" type="date" value={form.fromDate} onChange={(e) => setForm({ ...form, fromDate: e.target.value })} />
-                <Input label="To Date" type="date" value={form.toDate} onChange={(e) => setForm({ ...form, toDate: e.target.value })} />
+                <Input label="From Date" type="date" value={form.fromDate} onChange={(e) => setForm(prev => ({ ...prev, fromDate: e.target.value }))} />
+                <Input label="To Date" type="date" value={form.toDate} onChange={(e) => setForm(prev => ({ ...prev, toDate: e.target.value }))} />
               </div>
               <div className="flex flex-wrap gap-2">
                 {[7, 30, 90].map(days => (
@@ -945,7 +1098,7 @@ function BrokerAPITab() {
                     className="px-4 py-2 rounded-xl bg-card-alt border border-border text-[10px] font-black uppercase tracking-widest hover:border-accent hover:text-accent transition-all"
                     onClick={() => {
                       const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                      setForm({ ...form, fromDate: from, toDate: new Date().toISOString().split('T')[0] });
+                      setForm(prev => ({ ...prev, fromDate: from, toDate: new Date().toISOString().split('T')[0] }));
                     }}
                   >
                     {days} Days
@@ -960,7 +1113,7 @@ function BrokerAPITab() {
             <span className="text-xs font-black uppercase tracking-widest text-text-secondary">Apply Psychology?</span>
             <button
               type="button"
-              onClick={() => setPsychEnabled(!psychEnabled)}
+              onClick={() => setPsychEnabled(prev => !prev)}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
                 psychEnabled ? 'bg-accent text-white shadow-glow-blue' : 'bg-card border border-border text-text-faint'
               }`}
@@ -970,7 +1123,7 @@ function BrokerAPITab() {
           </div>
           {psychEnabled && (
             <div className="mt-6 border-t border-border pt-6">
-              <PsychologySection data={psychology} onChange={(val) => setPsychology({ ...psychology, ...val })} />
+              <PsychologySection data={psychology} onChange={(val) => setPsychology(prev => ({ ...prev, ...val }))} />
             </div>
           )}
         </FormSection>
@@ -987,29 +1140,30 @@ export default function AddTrade() {
   const [activeTab, setActiveTab] = useState('manual');
 
   const tabs = [
-    { id: 'manual', label: 'Manual Entry' },
-    { id: 'csv', label: 'Import CSV' },
-    { id: 'broker', label: 'Broker API' },
+    { id: 'manual', label: 'Manual' },
+    { id: 'csv', label: 'CSV' },
+    { id: 'broker', label: 'API' },
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fade-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-black font-heading tracking-tight text-text-primary">Log Activity</h1>
-          <p className="text-sm font-medium text-text-faint mt-1 uppercase tracking-widest">Select your preferred recording method</p>
+    <div className="max-w-4xl mx-auto space-y-3 animate-fade-up">
+      <div className="flex items-center justify-between border-b border-border/50 pb-2">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xs font-black uppercase tracking-[0.2em] text-text-faint">Log Activity</h1>
+          <div className="h-3 w-px bg-border" />
+          <p className="text-[10px] font-bold text-text-muted uppercase tracking-tight">Trading Journal</p>
         </div>
+
+        <TabBar
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          variant="pills"
+          className="bg-card-alt p-0.5 rounded-lg border border-border w-fit h-7 text-[10px]"
+        />
       </div>
 
-      <TabBar
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        variant="pills"
-        className="bg-card-alt p-1.5 rounded-2xl border border-border w-fit"
-      />
-
-      <div className="mt-8">
+      <div className="mt-1">
         {activeTab === 'manual' && <ManualEntryTab />}
         {activeTab === 'csv' && <CSVImportTab />}
         {activeTab === 'broker' && <BrokerAPITab />}

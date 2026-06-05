@@ -1,11 +1,9 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { IconCalendar, IconRisk, IconPsychology, IconExport, IconProfile, IconAdmin } from '../ui/Icons';
+import { IconCalendar, IconRisk, IconPsychology, IconExport, IconProfile } from '../ui/Icons';
 
 const MobileMoreSheet = ({ isOpen, onClose }) => {
-  const { isAdmin } = useAuthStore();
-
   if (!isOpen) return null;
 
   const moreItems = [
@@ -15,10 +13,6 @@ const MobileMoreSheet = ({ isOpen, onClose }) => {
     { name: 'Export', path: '/export', icon: IconExport },
     { name: 'Profile', path: '/profile', icon: IconProfile },
   ];
-
-  if (isAdmin()) {
-    moreItems.push({ name: 'Admin', path: '/admin', icon: IconAdmin });
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end animate-fade-in">

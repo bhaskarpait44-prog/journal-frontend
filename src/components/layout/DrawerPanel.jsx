@@ -4,11 +4,11 @@ import { useAuthStore } from '../../store/authStore';
 import { 
   IconDashboard, IconTrades, IconAddTrade, IconAnalytics, 
   IconCalendar, IconRisk, IconPsychology, IconExport, 
-  IconAdmin, IconProfile, IconLogout, IconArrowUp, IconClose
+  IconProfile, IconLogout, IconArrowUp, IconClose
 } from '../ui/Icons';
 
 const DrawerPanel = ({ isOpen, onClose }) => {
-  const { user, logout, isAdmin } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
   const mainItems = [
@@ -103,26 +103,6 @@ const DrawerPanel = ({ isOpen, onClose }) => {
             <p className="px-4 mb-3 text-[10px] font-bold text-text-faint uppercase tracking-widest">Tools & Analysis</p>
             <nav className="space-y-1">
               {toolItems.map((item) => <NavItem key={item.path} item={item} />)}
-              {isAdmin() && (
-                <NavLink
-                  to="/admin"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-150 ${
-                      isActive
-                        ? 'bg-purple/8 text-purple font-semibold border-l-4 border-purple rounded-l-none'
-                        : 'text-text-muted hover:bg-card-alt hover:text-text-primary'
-                    }`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <IconAdmin className={`w-5 h-5 transition-colors ${isActive ? 'text-purple' : 'text-text-faint group-hover:text-text-muted'}`} strokeWidth={isActive ? 2.5 : 2} />
-                      <span className="text-base">Admin Panel</span>
-                    </>
-                  )}
-                </NavLink>
-              )}
             </nav>
           </div>
         </div>
