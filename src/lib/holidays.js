@@ -86,6 +86,14 @@ export function getPreviousTradingDay(dateString) {
   }
 }
 
+export const getTargetDayInMonth = (year, month, target) => {
+  const d = new Date(year, month + 1, 0); // Last day
+  let diff = d.getDay() - target;
+  if (diff < 0) diff += 7;
+  d.setDate(d.getDate() - diff);
+  return d.toISOString().split('T')[0];
+};
+
 /**
  * Generates all valid exchange expiries for a symbol:
  * - Weekly (Benchmark indices)
@@ -95,37 +103,33 @@ export function getPreviousTradingDay(dateString) {
  */
 export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
   const sym = symbol.toUpperCase();
-  const date = new Date(fromDate);
   const expiries = new Set();
-
   const WEEKLY_INDICES = ['NIFTY', 'SENSEX'];
   const NSE_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'];
   const targetDay = NSE_INDICES.includes(sym) ? 2 : 4; // 2=Tue, 4=Thu
 
-  const getTargetDayInMonth = (year, month, target) => {
-    const d = new Date(year, month + 1, 0); // Last day
-    let diff = d.getDay() - target;
-    if (diff < 0) diff += 7;
-    d.setDate(d.getDate() - diff);
-    return d.toISOString().split('T')[0];
-  };
+  const todayStr = fromDate.toISOString().split('T')[0];
 
-  // 1. Weekly (If applicable)
-  if (WEEKLY_INDICES.includes(sym)) {
-    let d = new Date(date);
+  // 1. Weekly (If applicable) - Add next 5 weeklies
+  if (WEEKLY_INDICES.includes(sym) || ['BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'].includes(sym)) {
+    let d = new Date(fromDate);
     let diff = targetDay - d.getDay();
     if (diff < 0) diff += 7;
     d.setDate(d.getDate() + diff);
-    expiries.add(d.toISOString().split('T')[0]);
+    
+    for (let i = 0; i < 5; i++) {
+      const temp = new Date(d);
+      temp.setDate(temp.getDate() + (i * 7));
+      expiries.add(temp.toISOString().split('T')[0]);
+    }
   }
 
   // 2. Next 3 Monthly Expiries
   for (let i = 0; i < 3; i++) {
-    const m = date.getMonth() + i;
-    const y = date.getFullYear();
+    const m = fromDate.getMonth() + i;
+    const y = fromDate.getFullYear();
     const exp = getTargetDayInMonth(y, m, targetDay);
-    // Only add if it hasn't passed (for current month)
-    if (new Date(exp) >= new Date(date.toISOString().split('T')[0])) {
+    if (exp >= todayStr) {
       expiries.add(exp);
     }
   }
@@ -136,9 +140,9 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
   let yearOffset = 0;
   while (qCount < 3) {
     for (const qMonth of quarters) {
-      const qYear = date.getFullYear() + yearOffset;
+      const qYear = fromDate.getFullYear() + yearOffset;
       const exp = getTargetDayInMonth(qYear, qMonth, targetDay);
-      if (new Date(exp) >= new Date(date.toISOString().split('T')[0]) && qCount < 3) {
+      if (exp >= todayStr && qCount < 3) {
         if (!expiries.has(exp)) {
           expiries.add(exp);
           qCount++;
@@ -154,7 +158,7 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
   let lYearOffset = 1;
   while (lCount < 2) {
     for (const lMonth of longTerms) {
-      const lYear = date.getFullYear() + lYearOffset;
+      const lYear = fromDate.getFullYear() + lYearOffset;
       const exp = getTargetDayInMonth(lYear, lMonth, targetDay);
       if (!expiries.has(exp)) {
         expiries.add(exp);

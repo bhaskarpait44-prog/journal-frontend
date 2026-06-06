@@ -9,6 +9,8 @@ export function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
 }
 
+import { getTargetDayInMonth } from './holidays';
+
 export function buildSymbol(underlying, expiry, strike, optionType) {
   if (!underlying || !expiry || !strike || !optionType) return '';
   const d = new Date(expiry);
@@ -19,19 +21,11 @@ export function buildSymbol(underlying, expiry, strike, optionType) {
   const monthCodes = ['1','2','3','4','5','6','7','8','9','O','N','D'];
   const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
-  // Check if it's likely a monthly expiry (last week of month)
-  // Simple heuristic: if day > 24 and next week is a different month, it's a monthly.
-  // Actually, standard NSE logic: Monthlies use 3-letter MMM. Weeklies use 1-char M + DD.
+  const NSE_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'];
+  const targetDay = NSE_INDICES.includes(underlying) ? 2 : 4; // 2=Tue, 4=Thu
   
-  // We determine monthly vs weekly by checking if it's the last target day of the month.
-  // For simplicity and 90% accuracy in this context, we can check if it's a monthly based on the date provided.
-  // But a better way is to see if it's the last Thursday (or whatever the targetDay is).
-  
-  // Actually, most brokers use the 3-letter format for everything or the M-DD format for everything except monthlies.
-  // Let's implement the standard NSE format:
-  
-  const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  const isMonthly = (lastDayOfMonth - day) < 7; 
+  const lastTargetDay = getTargetDayInMonth(d.getFullYear(), d.getMonth(), targetDay);
+  const isMonthly = expiry === lastTargetDay;
 
   if (isMonthly) {
     return `${underlying}${year}${monthNames[monthIdx]}${strike}${optionType}`;

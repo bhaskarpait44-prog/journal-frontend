@@ -318,18 +318,21 @@ function ManualEntryTab() {
 
   const safeSetUnderlying = (symbol, lotSize, exchange) => {
     const hasData = form.strikePrice || form.entryPrice || form.exitPrice;
-    if (hasData && form.underlying && form.underlying !== symbol) {
-      if (!window.confirm('Changing the underlying asset will reset your execution pricing. Continue?')) {
+    const isDifferent = form.underlying !== symbol || (lotSize && parseInt(form.lotSize) !== parseInt(lotSize));
+    
+    if (hasData && form.underlying && isDifferent) {
+      if (!window.confirm('Changing the asset or lot size will reset your execution pricing. Continue?')) {
         return;
       }
     }
 
     const autoExchange = exchange || (['SENSEX', 'BANKEX'].includes(symbol) ? 'BSE' : 'NSE');
+    const finalLotSize = lotSize || form.lotSize;
     
     setForm(prev => ({ 
       ...prev, 
       underlying: symbol, 
-      lotSize: lotSize || prev.lotSize,
+      lotSize: finalLotSize,
       exchange: autoExchange,
       strikePrice: '',
       entryPrice: '',
@@ -500,10 +503,7 @@ function ManualEntryTab() {
             <div key={t.name} className="flex items-center bg-card border border-border rounded-lg pl-3 pr-1 py-1">
               <button
                 type="button"
-                onClick={() => {
-                  setForm(prev => ({ ...prev, underlying: t.underlying, lotSize: t.lotSize, optionType: t.optionType, exchange: t.exchange, strategy: t.strategy || prev.strategy }));
-                  setSearch(t.underlying);
-                }}
+                onClick={() => safeSetUnderlying(t.underlying, t.lotSize, t.exchange)}
                 className="text-xs font-bold text-text-primary hover:text-accent mr-2"
               >
                 {t.name}
@@ -563,12 +563,18 @@ function ManualEntryTab() {
                       const val = e.target.value.toUpperCase();
                       setSearch(val);
                       
-                      // Find if it's a known symbol to auto-set lot size
+                      // Find if it's a known symbol
                       const match = nseSymbols.find(s => s.symbol === val);
                       if (match) {
                         safeSetUnderlying(val, match.lotSize);
                       } else {
-                        setForm(prev => ({ ...prev, underlying: val }));
+                        // Reset contract-specific fields for custom symbol
+                        setForm(prev => ({ 
+                          ...prev, 
+                          underlying: val,
+                          strikePrice: '',
+                          expiryDate: '' 
+                        }));
                       }
                       
                       setShowDropdown(true);
@@ -767,7 +773,15 @@ function ManualEntryTab() {
               <FormSection title="Position Sizing" icon={IconRefresh}>
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <Input label="Lot Size *" type="number" value={form.lotSize} onChange={(e) => setForm(prev => ({ ...prev, lotSize: e.target.value }))} />
+                    <div className="space-y-1">
+                      <Input label="Lot Size *" type="number" value={form.lotSize} onChange={(e) => setForm(prev => ({ ...prev, lotSize: e.target.value }))} />
+                      {form.underlying && nseSymbols.find(s => s.symbol === form.underlying) && 
+                       parseInt(form.lotSize) !== nseSymbols.find(s => s.symbol === form.underlying).lotSize && (
+                        <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight ml-1 animate-pulse">
+                          ⚠ Mismatch (Std: {nseSymbols.find(s => s.symbol === form.underlying).lotSize})
+                        </p>
+                      )}
+                    </div>
                     <Input label="Lots *" type="number" value={form.quantity} onChange={(e) => setForm(prev => ({ ...prev, quantity: e.target.value }))} />
                   </div>
                   <div className="p-4 bg-card-alt rounded-xl border border-border flex justify-between items-center">
