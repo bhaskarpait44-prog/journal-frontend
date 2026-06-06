@@ -520,8 +520,8 @@ const Analytics = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <span className={`text-xs font-black ${item.profitFactor >= 1.5 ? 'text-profit' : item.profitFactor >= 1 ? 'text-accent' : 'text-loss'}`}>
-                          {item.profitFactor.toFixed(2)}
+                        <span className={`text-xs font-black ${item.profitFactor === null || item.profitFactor >= 1.5 ? 'text-profit' : item.profitFactor >= 1 ? 'text-accent' : 'text-loss'}`}>
+                          {item.profitFactor === null ? '∞' : item.profitFactor.toFixed(2)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
