@@ -51,6 +51,7 @@ const Analytics = () => {
   });
 
   const [showCustom, setShowCustom] = useState(period.mode === 'custom');
+  const [selectedStrategy, setSelectedStrategy] = useState('');
 
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(period));
@@ -73,12 +74,14 @@ const Analytics = () => {
     return Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
   }, [from, to]);
 
+  const strategyParam = selectedStrategy ? `&strategy=${encodeURIComponent(selectedStrategy)}` : '';
+
   // Data Fetching
-  const { data: summary, loading: summaryLoading } = useApi(`/analytics/summary?from=${from}&to=${to}`);
-  const { data: chartData, loading: chartLoading } = useApi(`/analytics/pnl-chart?days=${daysDiff}&from=${from}&to=${to}`);
-  const { data: symbolData, loading: symbolLoading } = useApi('/analytics/by-symbol');
+  const { data: summary, loading: summaryLoading } = useApi(`/analytics/summary?from=${from}&to=${to}${strategyParam}`);
+  const { data: chartData, loading: chartLoading } = useApi(`/analytics/pnl-chart?days=${daysDiff}&from=${from}&to=${to}${strategyParam}`);
+  const { data: symbolData, loading: symbolLoading } = useApi(`/analytics/by-symbol?${strategyParam.slice(1)}`);
   const { data: strategyData, loading: strategyLoading } = useApi('/analytics/by-strategy');
-  const { data: deepData, loading: deepLoading } = useApi(`/analytics/deep?from=${from}&to=${to}`);
+  const { data: deepData, loading: deepLoading } = useApi(`/analytics/deep?from=${from}&to=${to}${strategyParam}`);
 
   const chartPoints = chartData?.chartData ?? [];
 
@@ -136,9 +139,22 @@ const Analytics = () => {
     <div className="space-y-6 sm:space-y-8 animate-fade-up pb-12">
       {/* Header & Filter */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black font-heading tracking-tight text-text-primary">Performance Analysis</h1>
-          <p className="text-sm font-medium text-text-faint mt-1 uppercase tracking-widest leading-tight">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-black font-heading tracking-tight text-text-primary">Performance Analysis</h1>
+            {selectedStrategy && (
+              <Badge type="OPEN" className="bg-accent/10 text-accent border-accent/20 flex items-center gap-2 pr-1.5 py-1">
+                {selectedStrategy}
+                <button 
+                  onClick={() => setSelectedStrategy('')}
+                  className="hover:bg-accent/20 rounded-md p-0.5 transition-colors"
+                >
+                  <IconPlus className="w-3 h-3 rotate-45" />
+                </button>
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm font-medium text-text-faint uppercase tracking-widest leading-tight">
              Window: <span className="text-accent font-black">{fmtDate(from)}</span> — <span className="text-accent font-black">{fmtDate(to)}</span>
           </p>
         </div>
@@ -172,13 +188,45 @@ const Analytics = () => {
       </div>
 
       {/* Primary Metric Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
         <MetricCard label="Net Result" value={fmtINR(summary?.totalPnl || 0, true)} sub={`${summary?.totalTrades || 0} trades`} icon={IconDollar} color={summary?.totalPnl >= 0 ? 'text-profit' : 'text-loss'} />
         <MetricCard label="Hit Rate" value={`${(summary?.winRate || 0).toFixed(1)}%`} sub={`${summary?.winners || 0}W / ${summary?.losers || 0}L`} icon={IconCheck} color="text-accent" />
         <MetricCard label="Profit Factor" value={(summary?.profitFactor || 0).toFixed(2)} sub="Gross W/L" icon={IconAnalytics} color="text-purple" />
-        <MetricCard label="Efficiency" value={fmtINR(summary?.expectancy || 0, true)} sub="Avg. result" icon={IconRefresh} color={summary?.expectancy >= 0 ? 'text-profit' : 'text-loss'} />
+        <MetricCard label="Expectancy" value={fmtINR(summary?.expectancy || 0, true)} sub="Avg. per trade" icon={IconRefresh} color={summary?.expectancy >= 0 ? 'text-profit' : 'text-loss'} />
+        <MetricCard label="Kelly %" value={`${summary?.kellyPct || 0}%`} sub="Optimal Size" icon={IconSearch} color="text-amber-500" />
         <MetricCard label="Drawdown" value={(summary?.recoveryFactor || 0).toFixed(2)} sub="Recovery" icon={IconArrowDown} color="text-amber-500" />
       </div>
+
+      {/* Sizing & Capital Allocation Card */}
+      {summary?.kellyPct > 0 && (
+        <Card variant="flat" className="bg-accent/5 border-accent/20 border-dashed">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-1">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent shrink-0">
+                 <IconRefresh className="w-6 h-6" strokeWidth={2.5} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-tight text-text-primary">Capital Allocation Intelligence</h4>
+                <p className="text-[10px] font-bold text-text-faint uppercase tracking-wider mt-0.5">Based on your historical win rate & risk/reward dynamics</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+               <div className="px-4 py-2 rounded-xl bg-card border border-border flex flex-col">
+                  <span className="text-[8px] font-black text-text-faint uppercase">Kelly Full</span>
+                  <span className="text-sm font-black text-accent">{summary.kellyPct}%</span>
+               </div>
+               <div className="px-4 py-2 rounded-xl bg-card border border-border flex flex-col">
+                  <span className="text-[8px] font-black text-text-faint uppercase">Half Kelly</span>
+                  <span className="text-sm font-black text-profit">{(summary.kellyPct / 2).toFixed(1)}%</span>
+               </div>
+               <div className="px-4 py-3 rounded-xl bg-accent text-white flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase">Recommended Risk:</span>
+                  <span className="text-sm font-black">≤ {Math.min(5, summary.kellyPct / 2).toFixed(1)}% / trade</span>
+               </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="flex items-center gap-3 -my-2">
         <div className="h-px flex-1 bg-border/50" />
@@ -199,8 +247,8 @@ const Analytics = () => {
         <Card className="lg:col-span-2 p-0 overflow-hidden" variant="default">
            <div className="px-6 py-5 border-b border-border flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-text-primary text-sm sm:text-base">Daily Performance</h3>
-                <p className="text-[10px] text-text-faint font-medium mt-0.5">Individual session results</p>
+                <h3 className="font-bold text-text-primary text-sm sm:text-base uppercase tracking-tight">Daily Performance</h3>
+                <p className="text-[10px] text-text-faint font-bold uppercase mt-0.5">Individual session results</p>
               </div>
               <div className="text-right hidden sm:block">
                 <span className="text-sm font-black font-mono text-text-secondary">{summary?.winners + summary?.losers} active days</span>
@@ -241,9 +289,9 @@ const Analytics = () => {
         </Card>
 
         <Card padding="p-0" className="flex flex-col overflow-hidden" variant="default">
-           <div className="px-6 py-5 border-b border-border">
-              <h3 className="font-bold text-text-primary text-sm sm:text-base">Win / Loss Mix</h3>
-              <p className="text-[10px] text-text-faint font-medium mt-0.5">Distribution of outcomes</p>
+           <div className="px-6 py-5 border-b border-border bg-card-alt/20">
+              <h3 className="font-bold text-text-primary text-sm sm:text-base uppercase tracking-tight">Win / Loss Mix</h3>
+              <p className="text-[10px] text-text-faint font-bold uppercase mt-0.5">Distribution of outcomes</p>
            </div>
            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8">
               {!hasData ? <EmptyState icon={IconCheck} title="No Data" /> : (
@@ -287,55 +335,100 @@ const Analytics = () => {
         </Card>
       </div>
 
-      {/* Cumulative Equity Curve */}
-      <Card padding="p-0" className="overflow-hidden" variant="default">
-        <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-card-alt/30">
-          <div>
-            <h3 className="font-bold text-text-primary text-sm sm:text-base">Equity Growth</h3>
-            <p className="text-[10px] text-text-faint font-medium mt-0.5">Portfolio trajectory</p>
+      {/* Cumulative Equity Curve & Drawdown */}
+      <div className="grid grid-cols-1 gap-8">
+        <Card padding="p-0" className="overflow-hidden" variant="default">
+          <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-card-alt/30">
+            <div>
+              <h3 className="font-bold text-text-primary text-sm sm:text-base uppercase tracking-tight">Equity Curve</h3>
+              <p className="text-[10px] text-text-faint font-bold uppercase mt-0.5">Cumulative portfolio results</p>
+            </div>
+            <PnlSpan value={summary?.totalPnl} className="text-lg sm:text-xl font-black" />
           </div>
-          <PnlSpan value={summary?.totalPnl} className="text-lg sm:text-xl font-black" />
-        </div>
-        <div className="h-[200px] sm:h-[280px] w-full p-4 sm:p-6">
-          {!hasData ? <EmptyState icon={IconAnalytics} title="No Data" /> : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={processedChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="cumPnlGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={summary?.totalPnl >= 0 ? chartTheme.profit : chartTheme.loss} stopOpacity={0.15}/>
-                    <stop offset="95%" stopColor={summary?.totalPnl >= 0 ? chartTheme.profit : chartTheme.loss} stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTheme.grid} />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={(val) => new Date(val).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                  tick={{ fill: chartTheme.text, fontSize: 10, fontWeight: 600 }}
-                  axisLine={false}
-                  tickLine={false}
-                  hide={window.innerWidth < 640}
-                />
-                <YAxis 
-                  tick={{ fill: chartTheme.text, fontSize: 10, fontWeight: 600 }}
-                  tickFormatter={(val) => Math.abs(val) >= 1000 ? `₹${(val/1000).toFixed(1)}k` : `₹${val}`}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip content={<CumulativeTooltip chartTheme={chartTheme} />} />
-                <Area 
-                  type="monotone" 
-                  dataKey="cumulativePnl"
-                  stroke={summary?.totalPnl >= 0 ? chartTheme.profit : chartTheme.loss} 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#cumPnlGrad)" 
-                />
-                <ReferenceLine y={0} stroke={chartTheme.grid} strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </Card>
+          <div className="h-[240px] sm:h-[320px] w-full p-4 sm:p-6">
+            {!hasData ? <EmptyState icon={IconAnalytics} title="No Data" /> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartPoints} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="cumPnlGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={summary?.totalPnl >= 0 ? chartTheme.profit : chartTheme.loss} stopOpacity={0.15}/>
+                      <stop offset="95%" stopColor={summary?.totalPnl >= 0 ? chartTheme.profit : chartTheme.loss} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTheme.grid} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(val) => new Date(val).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    tick={{ fill: chartTheme.text, fontSize: 10, fontWeight: 600 }}
+                    axisLine={false}
+                    tickLine={false}
+                    hide={window.innerWidth < 640}
+                  />
+                  <YAxis 
+                    tick={{ fill: chartTheme.text, fontSize: 10, fontWeight: 600 }}
+                    tickFormatter={(val) => Math.abs(val) >= 1000 ? `₹${(val/1000).toFixed(1)}k` : `₹${val}`}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CumulativeTooltip chartTheme={chartTheme} />} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="cumulative"
+                    stroke={summary?.totalPnl >= 0 ? chartTheme.profit : chartTheme.loss} 
+                    strokeWidth={3}
+                    fillOpacity={1} 
+                    fill="url(#cumPnlGrad)" 
+                  />
+                  <ReferenceLine y={0} stroke={chartTheme.grid} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </Card>
+
+        {/* Drawdown Curve */}
+        <Card padding="p-0" className="overflow-hidden border-rose-500/20" variant="default">
+          <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-rose-500/5">
+            <div>
+              <h3 className="font-bold text-rose-500 text-sm sm:text-base uppercase tracking-tight">Drawdown Profile</h3>
+              <p className="text-[10px] text-text-faint font-bold uppercase mt-0.5">Capital at risk over time</p>
+            </div>
+            <span className="text-sm font-black font-mono text-rose-500">Max DD: {fmtINR(summary?.maxDrawdown || 0)}</span>
+          </div>
+          <div className="h-[140px] sm:h-[180px] w-full p-4 sm:p-6">
+            {!hasData ? <EmptyState icon={IconArrowDown} title="No Data" /> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartPoints} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="ddGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={chartTheme.loss} stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor={chartTheme.loss} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTheme.grid} />
+                  <XAxis dataKey="date" hide />
+                  <YAxis 
+                    reversed
+                    tick={{ fill: chartTheme.text, fontSize: 10, fontWeight: 600 }}
+                    tickFormatter={(val) => val === 0 ? '0' : `-${Math.abs(val) >= 1000 ? (val/1000).toFixed(1)+'k' : val}`}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<DrawdownTooltip chartTheme={chartTheme} />} />
+                  <Area 
+                    type="stepAfter" 
+                    dataKey="drawdown"
+                    stroke={chartTheme.loss} 
+                    strokeWidth={2}
+                    fillOpacity={1} 
+                    fill="url(#ddGrad)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </Card>
+      </div>
 
       {/* Breakdown Grids */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -379,40 +472,79 @@ const Analytics = () => {
         </Card>
 
         <Card variant="default" padding="p-0" className="overflow-hidden">
-          <div className="px-6 py-5 border-b border-border bg-card-alt/20">
-            <h3 className="font-bold text-text-primary">Performance by Strategy</h3>
-            <p className="text-[10px] text-text-faint font-medium mt-0.5 uppercase tracking-tighter">Systematic edge analysis</p>
+          <div className="px-6 py-5 border-b border-border bg-card-alt/20 flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-text-primary">Performance by Strategy</h3>
+              <p className="text-[10px] text-text-faint font-medium mt-0.5 uppercase tracking-tighter">Systematic edge analysis</p>
+            </div>
+            {selectedStrategy && (
+              <button 
+                onClick={() => setSelectedStrategy('')}
+                className="text-[10px] font-black text-accent uppercase tracking-widest hover:underline"
+              >
+                Clear Filter
+              </button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-card-alt/30 border-b border-border">
                 <tr>
                   <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-text-faint">Strategy Name</th>
-                  <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-text-faint text-right">Win Rate</th>
-                  <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-text-faint text-right">Avg P&L</th>
-                  <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-text-faint text-right">Volume</th>
+                  <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-text-faint text-right">W/L Ratio</th>
+                  <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-text-faint text-right">Profit Factor</th>
+                  <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-text-faint text-right">Avg Win/Loss</th>
+                  <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-text-faint text-right">Max DD</th>
+                  <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-text-faint text-right">R:R (Pl/Act)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
                 {strategyData?.data?.map((item) => {
-                  const winPct = (item.wins / item.totalTrades) * 100;
-                  const avgPnl = item.totalPnl / item.totalTrades;
+                  const isActive = selectedStrategy === item._id;
                   return (
-                    <tr key={item._id} className="hover:bg-card-alt/50 transition-colors group">
-                      <td className="px-6 py-4 font-black text-sm text-text-primary group-hover:text-accent transition-colors">{item._id || 'Unknown'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`text-xs font-black ${winPct >= 50 ? 'text-profit' : 'text-loss'}`}>{winPct.toFixed(0)}%</span>
+                    <tr 
+                      key={item._id} 
+                      className={`hover:bg-card-alt/50 transition-colors group cursor-pointer ${isActive ? 'bg-accent/5' : ''}`}
+                      onClick={() => setSelectedStrategy(item._id)}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className={`font-black text-sm transition-colors ${isActive ? 'text-accent' : 'text-text-primary group-hover:text-accent'}`}>{item._id || 'Unknown'}</span>
+                          <span className="text-[10px] font-bold text-text-faint uppercase">{item.totalTrades} Trades • {item.avgHoldTime}m Hold</span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <PnlSpan value={avgPnl} className="text-xs" />
+                        <div className="flex flex-col items-end">
+                          <span className={`text-xs font-black ${item.winRate >= 50 ? 'text-profit' : 'text-loss'}`}>{item.winRate.toFixed(1)}%</span>
+                          <span className="text-[9px] font-bold text-text-faint uppercase">{item.wins}W - {item.totalTrades - item.wins}L</span>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-right text-xs font-bold text-text-faint">{item.totalTrades}</td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`text-xs font-black ${item.profitFactor >= 1.5 ? 'text-profit' : item.profitFactor >= 1 ? 'text-accent' : 'text-loss'}`}>
+                          {item.profitFactor.toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] font-black text-profit">+{fmtINR(item.avgWin)}</span>
+                          <span className="text-[10px] font-black text-loss">-{fmtINR(item.avgLoss)}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-xs font-black text-loss">-{fmtINR(item.maxDrawdown)}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] font-black text-text-primary">{item.plannedRR}</span>
+                          <span className={`text-[10px] font-black ${item.actualRR >= item.plannedRR ? 'text-profit' : 'text-amber-500'}`}>{item.actualRR}</span>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
                 {!strategyData?.data?.length && (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center">
+                    <td colSpan={6} className="py-12 text-center">
                       <p className="text-xs font-bold text-text-faint uppercase">No strategy records available</p>
                     </td>
                   </tr>
@@ -566,6 +698,26 @@ const CustomTooltip = ({ active, payload, chartTheme }) => {
           {fmtINR(data.pnl, true)}
         </p>
         <p className="text-[10px] font-bold text-text-muted mt-1 uppercase">{data.trades} Trades logged</p>
+      </Card>
+    );
+  }
+  return null;
+};
+
+const DrawdownTooltip = ({ active, payload, chartTheme }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const value = payload[0].value;
+    return (
+      <Card variant="elevated" padding="p-3" className="border-none shadow-card-lg animate-scale-in">
+        <p className="text-[9px] font-black text-text-faint uppercase tracking-widest mb-1">{fmtDate(data.date)}</p>
+        <div className="flex items-center gap-2">
+           <div className="w-1.5 h-1.5 rounded-full bg-loss" />
+           <p className="text-sm font-black font-mono text-loss">
+            -{fmtINR(Math.abs(value), true)}
+          </p>
+        </div>
+        <p className="text-[10px] font-bold text-text-faint uppercase mt-1">Capital Underwater</p>
       </Card>
     );
   }

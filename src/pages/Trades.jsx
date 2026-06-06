@@ -933,8 +933,11 @@ function TradeDetailModal({ isOpen, onClose, trade, onEditStrategy, onEditPsycho
           <DetailRow label="Exit Price" value={trade.exitPrice ? `₹${trade.exitPrice}` : 'PENDING'} sub={trade.exitDate ? fmtDate(trade.exitDate) : 'Still Open'} />
           <DetailRow label="Quantity" value={trade.quantity} sub="Units / Lots" />
           <DetailRow label="Strategy" value={trade.strategy || 'NONE'} />
-          <DetailRow label="Setup" value={trade.setupType || 'NONE'} />
-          <DetailRow label="Charges" value={fmtINR(trade.charges)} />
+          <DetailRow 
+            label="Charges" 
+            value={fmtINR(trade.charges)} 
+            sub={trade.status === 'EXPIRED' ? '* ITM expiry STT not included' : null} 
+          />
         </div>
 
         {/* Sub-sections */}

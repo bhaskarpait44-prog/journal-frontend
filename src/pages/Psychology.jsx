@@ -11,18 +11,20 @@ import { useThemeStore } from '../store/themeStore';
 import { useNavigate } from 'react-router-dom';
 import { 
   IconPsychology, IconCheck, IconArrowDown, IconPlus,
-  IconAnalytics, IconDollar, IconRefresh, IconSearch
+  IconAnalytics, IconDollar, IconRefresh, IconSearch, IconChevronDown
 } from '../components/ui/Icons';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area
 } from 'recharts';
+import { TabBar } from '../components/ui/TabBar';
 
 export default function Psychology() {
   const navigate = useNavigate();
   const { theme } = useThemeStore();
+  const [period, setPeriod] = React.useState('week');
   const { data: stats, loading } = useApi('/analytics/psychology');
-  const { data: trends, loading: trendsLoading } = useApi('/analytics/psychology-trends');
+  const { data: trends, loading: trendsLoading } = useApi(`/analytics/psychology-trends?period=${period}`);
 
   if (loading || trendsLoading) return <PsychologySkeleton />;
   if (!stats || stats.totalLogged === 0) {
@@ -89,7 +91,14 @@ export default function Psychology() {
         <Card variant="flat" className="bg-card-alt/30 border-border/50 flex flex-col justify-between p-8">
            <div className="space-y-8">
               <div>
-                <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mb-3">Systematic Discipline</p>
+                <div className="flex justify-between items-center mb-3">
+                  <p className="text-[10px] font-black text-text-faint uppercase tracking-widest">Systematic Discipline</p>
+                  {stats.disciplineTrend !== 'flat' && (
+                    <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${stats.disciplineTrend === 'up' ? 'text-profit' : 'text-loss'}`}>
+                      {stats.disciplineTrend === 'up' ? '▲ Improving' : '▼ Declining'}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-end gap-2">
                   <span className={`text-5xl font-black font-heading tracking-tighter ${stats.avgDiscipline >= 7 ? 'text-profit' : stats.avgDiscipline >= 5 ? 'text-amber-500' : 'text-loss'}`}>
                     {stats.avgDiscipline}
@@ -111,7 +120,16 @@ export default function Psychology() {
                     {stats.followedPlanRate.toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-[10px] font-bold text-text-faint uppercase mt-2">Followed predefined rules</p>
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between text-[9px] font-black uppercase">
+                    <span className="text-text-faint">Followed Plan</span>
+                    <span className="text-profit">+{fmtINR(stats.planPerformance?.followed?.avg || 0)} avg</span>
+                  </div>
+                  <div className="flex justify-between text-[9px] font-black uppercase">
+                    <span className="text-text-faint">Deviated</span>
+                    <span className="text-loss">{fmtINR(stats.planPerformance?.deviated?.avg || 0)} avg</span>
+                  </div>
+                </div>
               </div>
            </div>
 
@@ -131,16 +149,30 @@ export default function Psychology() {
       {/* Main Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
          {/* Trend Chart */}
-         <Card variant="default" padding="p-0" className="overflow-hidden">
-            <div className="px-6 py-5 border-b border-border bg-card-alt/20 flex items-center justify-between">
+         <Card variant="default" padding="p-0" className="overflow-hidden border-border/60">
+            <div className="px-6 py-5 border-b border-border bg-card-alt/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="font-bold text-text-primary text-sm sm:text-base">Behavioral Trends</h3>
-                <p className="text-[10px] text-text-faint font-medium mt-0.5">Discipline vs. Win Rate correlation</p>
+                <h3 className="font-black text-text-primary text-sm uppercase tracking-tight">Behavioral Trends</h3>
+                <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider mt-0.5">Discipline vs. Win Rate correlation</p>
+              </div>
+              <div className="flex items-center bg-card-alt p-1 rounded-xl border border-border">
+                <button 
+                  onClick={() => setPeriod('week')}
+                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${period === 'week' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
+                >
+                  Weekly
+                </button>
+                <button 
+                  onClick={() => setPeriod('month')}
+                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${period === 'month' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
+                >
+                  Monthly
+                </button>
               </div>
             </div>
             <div className="h-[350px] w-full p-6">
                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trends.periods.map((p, i) => ({
+                  <AreaChart data={(trends.periods || []).map((p, i) => ({
                     period: p,
                     discipline: trends.discipline[i],
                     winRate: trends.winRate[i],
@@ -198,20 +230,23 @@ export default function Psychology() {
                 <span className="text-[10px] font-bold text-text-faint uppercase">Frequency of Bias</span>
              </div>
              <div className="space-y-6">
-                {stats.mistakeFrequency.map((m, i) => (
-                  <div key={m.tag} className="space-y-2">
-                    <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
-                      <span className="text-text-secondary">{m.tag.replace(/_/g, ' ')}</span>
-                      <span className="text-text-faint">{m.count} occurrences</span>
+                {(() => {
+                  const maxCount = Math.max(...stats.mistakeFrequency.map(m => m.count), 1);
+                  return stats.mistakeFrequency.map((m, i) => (
+                    <div key={m.tag} className="space-y-2">
+                      <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
+                        <span className="text-text-secondary">{m.tag.replace(/_/g, ' ')}</span>
+                        <span className="text-text-faint">{m.count} occurrences</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-card-alt rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-loss rounded-full opacity-60" 
+                          style={{ width: `${(m.count / maxCount) * 100}%` }} 
+                        />
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-card-alt rounded-full overflow-hidden">
-                       <div 
-                        className="h-full bg-loss rounded-full opacity-60" 
-                        style={{ width: `${(m.count / stats.totalLogged) * 100}%` }} 
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ));
+                })()}
              </div>
           </Card>
 
@@ -229,20 +264,28 @@ export default function Psychology() {
                         outerRadius={100}
                         paddingAngle={5}
                       >
-                        {stats.lossByEmotion.map((entry, i) => (
-                          <Cell key={i} fill={entry.totalPnl >= 0 ? '#22c55e' : '#ef4444'} fillOpacity={0.3 + (i * 0.2)} />
-                        ))}
+                        {stats.lossByEmotion.map((entry, i) => {
+                          const maxAbs = Math.max(...stats.lossByEmotion.map(e => Math.abs(e.totalPnl)));
+                          const opacity = maxAbs > 0 ? 0.3 + (Math.abs(entry.totalPnl) / maxAbs) * 0.7 : 0.5;
+                          return (
+                            <Cell key={i} fill={entry.totalPnl >= 0 ? '#22c55e' : '#ef4444'} fillOpacity={opacity} />
+                          );
+                        })}
                       </Pie>
                       <Tooltip />
                    </PieChart>
                 </ResponsiveContainer>
                 <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-4">
-                   {stats.lossByEmotion.map((entry, i) => (
-                     <div key={i} className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.totalPnl >= 0 ? '#22c55e' : '#ef4444', opacity: 0.3 + (i * 0.2) }} />
-                        <span className="text-[10px] font-black uppercase text-text-faint">{entry.emotion}</span>
-                     </div>
-                   ))}
+                   {stats.lossByEmotion.map((entry, i) => {
+                     const maxAbs = Math.max(...stats.lossByEmotion.map(e => Math.abs(e.totalPnl)));
+                     const opacity = maxAbs > 0 ? 0.3 + (Math.abs(entry.totalPnl) / maxAbs) * 0.7 : 0.5;
+                     return (
+                      <div key={i} className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.totalPnl >= 0 ? '#22c55e' : '#ef4444', opacity }} />
+                          <span className="text-[10px] font-black uppercase text-text-faint">{entry.emotion}</span>
+                      </div>
+                     );
+                   })}
                 </div>
              </div>
           </Card>
@@ -253,8 +296,7 @@ export default function Psychology() {
 
 const CustomEmotionTick = ({ x, y, payload }) => {
   const emotions = {
-    calm: '😌', confident: '💪', fear: '😨', frustrating: '😤', greed: '🤩', revenge: '😡',
-    fearful: '😨', frustrated: '😤', overconfident: '🤩'
+    calm: '😌', confident: '💪', fearful: '😨', frustrated: '😤', overconfident: '🤩', revenge: '😡'
   };
   return (
     <g transform={`translate(${x-15},${y-12})`}>
@@ -296,8 +338,15 @@ const CustomBarTooltip = ({ active, payload }) => {
     return (
       <Card variant="elevated" padding="p-3" className="border-none shadow-xl">
          <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mb-1">{d.emotion}</p>
-         <p className="text-base font-black text-text-primary">{d.winRate}% <span className="text-[10px] text-text-faint">Hit Rate</span></p>
-         <p className="text-[9px] font-bold text-text-faint mt-1 uppercase tracking-tighter">{d.trades} trades logged</p>
+         <div className="flex items-center justify-between gap-4">
+            <span className="text-[9px] font-black text-text-faint uppercase">Hit Rate</span>
+            <span className="text-sm font-black text-text-primary">{d.winRate}%</span>
+         </div>
+         <div className="flex items-center justify-between gap-4">
+            <span className="text-[9px] font-black text-text-faint uppercase">Impact</span>
+            <PnlSpan value={d.totalPnl} className="text-sm font-black" />
+         </div>
+         <p className="text-[9px] font-bold text-text-faint mt-2 pt-2 border-t border-border/50 uppercase tracking-tighter">{d.trades} trades logged</p>
       </Card>
     );
   }
@@ -308,17 +357,27 @@ function generateInsights(d) {
   const insights = [];
 
   if (d.followedPlanRate < 70) {
-    insights.push({ icon:'📋', color:'#8b5cf6', text:`Low plan adherence (<strong>${d.followedPlanRate.toFixed(0)}%</strong>). You are improvising entries instead of following your defined edge.` });
+    const cost = Math.abs((d.planPerformance?.followed?.avg || 0) - (d.planPerformance?.deviated?.avg || 0));
+    insights.push({ icon:'📋', color:'#8b5cf6', text:`Low plan adherence (<strong>${d.followedPlanRate.toFixed(0)}%</strong>). Deviating from rules is costing you <strong>${fmtINR(cost)}</strong> more per trade on average.` });
   }
   if (d.revengeTrades > 0)
-    insights.push({ icon:'😡', color:'#ef4444', text:`You executed <strong>${d.revengeTrades} revenge trade${d.revengeTrades>1?'s':''}</strong>. Revenge trading is the #1 account killer. Step away immediately after a loss.` });
-  if (d.fomoTrades > 0)
-    insights.push({ icon:'🚀', color:'#f97316', text:`<strong>${d.fomoTrades} FOMO entries</strong> detected. You are chasing price action. Focus on defined limit order entries.` });
+    insights.push({ icon:'😡', color:'#ef4444', text:`You executed <strong>${d.revengeTrades} revenge trade${d.revengeTrades>1?'s':''}</strong> costing <strong>${fmtINR(d.revengeTradeLoss)}</strong>. Revenge trading is the #1 account killer. Step away immediately after a loss.` });
+  
+  if (d.postLossPerformance?.count >= 5 && d.postLossPerformance?.winRate < 40) {
+    insights.push({ icon:'🔄', color:'#f43f5e', text:`Post-loss vulnerability: win rate drops to <strong>${d.postLossPerformance.winRate.toFixed(0)}%</strong> immediately after a loss. Implement a mandatory 15-minute cooldown.` });
+  }
 
-  const fearful = d.emotionWinRate?.find(e=>['fearful','fear'].includes(e.emotion));
+  const worstDay = [...(d.dayOfWeekPsych || [])].sort((a,b) => a.avgDiscipline - b.avgDiscipline)[0];
+  if (worstDay && worstDay.avgDiscipline < 6) {
+    insights.push({ icon:'📅', color:'#64748b', text:`Psychological edge weakens on <strong>${worstDay.day}s</strong> (avg discipline: ${worstDay.avgDiscipline.toFixed(1)}). Consider reducing size or skipping this session.` });
+  }
+
+  const fearful = d.emotionWinRate?.find(e=>e.emotion==='fearful');
   const calm = d.emotionWinRate?.find(e=>e.emotion==='calm');
-  if (fearful && calm && fearful.winRate < calm.winRate)
-    insights.push({ icon:'😨', color:'#eab308', text:`Your hit rate drops to <strong>${fearful.winRate}%</strong> when fearful vs <strong>${calm.winRate}%</strong> when calm. Anxiety is invalidating your edge.` });
+  if (fearful && calm && fearful.winRate < calm.winRate) {
+    const impact = Math.abs(fearful.totalPnl);
+    insights.push({ icon:'😨', color:'#eab308', text:`Hit rate drops to <strong>${fearful.winRate}%</strong> when fearful vs <strong>${calm.winRate}%</strong> when calm. Anxiety has cost you <strong>${fmtINR(impact)}</strong> in realized losses.` });
+  }
 
   if (d.avgDiscipline < 5)
     insights.push({ icon:'📉', color:'#ef4444', text:`Low systematic discipline (<strong class="text-loss">${d.avgDiscipline}/10</strong>) is destroying your performance. Stop changing strategies mid-session.` });

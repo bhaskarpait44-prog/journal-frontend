@@ -13,7 +13,8 @@ import { getTargetDayInMonth } from './holidays';
 
 export function buildSymbol(underlying, expiry, strike, optionType) {
   if (!underlying || !expiry || !strike || !optionType) return '';
-  const d = new Date(expiry);
+  const [y, m, d_] = expiry.split('-').map(Number);
+  const d = new Date(y, m - 1, d_);
   const year = String(d.getFullYear()).slice(2);
   const monthIdx = d.getMonth();
   const day = d.getDate();

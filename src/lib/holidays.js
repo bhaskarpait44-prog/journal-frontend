@@ -94,25 +94,36 @@ export const getTargetDayInMonth = (year, month, target) => {
   return d.toISOString().split('T')[0];
 };
 
-/**
- * Generates all valid exchange expiries for a symbol:
- * - Weekly (Benchmark indices)
- * - Monthly (Next 3 months)
- * - Quarterly (Next 3 quarters: Mar, Jun, Sep, Dec)
- * - Half-Yearly / Long-term (Next 2 semi-annuals: Jun, Dec)
- */
 export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
+  // Ensure fromDate is a valid Date object
+  let baseDate = fromDate instanceof Date ? fromDate : new Date(fromDate);
+  if (isNaN(baseDate.getTime())) baseDate = new Date();
+
   const sym = symbol.toUpperCase();
   const expiries = new Set();
   const WEEKLY_INDICES = ['NIFTY', 'SENSEX'];
   const NSE_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'];
   const targetDay = NSE_INDICES.includes(sym) ? 2 : 4; // 2=Tue, 4=Thu
 
-  const todayStr = fromDate.toISOString().split('T')[0];
+  // If today is expiry day and after 3:30 PM IST, skip today
+  let adjustedFromDate = new Date(baseDate);
+  const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  const hours = nowIST.getHours();
+  const minutes = nowIST.getMinutes();
+  
+  if (hours > 15 || (hours === 15 && minutes >= 30)) {
+    const d1 = baseDate.toISOString().split('T')[0];
+    const d2 = nowIST.toISOString().split('T')[0];
+    if (d1 === d2) {
+      adjustedFromDate.setDate(adjustedFromDate.getDate() + 1);
+    }
+  }
+
+  const todayStr = adjustedFromDate.toISOString().split('T')[0];
 
   // 1. Weekly (If applicable) - Add next 5 weeklies
   if (WEEKLY_INDICES.includes(sym) || ['BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'].includes(sym)) {
-    let d = new Date(fromDate);
+    let d = new Date(adjustedFromDate);
     let diff = targetDay - d.getDay();
     if (diff < 0) diff += 7;
     d.setDate(d.getDate() + diff);
@@ -125,13 +136,17 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
   }
 
   // 2. Next 3 Monthly Expiries
-  for (let i = 0; i < 3; i++) {
-    const m = fromDate.getMonth() + i;
-    const y = fromDate.getFullYear();
+  let mCount = 0;
+  let mOffset = 0;
+  while (mCount < 3) {
+    const m = adjustedFromDate.getMonth() + mOffset;
+    const y = adjustedFromDate.getFullYear();
     const exp = getTargetDayInMonth(y, m, targetDay);
     if (exp >= todayStr) {
       expiries.add(exp);
+      mCount++;
     }
+    mOffset++;
   }
 
   // 3. Next 3 Quarterly Expiries (Mar, Jun, Sep, Dec)
@@ -140,13 +155,12 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
   let yearOffset = 0;
   while (qCount < 3) {
     for (const qMonth of quarters) {
-      const qYear = fromDate.getFullYear() + yearOffset;
+      const qYear = adjustedFromDate.getFullYear() + yearOffset;
       const exp = getTargetDayInMonth(qYear, qMonth, targetDay);
-      if (exp >= todayStr && qCount < 3) {
-        if (!expiries.has(exp)) {
-          expiries.add(exp);
-          qCount++;
-        }
+      if (exp >= todayStr) {
+        expiries.add(exp);
+        qCount++;
+        if (qCount >= 3) break;
       }
     }
     yearOffset++;
@@ -158,12 +172,11 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
   let lYearOffset = 1;
   while (lCount < 2) {
     for (const lMonth of longTerms) {
-      const lYear = fromDate.getFullYear() + lYearOffset;
+      const lYear = adjustedFromDate.getFullYear() + lYearOffset;
       const exp = getTargetDayInMonth(lYear, lMonth, targetDay);
-      if (!expiries.has(exp)) {
-        expiries.add(exp);
-        lCount++;
-      }
+      expiries.add(exp);
+      lCount++;
+      if (lCount >= 2) break;
     }
     lYearOffset++;
   }

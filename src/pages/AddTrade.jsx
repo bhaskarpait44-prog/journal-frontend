@@ -24,6 +24,12 @@ const STRATEGIES = [
   'Straddle', 'Strangle', 'Butterfly', 'Scalp', 'Other',
 ];
 
+const SETUPS = [
+  'Breakout', 'Mean Reversion', 'Trend Following', 
+  'Gap Fill', 'Reversal', 'Support/Resistance', 
+  'News Based', 'Post-Earnings', 'Other'
+];
+
 const EMOTIONS_BEFORE = [
   { value: 'calm', label: '😌', name: 'Calm' },
   { value: 'confident', label: '💪', name: 'Confident' },
@@ -108,6 +114,33 @@ function FormSection({ title, icon: Icon, children, action }) {
   );
 }
 
+function EmojiPicker({ label, value, options, onChange }) {
+  return (
+    <div className="space-y-3">
+      <label className="text-[10px] font-black text-text-faint uppercase tracking-[0.15em] ml-1">{label}</label>
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-300 ${
+              value === opt.value 
+                ? 'bg-accent/10 border-accent scale-[1.05] shadow-glow-blue' 
+                : 'bg-card-alt border-transparent hover:border-border'
+            }`}
+          >
+            <span className="text-2xl mb-1">{opt.label}</span>
+            <span className={`text-[9px] font-black uppercase tracking-tight ${value === opt.value ? 'text-accent' : 'text-text-faint'}`}>
+              {opt.name}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PsychologySection({ data, onChange, required = false }) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -134,66 +167,60 @@ function PsychologySection({ data, onChange, required = false }) {
       </button>
 
       {isExpanded && (
-        <div className="p-6 space-y-6 animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Entry Mindset</label>
-              <select
-                className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
-                value={data.emotionBefore}
-                onChange={(e) => onChange({ emotionBefore: e.target.value })}
-              >
-                <option value="">Select Entry Feeling</option>
-                {EMOTIONS_BEFORE.map((e) => (
-                  <option key={e.value} value={e.value}>{e.label} {e.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-4">
-              <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Exit Mindset</label>
-              <select
-                className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
-                value={data.emotionAfter}
-                onChange={(e) => onChange({ emotionAfter: e.target.value })}
-              >
-                <option value="">Select Exit Feeling</option>
-                {EMOTIONS_AFTER.map((e) => (
-                  <option key={e.value} value={e.value}>{e.label} {e.name}</option>
-                ))}
-              </select>
-            </div>
+        <div className="p-6 space-y-8 animate-fade-in">
+          <div className="space-y-6">
+            <EmojiPicker 
+              label="Entry Mindset" 
+              value={data.emotionBefore} 
+              options={EMOTIONS_BEFORE} 
+              onChange={(val) => onChange({ emotionBefore: val })} 
+            />
+            
+            <EmojiPicker 
+              label="Exit Mindset" 
+              value={data.emotionAfter} 
+              options={EMOTIONS_AFTER} 
+              onChange={(val) => onChange({ emotionAfter: val })} 
+            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-border">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Discipline Score</label>
                 <span className="text-[10px] font-black text-accent">{data.disciplineRating} / 10</span>
               </div>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={data.disciplineRating}
-                onChange={(e) => onChange({ disciplineRating: parseInt(e.target.value) })}
-                className="w-full h-1.5 bg-card-alt rounded-lg appearance-none cursor-pointer accent-accent"
-              />
+              <div className="space-y-2">
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={data.disciplineRating}
+                  onChange={(e) => onChange({ disciplineRating: parseInt(e.target.value) })}
+                  className="w-full h-1.5 bg-card-alt rounded-lg appearance-none cursor-pointer accent-accent"
+                />
+                <div className="flex justify-between text-[8px] font-black text-text-faint uppercase tracking-widest px-1">
+                  <span>Impulsive</span>
+                  <span>Mixed</span>
+                  <span>Robotic</span>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-4">
               <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Plan Adherence</label>
-              <div className="flex bg-card-alt p-0.5 rounded-lg border border-border">
+              <div className="flex bg-card-alt p-1.5 rounded-2xl border border-border h-12">
                 <button
                   type="button"
                   onClick={() => onChange({ followedPlan: true })}
-                  className={`flex-1 py-1.5 rounded-md text-[10px] font-black uppercase transition-all ${data.followedPlan ? 'bg-profit text-white shadow-sm' : 'text-text-faint'}`}
+                  className={`flex-1 rounded-xl text-[10px] font-black uppercase transition-all ${data.followedPlan ? 'bg-profit text-white shadow-glow-green' : 'text-text-faint hover:text-text-muted'}`}
                 >
                   Followed Plan
                 </button>
                 <button
                   type="button"
                   onClick={() => onChange({ followedPlan: false })}
-                  className={`flex-1 py-1.5 rounded-md text-[10px] font-black uppercase transition-all ${!data.followedPlan ? 'bg-loss text-white shadow-sm' : 'text-text-faint'}`}
+                  className={`flex-1 rounded-xl text-[10px] font-black uppercase transition-all ${!data.followedPlan ? 'bg-loss text-white shadow-glow-red' : 'text-text-faint hover:text-text-muted'}`}
                 >
                   Deviated
                 </button>
@@ -201,18 +228,18 @@ function PsychologySection({ data, onChange, required = false }) {
             </div>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-border">
+          <div className="space-y-4 pt-6 border-t border-border">
             <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Execution Mistakes</label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {MISTAKE_TAGS.map((m) => (
                 <button
                   key={m.value}
                   type="button"
                   onClick={() => toggleMistake(m.value)}
-                  className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border transition-all ${
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${
                     data.mistakeTags.includes(m.value)
                       ? 'bg-loss/5 border-loss/30 text-loss'
-                      : 'bg-card border-border text-text-faint hover:text-text-muted'
+                      : 'bg-card border-border text-text-faint hover:text-text-muted hover:border-border-alt'
                   }`}
                 >
                   {m.label}
@@ -221,56 +248,191 @@ function PsychologySection({ data, onChange, required = false }) {
             </div>
           </div>
 
-          <Input
-            as="textarea"
-            label="Internal Monologue / Notes"
-            placeholder="Context, triggers, or improvement areas..."
-            value={data.notes}
-            onChange={(e) => onChange({ notes: e.target.value })}
-            className="text-xs min-h-[100px]"
-          />
+          <div className="space-y-4 pt-6 border-t border-border">
+            <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Post-Trade Reflection</label>
+            <textarea
+              className="w-full p-4 rounded-2xl bg-card-alt border border-border text-sm font-medium focus:ring-2 focus:ring-accent/20 outline-none min-h-[160px] resize-none"
+              placeholder="What did you see? How did you feel during the hold? What can you improve next time? (Autosaves to journal)"
+              value={data.notes}
+              onChange={(e) => onChange({ notes: e.target.value })}
+            />
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function ManualEntryTab() {
+function PsychologyModal({ isOpen, onClose, trade, psychology, setPsychology, onComplete }) {
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  const isClosed = trade?.status === 'CLOSED' || trade?.status === 'EXPIRED';
+  const totalSteps = isClosed ? 4 : 3;
+
+  const handleComplete = async () => {
+    setLoading(true);
+    try {
+      await api.post(`/trades/${trade.id}/psychology`, psychology);
+      onComplete();
+    } catch (err) {
+      toast.error('Failed to save psychology: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-xl animate-fade-in" onClick={onClose} />
+      
+      <Card className="relative w-full max-w-lg bg-card border-border shadow-2xl overflow-hidden animate-scale-in">
+        <div className="absolute top-0 left-0 w-full h-1 bg-card-alt">
+          <div 
+            className="h-full bg-accent transition-all duration-500" 
+            style={{ width: `${(step / totalSteps) * 100}%` }} 
+          />
+        </div>
+
+        <div className="p-8 space-y-8">
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto text-accent mb-4">
+              <IconPsychology className="w-6 h-6" strokeWidth={2.5} />
+            </div>
+            <h2 className="text-2xl font-black font-heading text-text-primary tracking-tight uppercase">Mindset Mapping</h2>
+            <p className="text-xs font-bold text-text-faint uppercase tracking-widest">Step {step} of {totalSteps} • Trade Ref: #{trade?.id?.slice(-4)}</p>
+          </div>
+
+          <div className="min-h-[300px] flex flex-col justify-center animate-fade-up" key={step}>
+            {step === 1 && (
+              <EmojiPicker 
+                label="How were you feeling BEFORE entry?" 
+                value={psychology.emotionBefore} 
+                options={EMOTIONS_BEFORE} 
+                onChange={(val) => {
+                  setPsychology(prev => ({ ...prev, emotionBefore: val }));
+                  setTimeout(() => setStep(2), 300);
+                }} 
+              />
+            )}
+
+            {step === 2 && isClosed && (
+              <EmojiPicker 
+                label="How do you feel NOW (after exit)?" 
+                value={psychology.emotionAfter} 
+                options={EMOTIONS_AFTER} 
+                onChange={(val) => {
+                  setPsychology(prev => ({ ...prev, emotionAfter: val }));
+                  setTimeout(() => setStep(3), 300);
+                }} 
+              />
+            )}
+
+            {((step === 2 && !isClosed) || step === 3) && (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black text-text-faint uppercase tracking-widest">Systematic Discipline</label>
+                    <span className="text-xs font-black text-accent">{psychology.disciplineRating} / 10</span>
+                  </div>
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={psychology.disciplineRating}
+                      onChange={(e) => setPsychology(prev => ({ ...prev, disciplineRating: parseInt(e.target.value) }))}
+                      className="w-full h-2 bg-card-alt rounded-full appearance-none cursor-pointer accent-accent"
+                    />
+                    <div className="flex justify-between text-[9px] font-black text-text-faint uppercase tracking-widest px-1">
+                      <span>Impulsive</span>
+                      <span>Mixed</span>
+                      <span>Robotic</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-text-faint uppercase tracking-widest px-1">Did you follow your plan?</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPsychology(prev => ({ ...prev, followedPlan: true }))}
+                      className={`h-14 rounded-2xl text-xs font-black uppercase transition-all border-2 ${psychology.followedPlan ? 'bg-profit/10 border-profit text-profit shadow-glow-green' : 'bg-card-alt border-transparent text-text-faint'}`}
+                    >
+                      Followed Plan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPsychology(prev => ({ ...prev, followedPlan: false }))}
+                      className={`h-14 rounded-2xl text-xs font-black uppercase transition-all border-2 ${!psychology.followedPlan ? 'bg-loss/10 border-loss text-loss shadow-glow-red' : 'bg-card-alt border-transparent text-text-faint'}`}
+                    >
+                      Deviated
+                    </button>
+                  </div>
+                </div>
+
+                <Button variant="primary" className="w-full h-12 shadow-glow-blue font-black uppercase text-xs" onClick={() => setStep(step + 1)}>Continue to Journal</Button>
+              </div>
+            )}
+
+            {step === totalSteps && (
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-text-faint uppercase tracking-widest px-1">Trade Narrative / Monologue</label>
+                  <textarea
+                    autoFocus
+                    className="w-full h-[200px] p-5 rounded-3xl bg-card-alt border border-border text-sm font-medium focus:ring-4 focus:ring-accent/10 outline-none resize-none leading-relaxed transition-all"
+                    placeholder="Enter details like: Why this setup? What was the mental battle? What did you learn?"
+                    value={psychology.notes}
+                    onChange={(e) => setPsychology(prev => ({ ...prev, notes: e.target.value }))}
+                  />
+                </div>
+                <Button 
+                  variant="primary" 
+                  className="w-full h-14 shadow-glow-blue text-sm font-black uppercase tracking-widest" 
+                  onClick={handleComplete}
+                  loading={loading}
+                >
+                  Save & Complete
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {step > 1 && (
+            <button 
+              type="button" 
+              onClick={() => setStep(step - 1)}
+              className="w-full text-[10px] font-black text-text-faint uppercase tracking-widest hover:text-text-muted transition-colors"
+            >
+              Go Back
+            </button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [nseSymbols, setNseSymbols] = useState(FALLBACK_SYMBOLS);
+  const [showPsychModal, setShowPsychModal] = useState(false);
+  const [savedTrade, setSavedTrade] = useState(null);
 
   const STEPS = [
     { id: 1, name: 'Setup', icon: IconSearch, desc: 'Contract' },
     { id: 2, name: 'Execution', icon: IconDollar, desc: 'Pricing' },
-    { id: 3, name: 'Journal', icon: IconPsychology, desc: 'Mindset' },
+    { id: 3, name: 'Categorize', icon: IconPlus, desc: 'Review' },
   ];
   const [search, setSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [templates, setTemplates] = useState([]);
-
-  const [form, setForm] = useState({
-    underlying: '',
-    optionType: 'CE',
-    tradeType: 'BUY',
-    strikePrice: '',
-    expiryDate: '',
-    lotSize: '',
-    quantity: 1,
-    exchange: 'NSE',
-    status: 'OPEN',
-    entryPrice: '',
-    entryDate: new Date().toISOString().split('T')[0],
-    exitPrice: '',
-    exitDate: '',
-    stopLoss: '',
-    target: '',
-    strategy: '',
-    tags: '',
-    notes: '',
-    exitReason: '',
-  });
 
   // Sync search with form.underlying when it changes (e.g. from templates)
   useEffect(() => {
@@ -278,15 +440,6 @@ function ManualEntryTab() {
       setSearch(form.underlying);
     }
   }, [form.underlying]);
-
-  const [psychology, setPsychology] = useState({
-    emotionBefore: '',
-    emotionAfter: '',
-    disciplineRating: 5,
-    followedPlan: true,
-    mistakeTags: [],
-    notes: '',
-  });
 
   useEffect(() => {
     api.get('/nse/fno-symbols').then((data) => {
@@ -404,10 +557,6 @@ function ManualEntryTab() {
         if (form.exitDate > today) return 'Exit date cannot be in the future';
       }
     }
-    if (step === 3) {
-      if (!psychology.emotionBefore) return 'Please log your mindset BEFORE the trade';
-      if (form.status !== 'OPEN' && !psychology.emotionAfter) return 'Please log your mindset AFTER the trade';
-    }
     return null;
   };
 
@@ -428,7 +577,7 @@ function ManualEntryTab() {
     }
 
     // Full validation ONLY on final submit (Step 3)
-    for (let s = 1; s <= 3; s++) {
+    for (let s = 1; s <= 2; s++) {
       const error = validateStep(s);
       if (error) {
         if (s !== currentStep) setCurrentStep(s);
@@ -457,12 +606,13 @@ function ManualEntryTab() {
         target: finalForm.target ? parseFloat(finalForm.target) : undefined,
         charges: charges?.total || 0,
         tags: finalForm.tags.split(',').map((t) => t.trim()).filter(Boolean),
-        psychology,
+        // No psychology sent yet, will be handled by modal
         symbol: buildSymbol(finalForm.underlying, finalForm.expiryDate, finalForm.strikePrice, finalForm.optionType) || finalForm.underlying,
       };
-      await api.post('/trades', payload);
-      toast.success('Trade logged successfully');
-      navigate('/trades');
+      const res = await api.post('/trades', payload);
+      setSavedTrade(res.trade);
+      setShowPsychModal(true);
+      toast.success('Trade base data saved');
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -472,6 +622,19 @@ function ManualEntryTab() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pb-32 sm:pb-8">
+      {/* Psychology Modal Injection */}
+      <PsychologyModal 
+        isOpen={showPsychModal} 
+        onClose={() => navigate('/trades')} 
+        trade={savedTrade} 
+        psychology={psychology} 
+        setPsychology={setPsychology} 
+        onComplete={() => {
+          toast.success('Trade logged fully!');
+          navigate('/trades');
+        }}
+      />
+
       {/* Minimal Progress UI */}
       <div className="flex items-center justify-center gap-2 mb-2">
         {STEPS.map((step, idx) => (
@@ -842,6 +1005,9 @@ function ManualEntryTab() {
                         <span className="text-text-faint tracking-tight">STT (on SELL turnover)</span>
                         <span className="text-text-primary font-mono">₹{(charges?.stt || 0).toFixed(2)}</span>
                       </div>
+                      {form.status === 'EXPIRED' && (
+                        <p className="text-[9px] text-text-faint italic -mt-2">* ITM expiry STT not included</p>
+                      )}
                       <div className="flex justify-between text-[11px] font-bold uppercase">
                         <span className="text-text-faint tracking-tight">Stamp Duty (on BUY turnover)</span>
                         <span className="text-text-primary font-mono">₹{(charges?.stampDuty || 0).toFixed(2)}</span>
@@ -866,14 +1032,14 @@ function ManualEntryTab() {
         )}
 
         {currentStep === 3 && (
-          <>
-            <div className="space-y-6 animate-fade-in">
-              <FormSection title="Categorization" icon={IconPlus}>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-faint uppercase tracking-widest">Strategy</label>
+          <div className="lg:col-span-2 space-y-8 animate-fade-in max-w-2xl mx-auto">
+            <FormSection title="Finalize Trade Categorization" icon={IconPlus}>
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-text-faint uppercase tracking-widest ml-1">Strategy Used</label>
                     <select
-                      className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold"
+                      className="w-full h-12 px-4 rounded-2xl bg-card border border-border text-sm font-bold shadow-sm focus:ring-2 focus:ring-accent/20 outline-none transition-all"
                       value={form.strategy}
                       onChange={(e) => setForm(prev => ({ ...prev, strategy: e.target.value }))}
                     >
@@ -881,20 +1047,53 @@ function ManualEntryTab() {
                       {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
-                  <Input label="Tags" placeholder="scalp, expiry..." value={form.tags} onChange={(e) => setForm(prev => ({ ...prev, tags: e.target.value }))} />
-                  <Input as="textarea" label="Journal Notes" value={form.notes} onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))} className="min-h-[120px]" />
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-text-faint uppercase tracking-widest ml-1">Setup / Pattern</label>
+                    <select
+                      className="w-full h-12 px-4 rounded-2xl bg-card border border-border text-sm font-bold shadow-sm focus:ring-2 focus:ring-accent/20 outline-none transition-all"
+                      value={form.setupType}
+                      onChange={(e) => setForm(prev => ({ ...prev, setupType: e.target.value }))}
+                    >
+                      <option value="">No Setup</option>
+                      {SETUPS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
                 </div>
-              </FormSection>
-            </div>
+                
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-text-faint uppercase tracking-widest ml-1">Trade Tags</label>
+                  <Input 
+                    placeholder="e.g. scalp, expiry, breakout" 
+                    value={form.tags} 
+                    onChange={(e) => setForm(prev => ({ ...prev, tags: e.target.value }))} 
+                    noLabel
+                    className="h-12 rounded-2xl"
+                  />
+                  <p className="text-[9px] font-bold text-text-faint uppercase tracking-tight ml-1">Comma separated labels for deep analytics</p>
+                </div>
 
-            <div className="animate-fade-in">
-              <PsychologySection
-                data={psychology}
-                onChange={(val) => setPsychology(prev => ({ ...prev, ...val }))}
-                required
-              />
+                <div className="space-y-3 pt-4 border-t border-border/50">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black text-text-faint uppercase tracking-widest">Dedicated Trade Journal</label>
+                    <Badge variant="ghost" className="text-[8px] font-black uppercase">Draft Autosaved</Badge>
+                  </div>
+                  <textarea 
+                    className="w-full min-h-[220px] p-6 rounded-3xl bg-card-alt/50 border border-border text-sm font-medium focus:ring-4 focus:ring-accent/10 outline-none transition-all resize-none leading-relaxed"
+                    placeholder="Describe the trade narrative... What was the entry logic? Any deviations from the plan? Mentality during the hold?"
+                    value={form.notes} 
+                    onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))} 
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            <div className="p-6 bg-accent/5 rounded-3xl border border-accent/10 text-center space-y-2">
+              <p className="text-xs font-black text-accent uppercase tracking-widest">Ready to Commit</p>
+              <p className="text-[10px] font-bold text-text-muted uppercase leading-relaxed max-w-xs mx-auto">
+                Mindset mapping (emotions & discipline) will be prompted in the next step after the trade is saved.
+              </p>
             </div>
-          </>
+          </div>
         )}
       </div>
 
@@ -913,7 +1112,7 @@ function ManualEntryTab() {
             Continue
           </Button>
         ) : (
-          <Button variant="primary" className="flex-[2] h-12 font-black uppercase tracking-widest shadow-glow-blue" type="submit" loading={loading}>Log Trade</Button>
+          <Button variant="primary" className="flex-[2] h-12 font-black uppercase tracking-widest shadow-glow-blue" type="submit" loading={loading}>Save & Continue to Mindset</Button>
         )}
       </div>
 
@@ -930,28 +1129,18 @@ function ManualEntryTab() {
         {currentStep < 3 ? (
           <Button type="button" variant="primary" className="flex-[2] h-12 rounded-xl shadow-glow-blue font-black uppercase text-xs" onClick={handleNext}>Next</Button>
         ) : (
-          <Button variant="primary" className="flex-[2] h-12 rounded-xl shadow-glow-blue font-black uppercase text-xs" type="submit" loading={loading}>Log Trade</Button>
+          <Button variant="primary" className="flex-[2] h-12 rounded-xl shadow-glow-blue font-black uppercase text-xs" type="submit" loading={loading}>Save & Map Mindset</Button>
         )}
       </div>
     </form>
   );
 }
 
-function CSVImportTab() {
+function CSVImportTab({ form, setForm, psychology, setPsychology }) {
   const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [strategy, setStrategy] = useState('');
-  const [notes, setNotes] = useState('');
   const [psychEnabled, setPsychEnabled] = useState(false);
-  const [psychology, setPsychology] = useState({
-    emotionBefore: '',
-    emotionAfter: '',
-    disciplineRating: 5,
-    followedPlan: true,
-    mistakeTags: [],
-    notes: '',
-  });
 
   const handleImport = async (e) => {
     e.preventDefault();
@@ -960,8 +1149,9 @@ function CSVImportTab() {
     setLoading(true);
     const formData = new FormData();
     formData.append('file', file);
-    if (strategy) formData.append('strategy', strategy);
-    if (notes) formData.append('notes', notes);
+    if (form.strategy) formData.append('strategy', form.strategy);
+    if (form.setupType) formData.append('setupType', form.setupType);
+    if (form.notes) formData.append('notes', form.notes);
 
     try {
       const res = await api.upload('/trades/import/csv', formData);
@@ -1002,23 +1192,36 @@ function CSVImportTab() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <FormSection title="Batch Categorization" icon={IconPlus}>
            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Apply Strategy</label>
-                <select
-                  className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
-                  value={strategy}
-                  onChange={(e) => setStrategy(e.target.value)}
-                >
-                  <option value="">None</option>
-                  {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Apply Strategy</label>
+                  <select
+                    className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
+                    value={form.strategy}
+                    onChange={(e) => setForm(prev => ({ ...prev, strategy: e.target.value }))}
+                  >
+                    <option value="">None</option>
+                    {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Apply Setup</label>
+                  <select
+                    className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
+                    value={form.setupType}
+                    onChange={(e) => setForm(prev => ({ ...prev, setupType: e.target.value }))}
+                  >
+                    <option value="">None</option>
+                    {SETUPS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
               </div>
               <Input
                 as="textarea"
                 label="Batch Observations"
                 placeholder="Log notes for all imported records..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                value={form.notes}
+                onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
               />
            </div>
         </FormSection>
@@ -1190,6 +1393,38 @@ function BrokerAPITab() {
 
 export default function AddTrade() {
   const [activeTab, setActiveTab] = useState('manual');
+  
+  const [form, setForm] = useState({
+    underlying: '',
+    optionType: 'CE',
+    tradeType: 'BUY',
+    strikePrice: '',
+    expiryDate: '',
+    lotSize: '',
+    quantity: 1,
+    exchange: 'NSE',
+    status: 'OPEN',
+    entryPrice: '',
+    entryDate: new Date().toISOString().split('T')[0],
+    exitPrice: '',
+    exitDate: '',
+    stopLoss: '',
+    target: '',
+    strategy: '',
+    setupType: '',
+    tags: '',
+    notes: '',
+    exitReason: '',
+  });
+
+  const [psychology, setPsychology] = useState({
+    emotionBefore: '',
+    emotionAfter: '',
+    disciplineRating: 5,
+    followedPlan: true,
+    mistakeTags: [],
+    notes: '',
+  });
 
   const tabs = [
     { id: 'manual', label: 'Manual' },
@@ -1216,8 +1451,18 @@ export default function AddTrade() {
       </div>
 
       <div className="mt-1">
-        {activeTab === 'manual' && <ManualEntryTab />}
-        {activeTab === 'csv' && <CSVImportTab />}
+        {activeTab === 'manual' && (
+          <ManualEntryTab 
+            form={form} setForm={setForm} 
+            psychology={psychology} setPsychology={setPsychology} 
+          />
+        )}
+        {activeTab === 'csv' && (
+          <CSVImportTab 
+            form={form} setForm={setForm} 
+            psychology={psychology} setPsychology={setPsychology} 
+          />
+        )}
         {activeTab === 'broker' && <BrokerAPITab />}
       </div>
     </div>

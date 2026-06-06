@@ -198,9 +198,10 @@ const Dashboard = () => {
       </div>
 
       {/* Stat Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
         <StatCard label="Win Rate" value={`${summary?.winRate || 0}%`} icon={IconCheck} color="text-emerald-500" />
         <StatCard label="Profit Factor" value={summary?.profitFactor || '0.00'} icon={IconAnalytics} color="text-violet-500" />
+        <StatCard label="Expectancy" value={fmtINR(summary?.expectancy || 0, true)} icon={IconRefresh} color={summary?.expectancy >= 0 ? 'text-profit' : 'text-loss'} isPnl />
         <StatCard label="Trades" value={summary?.totalTrades || 0} icon={IconTrades} color="text-blue-500" />
         <StatCard label="Best Trade" value={fmtINR(summary?.bestTrade || 0, true)} icon={IconArrowUp} color="text-profit" isPnl />
         <StatCard label="Worst Trade" value={fmtINR(summary?.worstTrade || 0, true)} icon={IconArrowDown} color="text-loss" isPnl />
