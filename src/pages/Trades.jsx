@@ -14,6 +14,7 @@ import { Modal } from '../components/ui/Modal';
 import { PnlSpan } from '../components/ui/PnlSpan';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import TradeChart from '../components/TradeChart';
 import { 
   IconFilter, IconPlus, IconImport, IconSearch, IconTrash, 
   IconEdit, IconPsychology, IconChevronRight, IconChevronDown, 
@@ -21,6 +22,12 @@ import {
 } from '../components/ui/Icons';
 
 const LIMIT = 20;
+const IST_OFFSET = '+05:30';
+
+function combineIstDateTime(date, time = '15:30') {
+  if (!date) return '';
+  return `${date}T${time || '15:30'}:00${IST_OFFSET}`;
+}
 
 export default function Trades() {
   const navigate = useNavigate();
@@ -45,7 +52,6 @@ export default function Trades() {
     strategy: false,
     psychology: false,
     import: false,
-    detail: false,
     bulkStrategy: false
   });
 
@@ -307,7 +313,7 @@ export default function Trades() {
                           className="rounded-md border-border text-accent focus:ring-accent/30 w-4 h-4"
                         />
                       </td>
-                      <td className="p-4" onClick={() => openModal('detail', trade)}>
+                      <td className="p-4" onClick={() => navigate(`/trades/${trade.id}`)}>
                         <div className="cursor-pointer">
                           <p className="font-black text-sm text-text-primary group-hover:text-accent transition-colors">{trade.symbol}</p>
                           <p className="text-[10px] font-bold text-text-faint uppercase tracking-tighter mt-0.5">
@@ -377,7 +383,7 @@ export default function Trades() {
                   key={trade.id} 
                   padding="p-0" 
                   className={`overflow-hidden border-l-4 ${trade.status === 'open' ? 'border-blue-500' : (trade.pnl >= 0 ? 'border-profit' : 'border-loss')}`}
-                  onClick={() => openModal('detail', trade)}
+                  onClick={() => navigate(`/trades/${trade.id}`)}
                 >
                   <div className="p-4 flex items-center justify-between border-b border-border bg-card-alt/20">
                     <div className="flex items-center gap-3">
@@ -513,15 +519,6 @@ export default function Trades() {
       <PsychologyModal isOpen={modals.psychology} onClose={() => closeModal('psychology')} trade={activeTrade} onSuccess={refetch} />
       <ImportCSVModal isOpen={modals.import} onClose={() => closeModal('import')} onSuccess={refetch} />
       <BulkStrategyModal isOpen={modals.bulkStrategy} onClose={() => closeModal('bulkStrategy')} selectedIds={selectedIds} onSuccess={() => { setSelectedIds(new Set()); refetch(); }} />
-      <TradeDetailModal 
-        isOpen={modals.detail} 
-        onClose={() => closeModal('detail')} 
-        trade={activeTrade} 
-        onEditStrategy={() => openModal('strategy', activeTrade)}
-        onEditPsychology={() => openModal('psychology', activeTrade)}
-        onCloseTrade={() => openModal('close', activeTrade)}
-        onDelete={() => { handleDelete(activeTrade.id); closeModal('detail'); }}
-      />
     </div>
   );
 }
@@ -533,6 +530,7 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
   const [formData, setFormData] = useState({
     exitPrice: '',
     exitDate: new Date().toISOString().split('T')[0],
+    exitTime: '15:30',
     charges: '25',
   });
 
@@ -549,7 +547,9 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
       await api.put(`/trades/${trade.id}/close`, {
         ...formData,
         exitPrice: parseFloat(formData.exitPrice),
+        exitDate: combineIstDateTime(formData.exitDate, formData.exitTime),
         charges: parseFloat(formData.charges),
+        exitTime: undefined,
       });
       toast.success('Position closed successfully');
       onSuccess();
@@ -596,6 +596,13 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
             type="date" 
             value={formData.exitDate}
             onChange={e => setFormData({...formData, exitDate: e.target.value})}
+            required
+          />
+          <Input 
+            label="Exit Time (IST)" 
+            type="time" 
+            value={formData.exitTime}
+            onChange={e => setFormData({...formData, exitTime: e.target.value})}
             required
           />
           <Input 
@@ -902,76 +909,3 @@ function BulkStrategyModal({ isOpen, onClose, selectedIds, onSuccess }) {
     </Modal>
   );
 }
-
-function TradeDetailModal({ isOpen, onClose, trade, onEditStrategy, onEditPsychology, onCloseTrade, onDelete }) {
-  if (!trade) return null;
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Record Insights">
-      <div className="space-y-8">
-        {/* Hero Section */}
-        <div className="relative p-6 bg-card-alt rounded-3xl border border-border overflow-hidden">
-          <div className="relative z-10 flex justify-between items-start">
-            <div>
-              <h4 className="text-3xl font-black font-heading tracking-tighter">{trade.symbol}</h4>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge type={trade.tradeType} />
-                <Badge type={trade.status === 'open' ? 'OPEN' : 'CLOSED'} />
-              </div>
-            </div>
-            <div className="text-right">
-              <PnlSpan value={trade.pnl} className="text-3xl font-black font-mono block" />
-              <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mt-1">Total Result</p>
-            </div>
-          </div>
-          <div className={`absolute -right-12 -bottom-12 w-48 h-48 rounded-full blur-[80px] opacity-10 ${trade.pnl >= 0 ? 'bg-profit' : 'bg-loss'}`} />
-        </div>
-
-        {/* Info Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-          <DetailRow label="Entry Price" value={`₹${trade.entryPrice}`} sub={fmtDate(trade.entryDate)} />
-          <DetailRow label="Exit Price" value={trade.exitPrice ? `₹${trade.exitPrice}` : 'PENDING'} sub={trade.exitDate ? fmtDate(trade.exitDate) : 'Still Open'} />
-          <DetailRow label="Quantity" value={trade.quantity} sub="Units / Lots" />
-          <DetailRow label="Strategy" value={trade.strategy || 'NONE'} />
-          <DetailRow 
-            label="Charges" 
-            value={fmtINR(trade.charges)} 
-            sub={trade.status === 'EXPIRED' ? '* ITM expiry STT not included' : null} 
-          />
-        </div>
-
-        {/* Sub-sections */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h5 className="text-[11px] font-black uppercase tracking-[0.2em] text-text-faint">Execution Notes</h5>
-            <button onClick={onEditStrategy} className="text-accent hover:bg-accent/10 p-2 rounded-lg transition-all"><IconEdit className="w-4 h-4" /></button>
-          </div>
-          <div className="p-5 rounded-2xl bg-card-alt border border-border">
-            {trade.notes ? (
-              <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{trade.notes}</p>
-            ) : (
-              <p className="text-xs text-text-faint italic">No journal entries for this trade record.</p>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {trade.status === 'open' ? (
-             <Button variant="primary" className="shadow-glow-blue h-12" onClick={onCloseTrade}>Close Position</Button>
-          ) : (
-            <Button variant="danger" className="h-12" onClick={onDelete}>Delete Record</Button>
-          )}
-          <Button variant="secondary" className="h-12" onClick={onEditPsychology}>View Mindset</Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-const DetailRow = ({ label, value, sub }) => (
-  <div>
-    <p className="text-[9px] font-black text-text-faint uppercase tracking-[0.2em] mb-1.5">{label}</p>
-    <p className="text-base font-black text-text-primary tracking-tight">{value}</p>
-    {sub && <p className="text-[10px] font-bold text-text-faint mt-0.5">{sub}</p>}
-  </div>
-);

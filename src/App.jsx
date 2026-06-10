@@ -23,6 +23,8 @@ import Calendar from './pages/Calendar.jsx';
 import Export from './pages/Export.jsx';
 import Profile from './pages/Profile.jsx';
 import Risk from './pages/Risk.jsx';
+import Charts from './pages/Charts.jsx';
+import TradeDetail from './pages/TradeDetail.jsx';
 import UpgradeModal from './components/ui/UpgradeModal.jsx';
 
 // Route Guards
@@ -104,6 +106,7 @@ function AppRoutes() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="trades" element={<Trades />} />
+        <Route path="trades/:id" element={<TradeDetail />} />
         <Route path="add-trade" element={<AddTrade />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="psychology" element={<Psychology />} />
@@ -111,6 +114,7 @@ function AppRoutes() {
         <Route path="export" element={<Export />} />
         <Route path="profile" element={<Profile />} />
         <Route path="risk" element={<Risk />} />
+        <Route path="charts" element={<Charts />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

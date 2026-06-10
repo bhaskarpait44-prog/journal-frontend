@@ -198,7 +198,7 @@ export default function Risk() {
                     onChange={e => handleSymbolChange(e.target.value)} 
                     placeholder="e.g. NIFTY" 
                     className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-12" 
-                    containerClassName="text-white/60"
+                    containerClassName="text-white/80"
                    />
                 </div>
                 <Input 
@@ -208,7 +208,7 @@ export default function Risk() {
                   onChange={e => setCalc({ ...calc, lotSize: e.target.value })} 
                   placeholder="50" 
                   className="bg-white/5 border-white/10 text-white h-12" 
-                  containerClassName="text-white/60"
+                  containerClassName="text-white/80"
                 />
               </div>
 
@@ -217,21 +217,21 @@ export default function Risk() {
                   label="Entry Level" 
                   type="number" 
                   step="0.05" 
-                  prefix={<span className="text-white/40 pointer-events-none">₹</span>}
+                  prefix={<span className="text-white/60 pointer-events-none">₹</span>}
                   value={calc.entryPrice} 
                   onChange={e => setCalc({ ...calc, entryPrice: e.target.value })} 
                   className="bg-white/5 border-white/10 text-white h-12" 
-                  containerClassName="text-white/60"
+                  containerClassName="text-white/80"
                 />
                 <Input 
                   label="Stop Loss" 
                   type="number" 
                   step="0.05" 
-                  prefix={<span className="text-white/40 pointer-events-none">₹</span>}
+                  prefix={<span className="text-white/60 pointer-events-none">₹</span>}
                   value={calc.slPrice} 
                   onChange={e => setCalc({ ...calc, slPrice: e.target.value })} 
                   className="bg-white/5 border-white/10 text-white h-12" 
-                  containerClassName="text-white/60"
+                  containerClassName="text-white/80"
                 />
               </div>
 
@@ -239,12 +239,12 @@ export default function Risk() {
                 <button 
                   type="button"
                   onClick={() => setCalc({ ...calc, tradeType: 'BUY' })}
-                  className={`py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all h-11 flex items-center justify-center ${calc.tradeType === 'BUY' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-white/40 hover:text-white/60'}`}
+                  className={`py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all h-11 flex items-center justify-center ${calc.tradeType === 'BUY' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-white/60 hover:text-white/80'}`}
                 >BUY (Long)</button>
                 <button 
                   type="button"
                   onClick={() => setCalc({ ...calc, tradeType: 'SELL' })}
-                  className={`py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all h-11 flex items-center justify-center ${calc.tradeType === 'SELL' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-white/40 hover:text-white/60'}`}
+                  className={`py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all h-11 flex items-center justify-center ${calc.tradeType === 'SELL' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-white/60 hover:text-white/80'}`}
                 >SELL (Short)</button>
               </div>
 

@@ -32,8 +32,8 @@ export default function UpgradeModal() {
         </div>
         
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-white font-heading">Unlock with Pro Plan</h3>
-          <p className="text-slate-400 text-sm leading-relaxed max-w-xs mx-auto">
+          <h3 className="text-xl font-bold text-text-primary font-heading">Unlock with Pro Plan</h3>
+          <p className="text-text-faint text-sm leading-relaxed max-w-xs mx-auto">
             {message}
           </p>
         </div>
@@ -42,7 +42,7 @@ export default function UpgradeModal() {
           <Button onClick={handleUpgrade} className="bg-amber-600 hover:bg-amber-700 shadow-glow-amber h-11">
             View Pro Pricing
           </Button>
-          <button onClick={() => setOpen(false)} className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors py-2">
+          <button onClick={() => setOpen(false)} className="text-xs font-bold text-text-muted uppercase tracking-widest hover:text-text-secondary transition-colors py-2">
             Maybe Later
           </button>
         </div>

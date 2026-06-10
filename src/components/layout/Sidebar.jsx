@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { 
   IconDashboard, IconTrades, IconAddTrade, IconAnalytics, 
   IconCalendar, IconRisk, IconPsychology, IconExport, 
-  IconProfile, IconLogout, IconArrowUp 
+  IconProfile, IconLogout, IconArrowUp, IconChart 
 } from '../ui/Icons';
 
 const Sidebar = ({ className = '' }) => {
@@ -19,6 +19,7 @@ const Sidebar = ({ className = '' }) => {
 
   const toolItems = [
     { name: 'Analytics', path: '/analytics', icon: IconAnalytics },
+    { name: 'Charts', path: '/charts', icon: IconChart },
     { name: 'Calendar', path: '/calendar', icon: IconCalendar },
     { name: 'Risk', path: '/risk', icon: IconRisk },
     { name: 'Psychology', path: '/psychology', icon: IconPsychology },

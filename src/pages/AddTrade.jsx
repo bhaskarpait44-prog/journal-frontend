@@ -71,6 +71,13 @@ const EXCHANGE_RATES = {
   BSE: { exchangePct: 0.0003250 },
 };
 
+const IST_OFFSET = '+05:30';
+
+function combineIstDateTime(date, time = '09:15') {
+  if (!date) return '';
+  return `${date}T${time || '09:15'}:00${IST_OFFSET}`;
+}
+
 function calcZerodhaFOOptions(entryPrice, exitPrice, lotSize, lots, tradeType, exchange) {
   if (!entryPrice || !lotSize || !lots) return null;
   const qty = lotSize * lots;
@@ -597,6 +604,8 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
 
       const payload = {
         ...finalForm,
+        entryDate: combineIstDateTime(finalForm.entryDate, finalForm.entryTime),
+        exitDate: finalForm.exitDate ? combineIstDateTime(finalForm.exitDate, finalForm.exitTime || '15:30') : undefined,
         strikePrice: parseFloat(finalForm.strikePrice),
         lotSize: parseInt(finalForm.lotSize),
         quantity: parseInt(finalForm.quantity),
@@ -606,6 +615,8 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
         target: finalForm.target ? parseFloat(finalForm.target) : undefined,
         charges: charges?.total || 0,
         tags: finalForm.tags.split(',').map((t) => t.trim()).filter(Boolean),
+        entryTime: undefined,
+        exitTime: undefined,
         // No psychology sent yet, will be handled by modal
         symbol: buildSymbol(finalForm.underlying, finalForm.expiryDate, finalForm.strikePrice, finalForm.optionType) || finalForm.underlying,
       };
@@ -892,11 +903,12 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
                 }
               >
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <Input label="Entry Price *" type="number" step="0.05" prefix="₹" value={form.entryPrice} onChange={(e) => setForm(prev => ({ ...prev, entryPrice: e.target.value }))} />
                     <Input label="Entry Date *" type="date" value={form.entryDate} onChange={(e) => setForm(prev => ({ ...prev, entryDate: e.target.value }))} />
+                    <Input label="Entry Time (IST) *" type="time" value={form.entryTime} onChange={(e) => setForm(prev => ({ ...prev, entryTime: e.target.value }))} />
                   </div>
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50 ${form.status === 'OPEN' ? 'opacity-40' : ''}`}>
+                  <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border/50 ${form.status === 'OPEN' ? 'opacity-40' : ''}`}>
                     <Input 
                       label="Exit Price" 
                       type="number" 
@@ -912,6 +924,33 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
                       value={form.exitDate} 
                       onChange={(e) => setForm(prev => ({ ...prev, exitDate: e.target.value }))} 
                       disabled={form.status === 'OPEN' || form.status === 'EXPIRED'} 
+                    />
+                    <Input 
+                      label="Exit Time (IST)" 
+                      type="time" 
+                      value={form.exitTime} 
+                      onChange={(e) => setForm(prev => ({ ...prev, exitTime: e.target.value }))} 
+                      disabled={form.status === 'OPEN' || form.status === 'EXPIRED'} 
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                    <Input 
+                      label="Stop Loss" 
+                      type="number" 
+                      step="0.05" 
+                      prefix="₹" 
+                      value={form.stopLoss} 
+                      onChange={(e) => setForm(prev => ({ ...prev, stopLoss: e.target.value }))} 
+                      placeholder="Optional"
+                    />
+                    <Input 
+                      label="Target" 
+                      type="number" 
+                      step="0.05" 
+                      prefix="₹" 
+                      value={form.target} 
+                      onChange={(e) => setForm(prev => ({ ...prev, target: e.target.value }))} 
+                      placeholder="Optional"
                     />
                   </div>
                   {form.status !== 'OPEN' && (
@@ -1406,8 +1445,10 @@ export default function AddTrade() {
     status: 'OPEN',
     entryPrice: '',
     entryDate: new Date().toISOString().split('T')[0],
+    entryTime: '09:15',
     exitPrice: '',
     exitDate: '',
+    exitTime: '15:30',
     stopLoss: '',
     target: '',
     strategy: '',

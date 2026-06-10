@@ -4,8 +4,9 @@ import { useAuthStore } from '../../store/authStore';
 import { 
   IconDashboard, IconTrades, IconAddTrade, IconAnalytics, 
   IconCalendar, IconRisk, IconPsychology, IconExport, 
-  IconProfile, IconLogout, IconArrowUp, IconClose
+  IconProfile, IconLogout, IconArrowUp, IconChart, IconClose
 } from '../ui/Icons';
+
 
 const DrawerPanel = ({ isOpen, onClose }) => {
   const { user, logout } = useAuthStore();
@@ -19,6 +20,7 @@ const DrawerPanel = ({ isOpen, onClose }) => {
 
   const toolItems = [
     { name: 'Analytics', path: '/analytics', icon: IconAnalytics },
+    { name: 'Charts', path: '/charts', icon: IconChart },
     { name: 'Calendar', path: '/calendar', icon: IconCalendar },
     { name: 'Risk', path: '/risk', icon: IconRisk },
     { name: 'Psychology', path: '/psychology', icon: IconPsychology },

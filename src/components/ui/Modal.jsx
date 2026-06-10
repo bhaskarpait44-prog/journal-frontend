@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose } from './Icons';
 
-export const Modal = ({ isOpen, onClose, title, children, footer }) => {
+export const Modal = ({ isOpen, onClose, title, children, footer, maxWidth = '480px' }) => {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -23,7 +23,10 @@ export const Modal = ({ isOpen, onClose, title, children, footer }) => {
       />
       
       {/* Modal Content */}
-      <div className="relative w-full md:w-[90vw] md:max-w-[480px] bg-card md:rounded-3xl rounded-t-3xl shadow-[0_25px_60px_rgba(0,0,0,0.5)] flex flex-col max-h-[92vh] animate-slide-up md:animate-scale-in overflow-hidden">
+      <div 
+        className="relative w-full md:w-[90vw] bg-card md:rounded-3xl rounded-t-3xl shadow-[0_25px_60px_rgba(0,0,0,0.5)] flex flex-col max-h-[92vh] animate-slide-up md:animate-scale-in overflow-hidden"
+        style={{ maxWidth: maxWidth }}
+      >
         {/* Handle for mobile */}
         <div className="md:hidden flex justify-center py-3">
           <div className="w-10 h-1 bg-border-strong rounded-full cursor-grab active:cursor-grabbing" />

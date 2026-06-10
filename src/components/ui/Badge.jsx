@@ -25,8 +25,8 @@ export const Badge = ({ children, type, className = '' }) => {
       dot: "bg-blue-400 animate-pulse"
     },
     CLOSED: {
-      style: "bg-slate-500/10 text-slate-400 border-slate-500/20",
-      dot: "bg-slate-400"
+      style: "bg-card-alt text-text-muted border-border",
+      dot: "bg-text-muted"
     },
     EXPIRED: {
       style: "bg-card-alt text-text-faint border-border",

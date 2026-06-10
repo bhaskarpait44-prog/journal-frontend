@@ -18,7 +18,7 @@ export function ThemeToggle({ className = '' }) {
         {isDark ? (
           <IconSun className="w-3 h-3 text-amber-500" strokeWidth={2.5} />
         ) : (
-          <IconMoon className="w-3 h-3 text-slate-500" strokeWidth={2.5} />
+          <IconMoon className="w-3 h-3 text-text-muted" strokeWidth={2.5} />
         )}
       </div>
     </button>

@@ -7,6 +7,7 @@ export const Input = ({
   error, 
   prefix,
   suffix,
+  noLabel,
   className = '', 
   containerClassName = '', 
   ...props 
@@ -21,7 +22,7 @@ export const Input = ({
 
   return (
     <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
-      {label && (
+      {label && !noLabel && (
         <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider ml-1">
           {label}
         </label>
