@@ -32,11 +32,6 @@ async function request(method, path, data, isForm = false) {
     throw new Error(json.message || 'Session expired. Please sign in again.');
   }
 
-  if (res.status === 403 && (json.message?.includes('Upgrade') || json.message?.includes('Active subscription'))) {
-    window.dispatchEvent(new CustomEvent('show-upgrade-modal', { detail: { message: json.message } }));
-    throw new Error(json.message);
-  }
-
   if (!res.ok) throw new Error(json.message || `Request failed (${res.status})`);
   return json;
 }

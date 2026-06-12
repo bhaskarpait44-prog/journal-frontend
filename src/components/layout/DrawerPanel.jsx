@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { 
   IconDashboard, IconTrades, IconAddTrade, IconAnalytics, 
   IconCalendar, IconRisk, IconPsychology, IconExport, 
-  IconProfile, IconLogout, IconArrowUp, IconChart, IconClose
+  IconProfile, IconLogout, IconArrowUp, IconClose
 } from '../ui/Icons';
 
 
@@ -20,7 +20,6 @@ const DrawerPanel = ({ isOpen, onClose }) => {
 
   const toolItems = [
     { name: 'Analytics', path: '/analytics', icon: IconAnalytics },
-    { name: 'Charts', path: '/charts', icon: IconChart },
     { name: 'Calendar', path: '/calendar', icon: IconCalendar },
     { name: 'Risk', path: '/risk', icon: IconRisk },
     { name: 'Psychology', path: '/psychology', icon: IconPsychology },
@@ -123,7 +122,7 @@ const DrawerPanel = ({ isOpen, onClose }) => {
                 <p className="text-sm font-bold text-text-primary truncate">{user?.name || 'User'}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-[9px] font-black bg-accent/10 text-accent px-1.5 py-0.5 rounded uppercase tracking-tighter">
-                    {user?.plan || 'PRO'} PLAN
+                    PRO PLAN
                   </span>
                 </div>
               </div>

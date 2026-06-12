@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { 
   IconDashboard, IconTrades, IconAddTrade, IconAnalytics, 
   IconCalendar, IconRisk, IconPsychology, IconExport, 
-  IconProfile, IconLogout, IconArrowUp, IconChart 
+  IconProfile, IconLogout, IconArrowUp 
 } from '../ui/Icons';
 
 const Sidebar = ({ className = '' }) => {
@@ -19,7 +19,6 @@ const Sidebar = ({ className = '' }) => {
 
   const toolItems = [
     { name: 'Analytics', path: '/analytics', icon: IconAnalytics },
-    { name: 'Charts', path: '/charts', icon: IconChart },
     { name: 'Calendar', path: '/calendar', icon: IconCalendar },
     { name: 'Risk', path: '/risk', icon: IconRisk },
     { name: 'Psychology', path: '/psychology', icon: IconPsychology },
@@ -76,7 +75,7 @@ const Sidebar = ({ className = '' }) => {
               TradeLog
             </span>
             <span className="text-[10px] font-bold text-accent uppercase tracking-widest leading-none">
-              {user?.plan || 'PRO'}
+              PRO
             </span>
           </div>
         </div>
@@ -113,7 +112,7 @@ const Sidebar = ({ className = '' }) => {
               <p className="text-xs font-bold text-text-primary truncate">{user?.name || 'User'}</p>
               <div className="flex items-center gap-1.5">
                 <span className="text-[9px] font-black bg-accent/10 text-accent px-1.5 py-0.5 rounded uppercase tracking-tighter">
-                  {user?.plan || 'PRO'} PLAN
+                  PRO PLAN
                 </span>
               </div>
             </div>
@@ -129,12 +128,6 @@ const Sidebar = ({ className = '' }) => {
             </button>
           </div>
         </div>
-        
-        {user?.expiresIn < 14 && (
-          <p className="mt-3 px-2 text-[10px] text-text-faint text-center">
-            Subscription expires in <span className="text-warning font-bold">{user.expiresIn} days</span>
-          </p>
-        )}
       </div>
     </aside>
   );

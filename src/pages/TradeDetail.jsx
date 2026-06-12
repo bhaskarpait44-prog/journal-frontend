@@ -12,7 +12,6 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { PnlSpan } from '../components/ui/PnlSpan';
 import { Skeleton } from '../components/ui/Skeleton';
-import TradeChart from '../components/TradeChart';
 import { 
   IconEdit, IconChevronDown, IconTrash, IconPsychology
 } from '../components/ui/Icons';
@@ -29,7 +28,6 @@ export default function TradeDetail() {
   const navigate = useNavigate();
   const [trade, setTrade] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('details');
   const [modals, setModals] = useState({
     close: false,
     strategy: false,
@@ -40,9 +38,6 @@ export default function TradeDetail() {
     try {
       const data = await api.get(`/trades/${id}`);
       setTrade(data);
-      if (data && data.entryPrice && (data.stopLoss || data.target)) {
-        setActiveTab('chart');
-      }
     } catch (err) {
       toast.error(err.message);
       navigate('/trades');
@@ -90,85 +85,61 @@ export default function TradeDetail() {
         <Button variant="secondary" size="sm" onClick={() => navigate('/trades')}>Back to Trades</Button>
       </div>
 
-      <div className="space-y-6">
-        {/* Tab Switcher */}
-        <div className="flex bg-card-alt p-1 rounded-2xl border border-border max-w-md mx-auto">
-          <button
-            onClick={() => setActiveTab('details')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'details' ? 'bg-card text-text-primary shadow-sm' : 'text-text-faint hover:text-text-muted'}`}
-          >
-            Execution Details
-          </button>
-          <button
-            onClick={() => setActiveTab('chart')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'chart' ? 'bg-card text-text-primary shadow-sm' : 'text-text-faint hover:text-text-muted'}`}
-          >
-            Trade Chart
-          </button>
+      <div className="space-y-8 animate-fade-in">
+        {/* Hero Section */}
+        <div className="relative p-8 bg-card-alt rounded-[2.5rem] border border-border overflow-hidden">
+          <div className="relative z-10 flex justify-between items-start">
+            <div>
+              <h4 className="text-4xl font-black font-heading tracking-tighter">{trade.symbol}</h4>
+              <div className="flex items-center gap-2 mt-3">
+                <Badge type={trade.tradeType} />
+                <Badge type={trade.status === 'OPEN' ? 'OPEN' : 'CLOSED'} />
+              </div>
+            </div>
+            <div className="text-right">
+              <PnlSpan value={trade.pnl} className="text-4xl font-black font-mono block" />
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mt-1">Total Result</p>
+            </div>
+          </div>
+          <div className={`absolute -right-12 -bottom-12 w-64 h-64 rounded-full blur-[100px] opacity-10 ${trade.pnl >= 0 ? 'bg-profit' : 'bg-loss'}`} />
         </div>
 
-        {activeTab === 'details' ? (
-          <div className="space-y-8 animate-fade-in">
-            {/* Hero Section */}
-            <div className="relative p-8 bg-card-alt rounded-[2.5rem] border border-border overflow-hidden">
-              <div className="relative z-10 flex justify-between items-start">
-                <div>
-                  <h4 className="text-4xl font-black font-heading tracking-tighter">{trade.symbol}</h4>
-                  <div className="flex items-center gap-2 mt-3">
-                    <Badge type={trade.tradeType} />
-                    <Badge type={trade.status === 'OPEN' ? 'OPEN' : 'CLOSED'} />
-                  </div>
-                </div>
-                <div className="text-right">
-                  <PnlSpan value={trade.pnl} className="text-4xl font-black font-mono block" />
-                  <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mt-1">Total Result</p>
-                </div>
-              </div>
-              <div className={`absolute -right-12 -bottom-12 w-64 h-64 rounded-full blur-[100px] opacity-10 ${trade.pnl >= 0 ? 'bg-profit' : 'bg-loss'}`} />
-            </div>
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 p-2">
+          <DetailRow label="Entry Price" value={`₹${trade.entryPrice}`} sub={fmtDate(trade.entryDate)} />
+          <DetailRow label="Exit Price" value={trade.exitPrice ? `₹${trade.exitPrice}` : 'PENDING'} sub={trade.exitDate ? fmtDate(trade.exitDate) : 'Still Open'} />
+          <DetailRow label="Quantity" value={trade.quantity} sub="Units / Lots" />
+          <DetailRow label="Strategy" value={trade.strategy || 'NONE'} />
+          <DetailRow 
+            label="Charges" 
+            value={fmtINR(trade.charges)} 
+            sub={trade.status === 'EXPIRED' ? '* ITM expiry STT not included' : null} 
+          />
+        </div>
 
-            {/* Info Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 p-2">
-              <DetailRow label="Entry Price" value={`₹${trade.entryPrice}`} sub={fmtDate(trade.entryDate)} />
-              <DetailRow label="Exit Price" value={trade.exitPrice ? `₹${trade.exitPrice}` : 'PENDING'} sub={trade.exitDate ? fmtDate(trade.exitDate) : 'Still Open'} />
-              <DetailRow label="Quantity" value={trade.quantity} sub="Units / Lots" />
-              <DetailRow label="Strategy" value={trade.strategy || 'NONE'} />
-              <DetailRow 
-                label="Charges" 
-                value={fmtINR(trade.charges)} 
-                sub={trade.status === 'EXPIRED' ? '* ITM expiry STT not included' : null} 
-              />
-            </div>
-
-            {/* Sub-sections */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h5 className="text-[11px] font-black uppercase tracking-[0.2em] text-text-faint">Execution Notes</h5>
-                <button onClick={() => openModal('strategy')} className="text-accent hover:bg-accent/10 p-2 rounded-lg transition-all"><IconEdit className="w-5 h-5" /></button>
-              </div>
-              <div className="p-6 rounded-3xl bg-card-alt border border-border">
-                {trade.notes ? (
-                  <p className="text-base text-text-secondary leading-relaxed whitespace-pre-wrap">{trade.notes}</p>
-                ) : (
-                  <p className="text-sm text-text-faint italic">No journal entries for this trade record.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {trade.status === 'OPEN' ? (
-                <Button variant="primary" className="shadow-glow-blue h-14 text-lg" onClick={() => openModal('close')}>Close Position</Button>
-              ) : (
-                <Button variant="danger" className="h-14 text-lg" onClick={handleDelete}><IconTrash className="w-5 h-5 mr-2" /> Delete Record</Button>
-              )}
-              <Button variant="secondary" className="h-14 text-lg" onClick={() => openModal('psychology')}><IconPsychology className="w-5 h-5 mr-2" /> View Mindset Analysis</Button>
-            </div>
+        {/* Sub-sections */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h5 className="text-[11px] font-black uppercase tracking-[0.2em] text-text-faint">Execution Notes</h5>
+            <button onClick={() => openModal('strategy')} className="text-accent hover:bg-accent/10 p-2 rounded-lg transition-all"><IconEdit className="w-5 h-5" /></button>
           </div>
-        ) : (
-          <div className="animate-fade-in bg-card-alt rounded-3xl border border-border p-4">
-            <TradeChart trade={trade} />
+          <div className="p-6 rounded-3xl bg-card-alt border border-border">
+            {trade.notes ? (
+              <p className="text-base text-text-secondary leading-relaxed whitespace-pre-wrap">{trade.notes}</p>
+            ) : (
+              <p className="text-sm text-text-faint italic">No journal entries for this trade record.</p>
+            )}
           </div>
-        )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {trade.status === 'OPEN' ? (
+            <Button variant="primary" className="shadow-glow-blue h-14 text-lg" onClick={() => openModal('close')}>Close Position</Button>
+          ) : (
+            <Button variant="danger" className="h-14 text-lg" onClick={handleDelete}><IconTrash className="w-5 h-5 mr-2" /> Delete Record</Button>
+          )}
+          <Button variant="secondary" className="h-14 text-lg" onClick={() => openModal('psychology')}><IconPsychology className="w-5 h-5 mr-2" /> View Mindset Analysis</Button>
+        </div>
       </div>
 
       {/* Sub Modals */}
@@ -187,15 +158,11 @@ const DetailRow = ({ label, value, sub }) => (
   </div>
 );
 
-// Reuse the modal components from Trades.jsx (ideally these should be in separate files)
-// For now I will copy them here to keep it simple, but a better approach would be to refactor them out.
-
 function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     exitPrice: '',
     exitDate: new Date().toISOString().split('T')[0],
-    exitTime: '15:30',
     charges: '25',
   });
 
@@ -212,9 +179,8 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
       await api.put(`/trades/${trade.id}/close`, {
         ...formData,
         exitPrice: parseFloat(formData.exitPrice),
-        exitDate: combineIstDateTime(formData.exitDate, formData.exitTime),
+        exitDate: combineIstDateTime(formData.exitDate, '15:30'),
         charges: parseFloat(formData.charges),
-        exitTime: undefined,
       });
       toast.success('Position closed successfully');
       onSuccess();
@@ -261,13 +227,6 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
             type="date" 
             value={formData.exitDate}
             onChange={e => setFormData({...formData, exitDate: e.target.value})}
-            required
-          />
-          <Input 
-            label="Exit Time (IST)" 
-            type="time" 
-            value={formData.exitTime}
-            onChange={e => setFormData({...formData, exitTime: e.target.value})}
             required
           />
           <Input 

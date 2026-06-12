@@ -16,8 +16,6 @@ export default function Signup() {
   const [showPass, setShowPass] = useState(false);
   const [agreed, setAgreed] = useState(false);
   
-  const selectedPlan = localStorage.getItem('selectedPlan') || 'PRO';
-
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -45,7 +43,7 @@ export default function Signup() {
       });
       login(res.token, res.user);
       toast.success('Account created! Welcome aboard.');
-      navigate('/pricing');
+      navigate('/dashboard');
     } catch (err) {
       if (err.message?.includes('already exists')) {
         toast.error('Email already registered');
@@ -64,7 +62,7 @@ export default function Signup() {
         const res = await api.post('/auth/google', { credential: response.credential });
         login(res.token, res.user);
         toast.success('Successfully registered via Google');
-        navigate('/pricing');
+        navigate('/dashboard');
       } catch (err) {
         toast.error(err.message);
       }
@@ -144,10 +142,6 @@ export default function Signup() {
 
         <div className="w-full max-w-[400px] space-y-8 py-10 lg:py-0 animate-fade-up">
           <div className="text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-widest mb-4">
-              <IconCheck className="w-3 h-3" strokeWidth={3} />
-              {selectedPlan} Plan
-            </div>
             <h2 className="text-3xl sm:text-4xl font-black font-heading text-text-primary tracking-tight">Create Account</h2>
             <p className="text-text-muted mt-3 font-medium text-sm">Already a member? <Link to="/login" className="text-accent font-black hover:underline underline-offset-4 decoration-accent/30">Sign in here</Link></p>
           </div>

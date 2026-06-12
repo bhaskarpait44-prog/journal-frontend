@@ -1,13 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { IconCalendar, IconRisk, IconPsychology, IconExport, IconProfile, IconChart } from '../ui/Icons';
+import { IconCalendar, IconRisk, IconPsychology, IconExport, IconProfile } from '../ui/Icons';
 
 const MobileMoreSheet = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const moreItems = [
-    { name: 'Charts', path: '/charts', icon: IconChart },
     { name: 'Calendar', path: '/calendar', icon: IconCalendar },
     { name: 'Risk', path: '/risk', icon: IconRisk },
     { name: 'Psychology', path: '/psychology', icon: IconPsychology },

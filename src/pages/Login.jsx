@@ -12,7 +12,6 @@ import { IconEye, IconEyeOff, IconPlus } from '../components/ui/Icons';
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  const hasSub = useAuthStore(s => s.hasSub());
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
@@ -35,7 +34,7 @@ export default function Login() {
       const { token, user } = await api.post('/auth/login', form);
       login(token, user);
       toast.success('Access Granted');
-      navigate(hasSub ? '/dashboard' : '/pricing');
+      navigate('/dashboard');
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -57,12 +56,12 @@ export default function Login() {
         .then(({ token, user }) => {
           login(token, user);
           toast.success('Access Granted');
-          navigate(hasSub ? '/dashboard' : '/pricing');
+          navigate('/dashboard');
         })
         .catch(err => toast.error(err.message))
         .finally(() => setLoading(false));
     }
-  }, [navigate, login, hasSub]);
+  }, [navigate, login]);
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();

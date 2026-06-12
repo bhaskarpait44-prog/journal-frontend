@@ -14,7 +14,6 @@ import { Modal } from '../components/ui/Modal';
 import { PnlSpan } from '../components/ui/PnlSpan';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
-import TradeChart from '../components/TradeChart';
 import { 
   IconFilter, IconPlus, IconImport, IconSearch, IconTrash, 
   IconEdit, IconPsychology, IconChevronRight, IconChevronDown, 
@@ -530,7 +529,6 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
   const [formData, setFormData] = useState({
     exitPrice: '',
     exitDate: new Date().toISOString().split('T')[0],
-    exitTime: '15:30',
     charges: '25',
   });
 
@@ -547,9 +545,8 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
       await api.put(`/trades/${trade.id}/close`, {
         ...formData,
         exitPrice: parseFloat(formData.exitPrice),
-        exitDate: combineIstDateTime(formData.exitDate, formData.exitTime),
+        exitDate: combineIstDateTime(formData.exitDate, '15:30'),
         charges: parseFloat(formData.charges),
-        exitTime: undefined,
       });
       toast.success('Position closed successfully');
       onSuccess();
@@ -596,13 +593,6 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
             type="date" 
             value={formData.exitDate}
             onChange={e => setFormData({...formData, exitDate: e.target.value})}
-            required
-          />
-          <Input 
-            label="Exit Time (IST)" 
-            type="time" 
-            value={formData.exitTime}
-            onChange={e => setFormData({...formData, exitTime: e.target.value})}
             required
           />
           <Input 

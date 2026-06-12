@@ -17,7 +17,6 @@ export const useAuthStore = create((set, get) => ({
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    localStorage.removeItem('selectedPlan');
     set({ token: null, user: null });
   },
 
@@ -27,11 +26,4 @@ export const useAuthStore = create((set, get) => ({
   },
 
   isLoggedIn: () => !!get().token,
-  
-  hasSub() {
-    const sub = get().user?.subscription;
-    if (!sub || sub.status !== 'active') return false;
-    if (sub.expiry && new Date() > new Date(sub.expiry)) return false;
-    return true;
-  },
 }));
