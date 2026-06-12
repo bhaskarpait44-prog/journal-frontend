@@ -9,7 +9,7 @@ import { fmtINR } from '../lib/utils';
 import { toast } from 'react-hot-toast';
 import { 
   IconRisk, IconDollar, IconRefresh, IconArrowUp, 
-  IconArrowDown, IconCheck, IconAnalytics, IconSearch
+  IconArrowDown, IconCheck, IconAnalytics, IconSearch, IconPlus
 } from '../components/ui/Icons';
 
 const LOT_SIZES = {
@@ -19,7 +19,10 @@ const LOT_SIZES = {
 };
 
 export default function Risk() {
-  const { data: profile, refetch } = useApi('/profile/risk');
+  const { data: profile, refetch: refetchProfile } = useApi('/profile/risk');
+  const { data: riskStatus, refetch: refetchStatus } = useApi('/analytics/daily-risk-status');
+  const { data: summary } = useApi('/analytics/summary');
+  
   const [loading, setLoading] = useState(false);
   
   const [settings, setSettings] = useState({
@@ -35,7 +38,8 @@ export default function Risk() {
     entryPrice: '',
     slPrice: '',
     tradeType: 'BUY',
-    riskOverride: ''
+    riskOverride: '',
+    rrRatio: 2.0
   });
 
   useEffect(() => {
@@ -49,7 +53,8 @@ export default function Risk() {
     try {
       await api.put('/profile/risk', settings);
       toast.success('Risk profile updated successfully');
-      refetch();
+      refetchProfile();
+      refetchStatus();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -71,11 +76,19 @@ export default function Risk() {
     const sl = parseFloat(calc.slPrice);
     const lotSize = parseFloat(calc.lotSize) || 1;
     const isBuy = calc.tradeType === 'BUY';
+    const rr = parseFloat(calc.rrRatio) || 2;
 
     if (!entry || !sl) return null;
 
     const riskPerUnit = isBuy ? entry - sl : sl - entry;
-    if (riskPerUnit <= 0) return { error: `Stop loss must be ${isBuy ? 'below' : 'above'} entry price.` };
+    
+    // Validation: SL on wrong side
+    if (riskPerUnit <= 0) {
+      return { 
+        error: `Invalid SL: Stop loss must be ${isBuy ? 'BELOW' : 'ABOVE'} entry for a ${calc.tradeType} trade.`,
+        isInvalid: true 
+      };
+    }
 
     const capitalAtRisk = parseFloat(calc.riskOverride) || (settings.totalCapital * settings.riskPerTrade) / 100;
     if (!capitalAtRisk) return null;
@@ -84,12 +97,12 @@ export default function Risk() {
     const maxLots = Math.floor(capitalAtRisk / (riskPerLot || 1));
     const maxUnits = maxLots * lotSize;
     const actualRisk = maxLots * riskPerLot;
-    const rewardPerUnit = riskPerUnit * 2;
+    const rewardPerUnit = riskPerUnit * rr;
     const targetPrice = isBuy ? entry + rewardPerUnit : entry - rewardPerUnit;
     const potentialProfit = maxLots * rewardPerUnit * lotSize;
 
     return {
-      maxLots, maxUnits, actualRisk, riskPerLot, targetPrice, potentialProfit, capitalAtRisk, riskPerUnit
+      maxLots, maxUnits, actualRisk, riskPerLot, targetPrice, potentialProfit, capitalAtRisk, riskPerUnit, rr
     };
   }, [calc, settings]);
 
@@ -97,237 +110,284 @@ export default function Risk() {
   const maxDailyLossLimit = (settings.totalCapital * settings.maxDailyLoss) / 100;
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fade-up max-w-6xl mx-auto pb-12">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black font-heading tracking-tight text-text-primary">Risk Parameters</h1>
-        <p className="text-sm font-medium text-text-faint mt-1 uppercase tracking-widest leading-tight">
-          Capital allocation & sizing rules
-        </p>
-      </div>
+    <div className="max-w-[1400px] mx-auto pb-20 animate-fade-in space-y-12">
+      {/* ── HEADER & QUICK STATUS ────────────────────────────────────────── */}
+      <section className="pt-8 flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div className="space-y-2">
+          <header className="flex items-center gap-3">
+            <span className="text-[10px] font-black tracking-[0.3em] text-text-faint uppercase">CAPITAL ARCHITECTURE</span>
+            <div className="h-[1px] w-8 bg-border" />
+          </header>
+          <h1 className="text-4xl sm:text-5xl font-black font-mono tracking-tighter uppercase tabular-nums leading-none">
+            Risk Control
+          </h1>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-        <div className="space-y-6 sm:space-y-8">
-          {/* Risk Profile Settings */}
-          <Card variant="default" padding="p-0" className="overflow-hidden">
-             <div className="px-6 py-5 border-b border-border bg-card-alt/30 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-accent/10 flex items-center justify-center text-accent shrink-0">
-                   <IconRisk className="w-6 h-6" strokeWidth={2.5} />
+        {riskStatus && (
+          <div className="flex-1 max-w-md bg-card-alt/30 border border-border p-5 space-y-3">
+             <div className="flex justify-between items-end">
+                <div className="space-y-1">
+                   <p className="text-[9px] font-black text-text-faint uppercase tracking-widest">Today's Drawdown</p>
+                   <p className={`text-xl font-mono font-black ${riskStatus.todayPnl >= 0 ? 'text-profit' : 'text-loss'}`}>
+                     {fmtINR(riskStatus.todayPnl, true)}
+                   </p>
                 </div>
-                <div>
-                   <h3 className="text-sm font-black uppercase tracking-widest text-text-primary">Risk Architecture</h3>
-                   <p className="text-[10px] font-bold text-text-faint uppercase tracking-tighter">Define global constraints</p>
+                <div className="text-right space-y-1">
+                   <p className="text-[9px] font-black text-text-faint uppercase tracking-widest">Cap Used</p>
+                   <p className="text-sm font-mono font-bold">{riskStatus.percentUsed.toFixed(1)}%</p>
                 </div>
              </div>
-             <div className="p-6 sm:p-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-                  <Input 
-                    label="Trading Capital" 
-                    type="number" 
-                    prefix={<span className="pointer-events-none">₹</span>}
-                    value={settings.totalCapital} 
-                    onChange={e => setSettings({ ...settings, totalCapital: parseFloat(e.target.value) || 0 })}
-                  />
-                  <Input 
-                    label="Idle Margin" 
-                    type="number" 
-                    prefix={<span className="pointer-events-none">₹</span>}
-                    value={settings.availableMargin} 
-                    onChange={e => setSettings({ ...settings, availableMargin: parseFloat(e.target.value) || 0 })}
-                  />
-                  <Input 
-                    label="Risk per Trade" 
-                    type="number" 
-                    step="0.1"
-                    suffix={<span className="pointer-events-none">%</span>}
-                    value={settings.riskPerTrade} 
-                    onChange={e => setSettings({ ...settings, riskPerTrade: parseFloat(e.target.value) || 0 })}
-                  />
-                  <Input 
-                    label="Daily Loss Cap" 
-                    type="number" 
-                    step="0.1"
-                    suffix={<span className="pointer-events-none">%</span>}
-                    value={settings.maxDailyLoss} 
-                    onChange={e => setSettings({ ...settings, maxDailyLoss: parseFloat(e.target.value) || 0 })}
-                  />
+             <div className="h-1.5 w-full bg-border rounded-full overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-1000 ${riskStatus.isBreached ? 'bg-loss' : 'bg-accent'}`}
+                  style={{ width: `${Math.min(riskStatus.percentUsed, 100)}%` }}
+                />
+             </div>
+             <p className="text-[8px] font-black text-text-faint uppercase tracking-tighter">
+                Daily Limit: {fmtINR(riskStatus.maxDailyLossAmount)}
+             </p>
+          </div>
+        )}
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+        {/* ── LEFT: PARAMETERS ─────────────────────────────────────────────── */}
+        <div className="lg:col-span-5 space-y-12">
+          
+          {/* Risk Profile Settings */}
+          <section className="space-y-8">
+             <header className="flex items-center justify-between border-b border-border pb-4">
+                <h3 className="text-[11px] font-black tracking-[0.2em] text-text-primary uppercase">Parameters</h3>
+                <span className="text-[9px] font-black text-text-faint uppercase tracking-widest italic">Live Preview Active</span>
+             </header>
+
+             <div className="space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                   <div className="space-y-3">
+                      <Input 
+                        label="TOTAL CAPITAL" 
+                        type="number" 
+                        value={settings.totalCapital} 
+                        onChange={e => setSettings({ ...settings, totalCapital: parseFloat(e.target.value) || 0 })}
+                        className="font-mono font-bold"
+                      />
+                      <p className="text-[10px] font-bold text-text-faint uppercase tracking-tighter px-1 italic">
+                        Account Balance
+                      </p>
+                   </div>
+                   <div className="space-y-3">
+                      <Input 
+                        label="IDLE MARGIN" 
+                        type="number" 
+                        value={settings.availableMargin} 
+                        onChange={e => setSettings({ ...settings, availableMargin: parseFloat(e.target.value) || 0 })}
+                        className="font-mono font-bold"
+                      />
+                      <p className="text-[10px] font-bold text-text-faint uppercase tracking-tighter px-1 italic">
+                        {settings.totalCapital > 0 ? `${((settings.availableMargin/settings.totalCapital)*100).toFixed(1)}% Free` : '0% Free'}
+                      </p>
+                   </div>
                 </div>
-                <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3">
-                  <Button variant="primary" className="h-12 px-8 shadow-glow-blue w-full sm:w-auto" onClick={handleSave} loading={loading}>Apply Parameters</Button>
-                  <Button variant="secondary" className="h-12 px-6 w-full sm:w-auto" onClick={() => setSettings({ totalCapital: 0, availableMargin: 0, riskPerTrade: 1, maxDailyLoss: 2 })}>Reset Profile</Button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4 border-t border-border/50">
+                   <div className="space-y-3">
+                      <Input 
+                        label="RISK PER TRADE (%)" 
+                        type="number" 
+                        step="0.1"
+                        value={settings.riskPerTrade} 
+                        onChange={e => setSettings({ ...settings, riskPerTrade: parseFloat(e.target.value) || 0 })}
+                        className="font-mono font-bold"
+                      />
+                      <p className="text-[10px] font-black text-rose-500 uppercase tracking-tighter px-1">
+                        ≈ {fmtINR(maxLossPerTrade)} / Trade
+                      </p>
+                   </div>
+                   <div className="space-y-3">
+                      <Input 
+                        label="DAILY LOSS CAP (%)" 
+                        type="number" 
+                        step="0.1"
+                        value={settings.maxDailyLoss} 
+                        onChange={e => setSettings({ ...settings, maxDailyLoss: parseFloat(e.target.value) || 0 })}
+                        className="font-mono font-bold"
+                      />
+                      <p className="text-[10px] font-black text-amber-500 uppercase tracking-tighter px-1">
+                        ≈ {fmtINR(maxDailyLossLimit)} / Session
+                      </p>
+                   </div>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                   <Button variant="primary" className="flex-1 h-14 rounded-none border-l-4 border-accent shadow-none font-black uppercase tracking-widest text-[11px]" onClick={handleSave} loading={loading}>
+                     Update Architecture
+                   </Button>
+                </div>
+             </div>
+          </section>
+
+          {/* Theoretical Summary */}
+          <section className="p-8 bg-card-alt/20 border-l-2 border-border space-y-8">
+             <header>
+                <h4 className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em]">Efficiency Summary</h4>
+             </header>
+             <div className="grid grid-cols-2 gap-8">
+                <StatItem label="Win Rate" value={`${summary?.winRate || 0}%`} />
+                <StatItem label="Profit Factor" value={summary?.profitFactor || '0.00'} />
+                <StatItem label="W/L Ratio" value={`${summary?.wins || 0}W : ${summary?.losses || 0}L`} />
+                <StatItem label="Expectancy" value={fmtINR(summary?.expectancy || 0, true)} />
+             </div>
+          </section>
+        </div>
+
+        {/* ── RIGHT: CALCULATOR ────────────────────────────────────────────── */}
+        <div className="lg:col-span-7">
+          <Card className="rounded-none border-none bg-card-alt p-0 overflow-hidden" variant="default">
+             <header className="px-8 py-6 border-b border-border bg-base/50 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                   <IconDollar className="w-5 h-5 text-accent" />
+                   <h3 className="text-xs font-black tracking-[0.2em] text-text-primary uppercase">Position Optimizer</h3>
+                </div>
+                <Badge className="bg-accent/10 text-accent text-[9px] border-none">ALGO-V1</Badge>
+             </header>
+             
+             <div className="p-8 sm:p-12 space-y-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
+                   <div className="space-y-8">
+                      <Input 
+                        label="SYMBOL" 
+                        value={calc.symbol} 
+                        onChange={e => handleSymbolChange(e.target.value)} 
+                        placeholder="NIFTY"
+                        className="font-mono font-black placeholder:text-text-faint/30"
+                      />
+                      <Input 
+                        label="ENTRY PRICE" 
+                        type="number" 
+                        step="0.05"
+                        value={calc.entryPrice} 
+                        onChange={e => setCalc({ ...calc, entryPrice: e.target.value })}
+                        className="font-mono font-black"
+                      />
+                      <div className="grid grid-cols-2 gap-px bg-border border border-border">
+                         <button 
+                           onClick={() => setCalc({ ...calc, tradeType: 'BUY' })}
+                           className={`h-12 text-[10px] font-black uppercase tracking-widest transition-colors ${calc.tradeType === 'BUY' ? 'bg-accent text-white' : 'bg-card text-text-faint hover:text-text-primary'}`}
+                         >LONG</button>
+                         <button 
+                           onClick={() => setCalc({ ...calc, tradeType: 'SELL' })}
+                           className={`h-12 text-[10px] font-black uppercase tracking-widest transition-colors ${calc.tradeType === 'SELL' ? 'bg-rose-500 text-white' : 'bg-card text-text-faint hover:text-text-primary'}`}
+                         >SHORT</button>
+                      </div>
+                   </div>
+
+                   <div className="space-y-8">
+                      <Input 
+                        label="LOT SIZE" 
+                        type="number" 
+                        value={calc.lotSize} 
+                        onChange={e => setCalc({ ...calc, lotSize: e.target.value })}
+                        className="font-mono font-black"
+                      />
+                      <Input 
+                        label="STOP LOSS" 
+                        type="number" 
+                        step="0.05"
+                        value={calc.slPrice} 
+                        onChange={e => setCalc({ ...calc, slPrice: e.target.value })}
+                        className={`font-mono font-black ${results?.isInvalid ? 'border-loss text-loss' : ''}`}
+                      />
+                      <Input 
+                        label="TARGET R:R" 
+                        type="number" 
+                        step="0.1"
+                        value={calc.rrRatio} 
+                        onChange={e => setCalc({ ...calc, rrRatio: e.target.value })}
+                        className="font-mono font-black"
+                      />
+                   </div>
+                </div>
+
+                <div className="pt-8 border-t border-border space-y-8">
+                   <div className="flex items-center justify-between">
+                      <h4 className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em]">Execution Matrix</h4>
+                      <div className="flex items-center gap-4">
+                         <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-accent" />
+                            <span className="text-[9px] font-black text-text-faint uppercase">Recommended</span>
+                         </div>
+                      </div>
+                   </div>
+
+                   {!results || results.isInvalid ? (
+                      <div className={`p-8 border-2 border-dashed ${results?.isInvalid ? 'border-loss/30 bg-loss/5' : 'border-border bg-card/50'} text-center space-y-2`}>
+                         <p className={`text-[11px] font-black uppercase tracking-widest ${results?.isInvalid ? 'text-loss' : 'text-text-faint'}`}>
+                           {results?.isInvalid ? results.error : 'Enter Entry & SL to generate matrix'}
+                         </p>
+                      </div>
+                   ) : (
+                      <div className="space-y-4">
+                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-8 px-2">
+                            <StatItem label="Ideal Lots" value={results.maxLots} color="text-accent" />
+                            <StatItem label="Ideal Units" value={results.maxUnits.toLocaleString()} />
+                            <StatItem label={`Exit (1:${results.rr})`} value={`₹${results.targetPrice.toFixed(1)}`} color="text-profit" />
+                            <StatItem label="Gross Risk" value={fmtINR(results.actualRisk)} color="text-loss" />
+                         </div>
+
+                         <div className="space-y-px bg-border border border-border">
+                            <MatrixRow label="Conservative" multiplier={0.5} results={results} settings={settings} calc={calc} />
+                            <MatrixRow label="Standard" multiplier={1.0} results={results} settings={settings} calc={calc} primary />
+                            <MatrixRow label="Aggressive" multiplier={1.5} results={results} settings={settings} calc={calc} aggressive />
+                         </div>
+                      </div>
+                   )}
                 </div>
              </div>
           </Card>
-
-          {/* Theoretical Limits Card */}
-          {settings.totalCapital > 0 && (
-            <Card variant="flat" className="bg-card-alt border-2 border-dashed border-border p-6 sm:p-8">
-              <h4 className="text-[11px] font-black text-text-muted uppercase tracking-[0.2em] mb-6">Derived Risk Limits</h4>
-              <div className="grid grid-cols-2 gap-4 sm:gap-6">
-                <LimitBox label="Per Entry Risk" value={fmtINR(maxLossPerTrade)} sub={`${settings.riskPerTrade}% Alloc`} color="text-rose-500" />
-                <LimitBox label="Session Stop" value={fmtINR(maxDailyLossLimit)} sub={`${settings.maxDailyLoss}% Max DD`} color="text-amber-500" />
-                <LimitBox label="NAV Capital" value={fmtINR(settings.totalCapital)} sub="Account Value" />
-                <LimitBox label="Margin Health" value={fmtINR(settings.availableMargin)} sub={`${((settings.availableMargin/settings.totalCapital)*100).toFixed(1)}% Free`} color="text-emerald-500" />
-              </div>
-            </Card>
-          )}
         </div>
-
-        {/* Position Sizer */}
-        <Card variant="elevated" className="border-none bg-gradient-to-br from-[#0d1525] to-[#0a0f1c] relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-5">
-             <IconAnalytics className="w-32 h-32 text-accent" />
-          </div>
-          
-          <div className="relative z-10 p-2 sm:p-4">
-            <div className="flex items-center gap-4 mb-8 sm:mb-10">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-accent/20 flex items-center justify-center text-accent shadow-lg shadow-accent/10 shrink-0">
-                <IconDollar className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2.5} />
-              </div>
-              <div>
-                <h3 className="text-lg sm:text-xl font-black font-heading text-white tracking-tight">Optimizer</h3>
-                <p className="text-[10px] font-black text-accent uppercase tracking-widest mt-0.5">Algorithmic sizing</p>
-              </div>
-            </div>
-
-            <div className="space-y-5 sm:space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                   <Input 
-                    label="Trading Symbol" 
-                    value={calc.symbol} 
-                    onChange={e => handleSymbolChange(e.target.value)} 
-                    placeholder="e.g. NIFTY" 
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-12" 
-                    containerClassName="text-white/80"
-                   />
-                </div>
-                <Input 
-                  label="Lot Size" 
-                  type="number" 
-                  value={calc.lotSize} 
-                  onChange={e => setCalc({ ...calc, lotSize: e.target.value })} 
-                  placeholder="50" 
-                  className="bg-white/5 border-white/10 text-white h-12" 
-                  containerClassName="text-white/80"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input 
-                  label="Entry Level" 
-                  type="number" 
-                  step="0.05" 
-                  prefix={<span className="text-white/60 pointer-events-none">₹</span>}
-                  value={calc.entryPrice} 
-                  onChange={e => setCalc({ ...calc, entryPrice: e.target.value })} 
-                  className="bg-white/5 border-white/10 text-white h-12" 
-                  containerClassName="text-white/80"
-                />
-                <Input 
-                  label="Stop Loss" 
-                  type="number" 
-                  step="0.05" 
-                  prefix={<span className="text-white/60 pointer-events-none">₹</span>}
-                  value={calc.slPrice} 
-                  onChange={e => setCalc({ ...calc, slPrice: e.target.value })} 
-                  className="bg-white/5 border-white/10 text-white h-12" 
-                  containerClassName="text-white/80"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 w-full bg-black/40 p-1 rounded-2xl border border-white/5 shadow-inner">
-                <button 
-                  type="button"
-                  onClick={() => setCalc({ ...calc, tradeType: 'BUY' })}
-                  className={`py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all h-11 flex items-center justify-center ${calc.tradeType === 'BUY' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-white/60 hover:text-white/80'}`}
-                >BUY (Long)</button>
-                <button 
-                  type="button"
-                  onClick={() => setCalc({ ...calc, tradeType: 'SELL' })}
-                  className={`py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all h-11 flex items-center justify-center ${calc.tradeType === 'SELL' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-white/60 hover:text-white/80'}`}
-                >SELL (Short)</button>
-              </div>
-
-              <Input 
-                label="Risk Override (₹)" 
-                type="number" 
-                value={calc.riskOverride} 
-                onChange={e => setCalc({ ...calc, riskOverride: e.target.value })} 
-                placeholder={settings.totalCapital > 0 ? `Auto: ₹${maxLossPerTrade.toLocaleString()}` : "Global profile unset"}
-                className="bg-white/5 border-white/10 text-white h-12" 
-                containerClassName="text-white/60"
-              />
-
-              {results?.error && (
-                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-[10px] font-black uppercase tracking-tight flex items-center gap-3 animate-fade-in">
-                   <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                   <span className="truncate">{results.error}</span>
-                </div>
-              )}
-
-              {results && !results.error && (
-                <div className="space-y-5 sm:space-y-6 pt-6 animate-fade-up border-t border-white/10 mt-6 sm:mt-8">
-                  <div className="flex items-center gap-2 text-[9px] font-black text-accent uppercase tracking-widest">
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                    Live Calculation
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <ResultItem label="Optimum Lots" value={results.maxLots} color="text-accent" isDark />
-                    <ResultItem label="Total Units" value={results.maxUnits.toLocaleString()} color="text-white" isDark />
-                    <ResultItem label="Target (2:1)" value={`₹${results.targetPrice.toFixed(1)}`} color="text-emerald-400" isDark />
-                    <ResultItem label="Profit (2:1)" value={fmtINR(results.potentialProfit)} color="text-emerald-400" isDark />
-                  </div>
-
-                  <div className="space-y-2.5 pt-2">
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] px-1">Sizing Matrix</p>
-                    <LotTier label="Conservative (0.5x)" lots={Math.max(1, Math.floor(results.maxLots * 0.5))} lotSize={calc.lotSize} riskPerLot={results.riskPerLot} totalCapital={settings.totalCapital} />
-                    <LotTier label="Standard (1.0x)" lots={results.maxLots} lotSize={calc.lotSize} riskPerLot={results.riskPerLot} totalCapital={settings.totalCapital} primary />
-                    <LotTier label="Aggressive (1.5x)" lots={Math.ceil(results.maxLots * 1.5)} lotSize={calc.lotSize} riskPerLot={results.riskPerLot} totalCapital={settings.totalCapital} risk />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </Card>
       </div>
     </div>
   );
 }
 
-const LimitBox = ({ label, value, sub, color = 'text-text-primary' }) => (
-  <div className="space-y-0.5">
-    <p className="text-[9px] font-black text-text-faint uppercase tracking-widest truncate">{label}</p>
-    <div className={`text-base sm:text-lg font-black font-mono tracking-tight truncate ${color}`}>{value}</div>
-    <p className="text-[9px] sm:text-[10px] font-bold text-text-faint uppercase tracking-tighter opacity-60 truncate">{sub}</p>
+const StatItem = ({ label, value, color = 'text-text-primary' }) => (
+  <div className="space-y-1">
+    <p className="text-[9px] font-black text-text-faint uppercase tracking-widest">{label}</p>
+    <p className={`text-lg font-mono font-black tabular-nums tracking-tighter ${color}`}>{value}</p>
   </div>
 );
 
-const ResultItem = ({ label, value, color, isDark }) => (
-  <div className={`p-4 sm:p-5 rounded-3xl border transition-all ${isDark ? 'bg-white/5 border-white/5' : 'bg-card border-border shadow-sm'}`}>
-    <p className={`text-[9px] font-black uppercase tracking-widest mb-1.5 truncate ${isDark ? 'text-white/40' : 'text-text-faint'}`}>{label}</p>
-    <p className={`text-base sm:text-xl font-black font-mono tracking-tighter tabular-nums truncate ${color}`}>{value}</p>
-  </div>
-);
-
-const LotTier = ({ label, lots, lotSize, riskPerLot, totalCapital, primary, risk }) => {
-  if (lots <= 0) return null;
-  const totalRisk = lots * riskPerLot;
-  const riskPct = totalCapital > 0 ? ((totalRisk / totalCapital) * 100).toFixed(1) : '—';
+const MatrixRow = ({ label, multiplier, results, settings, calc, primary, aggressive }) => {
+  const lots = Math.floor(results.maxLots * multiplier);
+  const units = lots * (parseFloat(calc.lotSize) || 1);
+  const risk = lots * results.riskPerLot;
+  const riskPct = settings.totalCapital > 0 ? ((risk / settings.totalCapital) * 100).toFixed(1) : '0.0';
+  
+  // Warning if aggressive uses more than 50% of capital or exceeds margin (simple heuristic)
+  const isHighCapitalWarning = aggressive && risk > (settings.availableMargin * 0.8);
 
   return (
-    <div className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl border transition-all ${
-      primary ? 'bg-accent/10 border-accent/30 shadow-lg shadow-accent/5' : 
-      risk ? 'bg-rose-500/10 border-rose-500/20 opacity-80' : 
-      'bg-white/5 border-white/5 opacity-60'
-    }`}>
-      <div className="space-y-0.5 min-w-0 flex-1">
-        <p className={`text-[11px] sm:text-xs font-black uppercase tracking-tight truncate ${primary ? 'text-accent' : 'text-white/80'}`}>{label}</p>
-        <p className="text-[9px] sm:text-[10px] font-bold text-white/40 uppercase tracking-tighter truncate">{lots} Lots · {(lots * lotSize).toLocaleString()} Units</p>
-      </div>
-      <div className="text-right shrink-0 ml-4">
-        <p className={`text-xs sm:text-sm font-black font-mono ${risk ? 'text-rose-400' : 'text-white'}`}>{fmtINR(totalRisk)}</p>
-        <p className={`text-[8px] sm:text-[10px] font-black uppercase ${risk ? 'text-rose-400' : 'text-white/40'}`}>{riskPct}% Risk</p>
-      </div>
+    <div className={`flex items-center justify-between p-6 bg-card transition-colors ${primary ? 'bg-accent/5' : ''}`}>
+       <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2">
+             <span className={`text-[11px] font-black uppercase tracking-wider ${primary ? 'text-accent' : 'text-text-primary'}`}>{label}</span>
+             {primary && <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />}
+             {isHighCapitalWarning && <span className="text-[8px] font-black bg-loss text-white px-1 py-0.5 animate-pulse">CAPITAL WARNING</span>}
+          </div>
+          <p className="text-[9px] font-bold text-text-faint uppercase tracking-tighter italic">
+            {lots > 0 ? `${lots} LOTS / ${units.toLocaleString()} UNITS` : '0 LOTS / CAPACITY OVERFLOW'}
+          </p>
+       </div>
+       <div className="text-right flex items-center gap-8">
+          <div className="space-y-1">
+             <p className={`text-sm font-mono font-black tabular-nums ${aggressive ? 'text-loss' : 'text-text-primary'}`}>
+                {fmtINR(risk)}
+             </p>
+             <p className="text-[9px] font-black text-text-faint uppercase tracking-tighter">
+                {riskPct}% RISK
+             </p>
+          </div>
+       </div>
     </div>
   );
 };

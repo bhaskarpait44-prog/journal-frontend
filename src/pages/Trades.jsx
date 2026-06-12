@@ -216,8 +216,8 @@ export default function Trades() {
               className="h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none"
             >
               <option value="">Status: All</option>
-              <option value="open">Open</option>
-              <option value="closed">Closed</option>
+              <option value="OPEN">Open</option>
+              <option value="CLOSED">Closed</option>
             </select>
             <select 
               name="optionType"
@@ -303,7 +303,7 @@ export default function Trades() {
                   {trades.map(trade => (
                     <tr 
                       key={trade.id} 
-                      className={`group hover:bg-card-alt/30 transition-all duration-150 border-l-4 ${trade.status === 'open' ? 'border-blue-500/0 hover:border-blue-500' : (trade.pnl >= 0 ? 'border-profit/0 hover:border-profit' : 'border-loss/0 hover:border-loss')}`}
+                      className={`group hover:bg-card-alt/30 transition-all duration-150 border-l-4 ${trade.status === 'OPEN' ? 'border-blue-500/0 hover:border-blue-500' : (trade.pnl >= 0 ? 'border-profit/0 hover:border-profit' : 'border-loss/0 hover:border-loss')}`}
                     >
                       <td className="p-4 text-center">
                         <input 
@@ -328,7 +328,7 @@ export default function Trades() {
                         <div className="text-[10px] font-medium text-text-faint uppercase tracking-tighter">{fmtDate(trade.entryDate)}</div>
                       </td>
                       <td className="p-4">
-                        {trade.status === 'open' ? (
+                        {trade.status === 'OPEN' ? (
                           <Badge type="OPEN">OPEN</Badge>
                         ) : (
                           <>
@@ -357,7 +357,7 @@ export default function Trades() {
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                          {trade.status === 'open' && (
+                          {trade.status === 'OPEN' && (
                             <button
                               onClick={() => openModal('close', trade)}
                               className="px-3 py-1.5 rounded-lg bg-profit/10 text-profit text-[10px] font-black uppercase tracking-widest hover:bg-profit hover:text-white transition-all"
@@ -382,7 +382,7 @@ export default function Trades() {
                 <Card 
                   key={trade.id} 
                   padding="p-0" 
-                  className={`overflow-hidden border-l-4 ${trade.status === 'open' ? 'border-blue-500' : (trade.pnl >= 0 ? 'border-profit' : 'border-loss')}`}
+                  className={`overflow-hidden border-l-4 ${trade.status === 'OPEN' ? 'border-blue-500' : (trade.pnl >= 0 ? 'border-profit' : 'border-loss')}`}
                   onClick={() => navigate(`/trades/${trade.id}`)}
                 >
                   <div className="p-4 flex items-center justify-between border-b border-border bg-card-alt/20">
@@ -410,7 +410,7 @@ export default function Trades() {
                     </div>
                     <div>
                       <p className="text-[9px] text-text-faint font-black uppercase tracking-widest mb-1">Exit</p>
-                      <p className="text-sm font-black">{trade.status === 'open' ? '—' : `₹${trade.exitPrice}`}</p>
+                      <p className="text-sm font-black">{trade.status === 'OPEN' ? '—' : `₹${trade.exitPrice}`}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[9px] text-text-faint font-black uppercase tracking-widest mb-1">P&L</p>
@@ -836,9 +836,9 @@ function ImportCSVModal({ isOpen, onClose, onSuccess }) {
     if (!file) return;
     setLoading(true);
     const formData = new FormData();
-    formData.append('csv', file);
+    formData.append('file', file);
     try {
-      await api.upload('/export/import', formData);
+      await api.upload('/trades/import/csv', formData);
       toast.success('Batch import complete');
       onSuccess();
       onClose();

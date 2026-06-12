@@ -116,7 +116,7 @@ export default function TradeDetail() {
                   <h4 className="text-4xl font-black font-heading tracking-tighter">{trade.symbol}</h4>
                   <div className="flex items-center gap-2 mt-3">
                     <Badge type={trade.tradeType} />
-                    <Badge type={trade.status === 'open' ? 'OPEN' : 'CLOSED'} />
+                    <Badge type={trade.status === 'OPEN' ? 'OPEN' : 'CLOSED'} />
                   </div>
                 </div>
                 <div className="text-right">
@@ -156,7 +156,7 @@ export default function TradeDetail() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {trade.status === 'open' ? (
+              {trade.status === 'OPEN' ? (
                 <Button variant="primary" className="shadow-glow-blue h-14 text-lg" onClick={() => openModal('close')}>Close Position</Button>
               ) : (
                 <Button variant="danger" className="h-14 text-lg" onClick={handleDelete}><IconTrash className="w-5 h-5 mr-2" /> Delete Record</Button>
