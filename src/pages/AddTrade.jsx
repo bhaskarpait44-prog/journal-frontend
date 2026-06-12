@@ -66,40 +66,11 @@ const FALLBACK_SYMBOLS = [
   { symbol: 'BANKEX', lotSize: 15 },
 ];
 
-const EXCHANGE_RATES = {
-  NSE: { exchangePct: 0.0003554 },
-  BSE: { exchangePct: 0.0003250 },
-};
-
 const IST_OFFSET = '+05:30';
 
 function combineIstDateTime(date, time = '09:15') {
   if (!date) return '';
   return `${date}T${time || '09:15'}:00${IST_OFFSET}`;
-}
-
-function calcZerodhaFOOptions(entryPrice, exitPrice, lotSize, lots, tradeType, exchange) {
-  if (!entryPrice || !lotSize || !lots) return null;
-  const qty = lotSize * lots;
-  const entryTurnover = entryPrice * qty;
-  const exitTurnover = (exitPrice && parseFloat(exitPrice) > 0) ? parseFloat(exitPrice) * qty : 0;
-  const totalTurnover = entryTurnover + exitTurnover;
-  const exchRate = (EXCHANGE_RATES[exchange] || EXCHANGE_RATES.NSE).exchangePct;
-
-  // STT on SELL side, Stamp on BUY side
-  const sellTurnover = tradeType === 'SELL' ? entryTurnover : exitTurnover;
-  const buyTurnover = tradeType === 'BUY' ? entryTurnover : exitTurnover;
-
-  const orders = exitTurnover > 0 ? 2 : 1;
-  const brokerage = 20 * orders;
-  const stt = parseFloat((0.001 * sellTurnover).toFixed(2));
-  const exchangeTxn = parseFloat((exchRate * totalTurnover).toFixed(2));
-  const sebi = parseFloat((0.000001 * totalTurnover).toFixed(2));
-  const gst = parseFloat((0.18 * (brokerage + exchangeTxn + sebi)).toFixed(2));
-  const stampDuty = Math.min(300, Math.floor(0.00003 * buyTurnover));
-
-  const total = parseFloat((brokerage + stt + exchangeTxn + sebi + gst + stampDuty).toFixed(2));
-  return { brokerage, stt, exchangeTxn, gst, sebi, stampDuty, total, turnover: totalTurnover, exchange };
 }
 
 // --- Sections ---
@@ -296,6 +267,14 @@ function PsychologyModal({ isOpen, onClose, trade, psychology, setPsychology, on
       <div className="absolute inset-0 bg-black/80 backdrop-blur-xl animate-fade-in" onClick={onClose} />
       
       <Card className="relative w-full max-w-lg bg-card border-border shadow-2xl overflow-hidden animate-scale-in">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 p-2 text-text-faint hover:text-text-muted hover:bg-card-alt rounded-xl transition-all"
+          title="Skip for now"
+        >
+          <IconPlus className="w-5 h-5 rotate-45" />
+        </button>
+
         <div className="absolute top-0 left-0 w-full h-1 bg-card-alt">
           <div 
             className="h-full bg-accent transition-all duration-500" 
@@ -313,6 +292,7 @@ function PsychologyModal({ isOpen, onClose, trade, psychology, setPsychology, on
           </div>
 
           <div className="min-h-[300px] flex flex-col justify-center animate-fade-up" key={step}>
+            {/* ... steps ... */}
             {step === 1 && (
               <EmojiPicker 
                 label="How were you feeling BEFORE entry?" 
@@ -409,22 +389,32 @@ function PsychologyModal({ isOpen, onClose, trade, psychology, setPsychology, on
             )}
           </div>
 
-          {step > 1 && (
+          <div className="flex flex-col gap-4">
+            {step > 1 && (
+              <button 
+                type="button" 
+                onClick={() => setStep(step - 1)}
+                className="w-full text-[10px] font-black text-text-faint uppercase tracking-widest hover:text-text-muted transition-colors"
+              >
+                Go Back
+              </button>
+            )}
+            
             <button 
               type="button" 
-              onClick={() => setStep(step - 1)}
-              className="w-full text-[10px] font-black text-text-faint uppercase tracking-widest hover:text-text-muted transition-colors"
+              onClick={onClose}
+              className="w-full text-[10px] font-black text-accent hover:text-blue-400 uppercase tracking-widest transition-colors pt-2 border-t border-border/50"
             >
-              Go Back
+              Skip for now
             </button>
-          )}
+          </div>
         </div>
       </Card>
     </div>
   );
 }
 
-function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
+function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -440,6 +430,64 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
   const [search, setSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [templates, setTemplates] = useState([]);
+  const [charges, setCharges] = useState(null);
+  const [popularTags, setPopularTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
+  const [spotPrice, setSpotPrice] = useState(null);
+  const [showTemplateInput, setShowTemplateInput] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+
+  const fetchSpotPrice = async (symbol) => {
+    if (!['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX', 'BANKEX'].includes(symbol)) {
+      setSpotPrice(null);
+      return;
+    }
+    try {
+      const res = await api.get(`/candles?symbol=${symbol}&range=1d&interval=1m`);
+      if (res.candles?.length) {
+        setSpotPrice(res.candles[res.candles.length - 1].close);
+      }
+    } catch (err) {
+      console.error('Failed to fetch spot price:', err);
+    }
+  };
+
+  const cloneLastTrade = async () => {
+    try {
+      const lastTrade = await api.get('/trades/latest');
+      if (!lastTrade) return toast.error('No previous trade found');
+      
+      setForm(prev => ({
+        ...prev,
+        underlying: lastTrade.underlying,
+        optionType: lastTrade.optionType,
+        tradeType: lastTrade.tradeType,
+        strikePrice: lastTrade.strikePrice?.toString(),
+        expiryDate: lastTrade.expiryDate?.split('T')[0],
+        lotSize: lastTrade.lotSize?.toString(),
+        quantity: lastTrade.quantity?.toString(),
+        exchange: lastTrade.exchange || 'NSE',
+        status: 'OPEN',
+        strategy: lastTrade.strategy || '',
+        setupType: lastTrade.setupType || '',
+        tags: Array.isArray(lastTrade.tags) ? lastTrade.tags : [],
+        entryDate: new Date().toISOString().split('T')[0],
+        entryTime: '09:15',
+        exitDate: '',
+        exitTime: '15:30',
+        entryPrice: '',
+        exitPrice: '',
+        stopLoss: lastTrade.stopLoss?.toString() || '',
+        target: lastTrade.target?.toString() || '',
+        notes: lastTrade.notes || '',
+      }));
+      setSearch(lastTrade.underlying);
+      toast.success('Cloned last trade details');
+    } catch (err) {
+      toast.error('Failed to clone trade: ' + err.message);
+    }
+  };
 
   // Sync search with form.underlying when it changes (e.g. from templates)
   useEffect(() => {
@@ -449,6 +497,32 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
   }, [form.underlying]);
 
   useEffect(() => {
+    const fetchCharges = async () => {
+      if (!form.entryPrice || !form.lotSize || !form.quantity) {
+        setCharges(null);
+        return;
+      }
+      try {
+        const data = await api.post('/trades/estimate-charges', {
+          entryPrice: form.entryPrice,
+          exitPrice: (form.status === 'OPEN' || form.status === 'EXPIRED') ? 0 : form.exitPrice,
+          lotSize: form.lotSize,
+          quantity: form.quantity,
+          tradeType: form.tradeType,
+          exchange: form.exchange,
+          status: form.status
+        });
+        setCharges(data);
+      } catch (err) {
+        console.error('Failed to fetch charges:', err);
+      }
+    };
+
+    const timer = setTimeout(fetchCharges, 300);
+    return () => clearTimeout(timer);
+  }, [form.entryPrice, form.exitPrice, form.status, form.lotSize, form.quantity, form.tradeType, form.exchange]);
+
+  useEffect(() => {
     api.get('/nse/fno-symbols').then((data) => {
       if (data?.symbols?.length) setNseSymbols(data.symbols);
     }).catch(() => {});
@@ -456,9 +530,14 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
     api.get('/profile/templates').then((data) => {
       if (Array.isArray(data)) setTemplates(data);
     }).catch(() => {});
+
+    api.get('/trades/tags/popular').then((data) => {
+      if (Array.isArray(data)) setPopularTags(data);
+    }).catch(() => {});
     
     const handler = (e) => {
       if (!e.target.closest('.symbol-dropdown-wrapper')) setShowDropdown(false);
+      if (!e.target.closest('.tag-input-wrapper')) setShowTagDropdown(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -468,13 +547,34 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
   const [isManualExpiry, setIsManualExpiry] = useState(false);
 
   useEffect(() => {
-    if (form.underlying) {
-      const expiries = getAllAvailableExpiries(form.underlying);
-      setAvailableExpiries(expiries);
-      setForm(prev => ({ ...prev, expiryDate: expiries[0] || '' }));
-      setIsManualExpiry(false); // Reset to auto whenever underlying changes
+    if (form.underlying && currentStep === 1) {
+      fetchSpotPrice(form.underlying);
+      const timer = setInterval(() => fetchSpotPrice(form.underlying), 60000);
+      return () => clearInterval(timer);
     }
-  }, [form.underlying]);
+  }, [form.underlying, currentStep]);
+
+  const addTag = (tag) => {
+    const t = tag.trim().toLowerCase();
+    if (!t) return;
+    if (!form.tags.includes(t)) {
+      setForm(prev => ({ ...prev, tags: [...prev.tags, t] }));
+    }
+    setTagInput('');
+  };
+
+  const removeTag = (tag) => {
+    setForm(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(tagInput);
+    } else if (e.key === 'Backspace' && !tagInput && form.tags.length > 0) {
+      removeTag(form.tags[form.tags.length - 1]);
+    }
+  };
 
   const safeSetUnderlying = (symbol, lotSize, exchange) => {
     const hasData = form.strikePrice || form.entryPrice || form.exitPrice;
@@ -503,6 +603,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
     }));
     setSearch(symbol);
     setShowDropdown(false);
+    fetchSpotPrice(symbol);
   };
 
   const filteredSymbols = useMemo(() => {
@@ -518,18 +619,6 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
       .slice(0, 10);
   }, [search, nseSymbols]);
 
-  const charges = useMemo(() => {
-    const c = calcZerodhaFOOptions(
-      parseFloat(form.entryPrice),
-      (form.status === 'OPEN' || form.status === 'EXPIRED') ? 0 : parseFloat(form.exitPrice),
-      parseInt(form.lotSize),
-      parseInt(form.quantity),
-      form.tradeType,
-      form.exchange
-    );
-    return c;
-  }, [form.entryPrice, form.exitPrice, form.status, form.lotSize, form.quantity, form.tradeType, form.exchange]);
-
   const pnlPreview = useMemo(() => {
     const isSettled = form.status === 'CLOSED' || form.status === 'EXPIRED';
     if (!isSettled || !form.entryPrice || !form.lotSize || !form.quantity) return null;
@@ -539,10 +628,22 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
 
     const units = form.lotSize * form.quantity;
     const mult = form.tradeType === 'BUY' ? 1 : -1;
-    const gross = mult * (exit - parseFloat(form.entryPrice)) * units;
+    const entry = parseFloat(form.entryPrice);
+    const gross = mult * (exit - entry) * units;
     const net = gross - (charges?.total || 0);
-    return { gross, net };
-  }, [form.status, form.entryPrice, form.exitPrice, form.lotSize, form.quantity, charges]);
+
+    let rMultiple = null;
+    const sl = parseFloat(form.stopLoss);
+    if (!isNaN(sl) && sl > 0) {
+      const riskPerUnit = mult * (entry - sl);
+      if (riskPerUnit > 0) {
+        const totalRisk = riskPerUnit * units;
+        rMultiple = gross / totalRisk;
+      }
+    }
+
+    return { gross, net, rMultiple };
+  }, [form.status, form.entryPrice, form.exitPrice, form.lotSize, form.quantity, form.stopLoss, form.tradeType, charges]);
 
   const validateStep = (step) => {
     if (step === 1) {
@@ -552,9 +653,15 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
     }
     if (step === 2) {
       if (!form.lotSize) return 'Please enter lot size';
+      if (parseInt(form.lotSize) <= 0) return 'Lot size must be at least 1';
       if (!form.quantity) return 'Please enter number of lots';
+      if (parseInt(form.quantity) <= 0) return 'Quantity (lots) must be at least 1';
       if (!form.entryPrice) return 'Please enter entry price';
       
+      if (form.status === 'CLOSED' && !form.exitPrice) {
+        return 'Exit price is required for a closed trade';
+      }
+
       // Date validations
       const today = new Date().toISOString().split('T')[0];
       if (form.entryDate > today) return 'Entry date cannot be in the future';
@@ -604,8 +711,8 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
 
       const payload = {
         ...finalForm,
-        entryDate: combineIstDateTime(finalForm.entryDate, '09:15'),
-        exitDate: finalForm.exitDate ? combineIstDateTime(finalForm.exitDate, '15:30') : undefined,
+        entryDate: combineIstDateTime(finalForm.entryDate, finalForm.entryTime),
+        exitDate: finalForm.exitDate ? combineIstDateTime(finalForm.exitDate, finalForm.exitTime) : undefined,
         strikePrice: parseFloat(finalForm.strikePrice),
         lotSize: parseInt(finalForm.lotSize),
         quantity: parseInt(finalForm.quantity),
@@ -614,7 +721,8 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
         stopLoss: finalForm.stopLoss ? parseFloat(finalForm.stopLoss) : undefined,
         target: finalForm.target ? parseFloat(finalForm.target) : undefined,
         charges: charges?.total || 0,
-        tags: finalForm.tags.split(',').map((t) => t.trim()).filter(Boolean),
+        tags: Array.isArray(finalForm.tags) ? finalForm.tags : [],
+        exitReason: finalForm.exitReason || undefined,
         // No psychology sent yet, will be handled by modal
         symbol: buildSymbol(finalForm.underlying, finalForm.expiryDate, finalForm.strikePrice, finalForm.optionType) || finalForm.underlying,
       };
@@ -639,34 +747,80 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
         psychology={psychology} 
         setPsychology={setPsychology} 
         onComplete={() => {
+          onSuccess?.();
           toast.success('Trade logged fully!');
           navigate('/trades');
         }}
       />
 
-      {/* Minimal Progress UI */}
-      <div className="flex items-center justify-center gap-2 mb-2">
-        {STEPS.map((step, idx) => (
-          <React.Fragment key={step.id}>
-            <div 
-              className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${
-                currentStep === step.id ? 'bg-accent ring-4 ring-accent/10' : 
-                currentStep > step.id ? 'bg-profit' : 'bg-border'
-              }`} 
-              title={step.name}
-            />
-            {idx < STEPS.length - 1 && (
-              <div className={`w-8 h-px transition-colors duration-500 ${currentStep > step.id ? 'bg-profit' : 'bg-border'}`} />
-            )}
-          </React.Fragment>
-        ))}
+      {/* Quick Actions */}
+      <div className="flex justify-end mb-2">
+        <button
+          type="button"
+          onClick={cloneLastTrade}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent/5 border border-accent/10 text-accent text-[10px] font-black uppercase tracking-widest hover:bg-accent/10 transition-all group"
+        >
+          <IconRefresh className="w-3 h-3 group-hover:rotate-180 transition-transform duration-500" />
+          Clone Last Trade
+        </button>
       </div>
 
-      {/* Step Heading - Compact */}
-      <div className="flex items-center justify-center gap-3 mb-4 animate-fade-in">
-        <span className="text-[9px] font-black text-accent bg-accent/5 border border-accent/10 px-2 py-0.5 rounded uppercase tracking-widest">Step {currentStep}/3</span>
-        <h2 className="text-sm font-black text-text-primary uppercase tracking-tight">{STEPS[currentStep-1].name} <span className="text-text-faint font-bold ml-1">/ {STEPS[currentStep-1].desc}</span></h2>
+      {/* Progress Navigation */}
+      <div className="flex items-center justify-between p-1 bg-card-alt rounded-2xl border border-border mb-8">
+        {STEPS.map((step, idx) => {
+          const isActive = currentStep === step.id;
+          const isCompleted = currentStep > step.id;
+          const isDisabled = !isCompleted && !isActive;
+
+          return (
+            <React.Fragment key={step.id}>
+              <button
+                type="button"
+                disabled={isDisabled}
+                onClick={() => isCompleted && setCurrentStep(step.id)}
+                className={`flex-1 flex items-center justify-center gap-2 h-11 px-2 rounded-xl transition-all duration-300 ${
+                  isActive ? 'bg-accent text-white shadow-glow-blue' : 
+                  isCompleted ? 'text-profit hover:bg-profit/5' : 
+                  'text-text-faint cursor-not-allowed'
+                }`}
+              >
+                <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black border ${
+                  isActive ? 'bg-white text-accent border-white' : 
+                  isCompleted ? 'bg-profit/10 border-profit/20' : 
+                  'bg-border/50 border-transparent'
+                }`}>
+                  {isCompleted ? <IconCheck className="w-3 h-3" /> : step.id}
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{step.name}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">{isActive ? step.name : ''}</span>
+              </button>
+              {idx < STEPS.length - 1 && (
+                <div className="w-px h-4 bg-border/50 shrink-0" />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
+
+      {/* Sticky Summary Bar (Steps 2 & 3) */}
+      {currentStep > 1 && (
+        <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-border p-3 mb-6 rounded-b-2xl shadow-sm animate-fade-in flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Badge type={form.tradeType} className="text-[9px]">{form.tradeType}</Badge>
+            <span className="text-xs font-black text-text-primary tracking-tight">
+              {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType) || 'Unknown Contract'}
+            </span>
+          </div>
+          <div className="flex gap-4 text-[10px] font-black uppercase tracking-widest text-text-faint hidden sm:flex">
+            <span>Lots: <span className="text-text-primary">{form.quantity || 0}</span></span>
+            <span>Entry: <span className="text-text-primary">₹{form.entryPrice || 0}</span></span>
+            <span>Exposure: <span className="text-text-primary">₹{fmtINR((parseFloat(form.entryPrice) || 0) * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0))}</span></span>
+          </div>
+          <div className="sm:hidden text-[10px] font-black uppercase tracking-widest text-text-primary">
+            ₹{fmtINR((parseFloat(form.entryPrice) || 0) * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0))}
+          </div>
+        </div>
+      )}
 
       {templates.length > 0 && currentStep === 1 && (
         <div className="flex flex-wrap items-center gap-2 mb-6">
@@ -706,22 +860,62 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
               icon={IconSearch} 
               accent="blue"
               action={
-                <button 
-                  type="button" 
-                  onClick={async () => {
-                    if (!form.underlying) return toast.error('Select a symbol first');
-                    const name = window.prompt('Enter template name:');
-                    if (!name) return;
-                    try {
-                      const res = await api.post('/profile/templates', { name, underlying: form.underlying, lotSize: form.lotSize, optionType: form.optionType, exchange: form.exchange, strategy: form.strategy });
-                      setTemplates(res);
-                      toast.success('Template saved');
-                    } catch (e) { toast.error('Failed to save template'); }
-                  }}
-                  className="text-[10px] font-black text-accent uppercase tracking-widest hover:text-blue-400 bg-accent/10 px-2 py-1 rounded-md transition-colors"
-                >
-                  Save Template
-                </button>
+                showTemplateInput ? (
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      autoFocus
+                      placeholder="Template Name..." 
+                      className="h-7 w-32 px-2 rounded-md bg-card border border-border text-[10px] font-bold outline-none focus:border-accent"
+                      value={templateName}
+                      onChange={e => setTemplateName(e.target.value)}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Escape') {
+                          setShowTemplateInput(false);
+                          setTemplateName('');
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (!templateName.trim()) return;
+                          try {
+                            const res = await api.post('/profile/templates', { name: templateName.trim(), underlying: form.underlying, lotSize: form.lotSize, optionType: form.optionType, exchange: form.exchange, strategy: form.strategy });
+                            setTemplates(res);
+                            toast.success('Template saved');
+                            setShowTemplateInput(false);
+                            setTemplateName('');
+                          } catch (err) { toast.error('Failed to save template'); }
+                        }
+                      }}
+                    />
+                    <button 
+                      type="button"
+                      onClick={async () => {
+                        if (!templateName.trim()) return setShowTemplateInput(false);
+                        try {
+                          const res = await api.post('/profile/templates', { name: templateName.trim(), underlying: form.underlying, lotSize: form.lotSize, optionType: form.optionType, exchange: form.exchange, strategy: form.strategy });
+                          setTemplates(res);
+                          toast.success('Template saved');
+                          setShowTemplateInput(false);
+                          setTemplateName('');
+                        } catch (err) { toast.error('Failed to save template'); }
+                      }}
+                      className="text-[10px] font-black text-white bg-accent px-2 py-1 rounded-md transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button type="button" onClick={() => setShowTemplateInput(false)} className="text-[10px] font-black text-text-faint px-1">✕</button>
+                  </div>
+                ) : (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      if (!form.underlying) return toast.error('Select a symbol first');
+                      setShowTemplateInput(true);
+                    }}
+                    className="text-[10px] font-black text-accent uppercase tracking-widest hover:text-blue-400 bg-accent/10 px-2 py-1 rounded-md transition-colors"
+                  >
+                    Save Template
+                  </button>
+                )
               }
             >
               <div className="space-y-6">
@@ -803,14 +997,50 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Strike Price *"
-                    type="number"
-                    prefix="₹"
-                    value={form.strikePrice}
-                    onChange={(e) => setForm(prev => ({ ...prev, strikePrice: e.target.value }))}
-                    placeholder="22500"
-                  />
+                  <div className="space-y-3">
+                    <Input
+                      label="Strike Price *"
+                      type="number"
+                      prefix="₹"
+                      value={form.strikePrice}
+                      onChange={(e) => setForm(prev => ({ ...prev, strikePrice: e.target.value }))}
+                      placeholder="22500"
+                    />
+                    {spotPrice && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-[9px] font-black text-text-faint uppercase tracking-widest">Live Spot: <span className="text-accent">₹{spotPrice.toFixed(2)}</span></span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(() => {
+                            const interval = form.underlying === 'NIFTY' ? 50 : 
+                                           form.underlying === 'BANKNIFTY' ? 100 :
+                                           form.underlying === 'FINNIFTY' ? 50 :
+                                           form.underlying === 'MIDCPNIFTY' ? 25 : 100;
+                            const atm = Math.round(spotPrice / interval) * interval;
+                            return [-2, -1, 0, 1, 2].map(offset => {
+                              const strike = atm + (offset * interval);
+                              const label = offset === 0 ? 'ATM' : (offset > 0 ? `+${offset * interval}` : `${offset * interval}`);
+                              return (
+                                <button
+                                  key={strike}
+                                  type="button"
+                                  onClick={() => setForm(prev => ({ ...prev, strikePrice: strike.toString() }))}
+                                  className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all border ${
+                                    form.strikePrice === strike.toString() 
+                                      ? 'bg-accent/10 border-accent text-accent shadow-sm' 
+                                      : 'bg-card border-border text-text-faint hover:text-text-muted hover:border-border-alt'
+                                  }`}
+                                >
+                                  {label} ({strike})
+                                </button>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Expiry Date *</label>
@@ -901,11 +1131,12 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
                 }
               >
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <Input label="Entry Price *" type="number" step="0.05" prefix="₹" value={form.entryPrice} onChange={(e) => setForm(prev => ({ ...prev, entryPrice: e.target.value }))} />
                     <Input label="Entry Date *" type="date" value={form.entryDate} onChange={(e) => setForm(prev => ({ ...prev, entryDate: e.target.value }))} />
+                    <Input label="Entry Time (IST) *" type="time" value={form.entryTime} onChange={(e) => setForm(prev => ({ ...prev, entryTime: e.target.value }))} />
                   </div>
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50 ${form.status === 'OPEN' ? 'opacity-40' : ''}`}>
+                  <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border/50 ${form.status === 'OPEN' ? 'opacity-40' : ''}`}>
                     <Input 
                       label="Exit Price" 
                       type="number" 
@@ -920,6 +1151,13 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
                       type="date" 
                       value={form.exitDate} 
                       onChange={(e) => setForm(prev => ({ ...prev, exitDate: e.target.value }))} 
+                      disabled={form.status === 'OPEN' || form.status === 'EXPIRED'} 
+                    />
+                    <Input 
+                      label="Exit Time (IST)" 
+                      type="time" 
+                      value={form.exitTime} 
+                      onChange={(e) => setForm(prev => ({ ...prev, exitTime: e.target.value }))} 
                       disabled={form.status === 'OPEN' || form.status === 'EXPIRED'} 
                     />
                   </div>
@@ -974,7 +1212,31 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
                         </p>
                       )}
                     </div>
-                    <Input label="Lots *" type="number" value={form.quantity} onChange={(e) => setForm(prev => ({ ...prev, quantity: e.target.value }))} />
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-text-faint uppercase tracking-widest ml-1">Lots *</label>
+                      <div className="flex bg-card-alt p-1 rounded-2xl border border-border h-11 items-center">
+                        <button
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, quantity: Math.max(1, parseInt(prev.quantity || 1) - 1).toString() }))}
+                          className="w-10 h-full flex items-center justify-center text-text-faint hover:text-text-primary hover:bg-card rounded-xl transition-all"
+                        >
+                          <span className="text-xl font-bold leading-none mt-[-2px]">-</span>
+                        </button>
+                        <input 
+                          type="number" 
+                          value={form.quantity} 
+                          onChange={(e) => setForm(prev => ({ ...prev, quantity: e.target.value }))}
+                          className="flex-1 w-full bg-transparent border-none outline-none text-center font-black text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, quantity: (parseInt(prev.quantity || 0) + 1).toString() }))}
+                          className="w-10 h-full flex items-center justify-center text-text-faint hover:text-text-primary hover:bg-card rounded-xl transition-all"
+                        >
+                          <span className="text-xl font-bold leading-none mt-[-2px]">+</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <div className="p-4 bg-card-alt rounded-xl border border-border flex justify-between items-center">
                     <span className="text-[10px] font-black text-text-faint uppercase">Position Exposure</span>
@@ -994,14 +1256,24 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
                 
                 <div className="p-6 space-y-8">
                   {pnlPreview ? (
-                    <div className="text-center pb-8 border-b border-border/50">
+                    <div className="text-center pb-8 border-b border-border/50 relative">
                       <p className="text-[10px] font-bold text-text-faint uppercase tracking-widest mb-2">Net Realized P&L</p>
                       <p className={`text-4xl font-mono font-black tracking-tighter ${pnlPreview.net >= 0 ? 'text-profit' : 'text-loss'}`}>
                         {pnlPreview.net >= 0 ? '+' : ''}{fmtINR(pnlPreview.net, true)}
                       </p>
-                      <p className="text-[10px] font-bold text-text-muted mt-2 uppercase tracking-tighter">
-                        Gross: <span className={pnlPreview.gross >= 0 ? 'text-profit' : 'text-loss'}>{fmtINR(pnlPreview.gross)}</span>
-                      </p>
+                      <div className="flex items-center justify-center gap-3 mt-2">
+                        <p className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+                          Gross: <span className={pnlPreview.gross >= 0 ? 'text-profit' : 'text-loss'}>{fmtINR(pnlPreview.gross)}</span>
+                        </p>
+                        {pnlPreview.rMultiple !== null && (
+                          <>
+                            <span className="text-border">•</span>
+                            <Badge className="bg-card border border-border text-[9px] font-black text-text-secondary">
+                              {pnlPreview.rMultiple > 0 ? '+' : ''}{pnlPreview.rMultiple.toFixed(2)}R
+                            </Badge>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-10 border-b border-border/50 opacity-30">
@@ -1091,14 +1363,52 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology }) {
                 
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-text-faint uppercase tracking-widest ml-1">Trade Tags</label>
-                  <Input 
-                    placeholder="e.g. scalp, expiry, breakout" 
-                    value={form.tags} 
-                    onChange={(e) => setForm(prev => ({ ...prev, tags: e.target.value }))} 
-                    noLabel
-                    className="h-12 rounded-2xl"
-                  />
-                  <p className="text-[9px] font-bold text-text-faint uppercase tracking-tight ml-1">Comma separated labels for deep analytics</p>
+                  <div className="relative tag-input-wrapper">
+                    <div className="min-h-12 p-1.5 rounded-2xl bg-card border border-border focus-within:ring-2 focus-within:ring-accent/20 transition-all flex flex-wrap gap-2 items-center">
+                      {form.tags.map((tag) => (
+                        <span 
+                          key={tag} 
+                          className="pl-3 pr-2 py-1 rounded-xl bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase flex items-center gap-1.5 animate-scale-in"
+                        >
+                          {tag}
+                          <button 
+                            type="button" 
+                            onClick={() => removeTag(tag)}
+                            className="hover:text-loss transition-colors"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                      <input
+                        type="text"
+                        placeholder={form.tags.length === 0 ? "e.g. scalp, expiry, breakout" : ""}
+                        className="flex-1 bg-transparent border-none outline-none text-sm font-bold px-2 py-1 min-w-[120px]"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={handleTagKeyDown}
+                        onFocus={() => setShowTagDropdown(true)}
+                      />
+                    </div>
+                    {showTagDropdown && popularTags.filter(t => !form.tags.includes(t)).length > 0 && (
+                      <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-2xl shadow-card-lg max-h-[180px] overflow-y-auto no-scrollbar animate-scale-in origin-top">
+                        <div className="p-2 border-b border-border bg-card-alt/30">
+                          <span className="text-[9px] font-black text-text-faint uppercase tracking-widest ml-1">Most Used Tags</span>
+                        </div>
+                        {popularTags.filter(t => !form.tags.includes(t)).map((tag) => (
+                          <div
+                            key={tag}
+                            className="px-4 py-2.5 hover:bg-card-alt cursor-pointer flex justify-between items-center transition-colors group"
+                            onClick={() => addTag(tag)}
+                          >
+                            <span className="font-bold text-xs text-text-primary group-hover:text-accent transition-colors uppercase tracking-tight">{tag}</span>
+                            <IconPlus className="w-3 h-3 text-text-faint group-hover:text-accent" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] font-bold text-text-faint uppercase tracking-tight ml-1">Press Enter or Comma to add tag • Reusable for deep analytics</p>
                 </div>
 
                 <div className="space-y-3 pt-4 border-t border-border/50">
@@ -1423,7 +1733,7 @@ function BrokerAPITab() {
 export default function AddTrade() {
   const [activeTab, setActiveTab] = useState('manual');
   
-  const [form, setForm] = useState({
+  const initialForm = {
     underlying: '',
     optionType: 'CE',
     tradeType: 'BUY',
@@ -1435,16 +1745,20 @@ export default function AddTrade() {
     status: 'OPEN',
     entryPrice: '',
     entryDate: new Date().toISOString().split('T')[0],
+    entryTime: '09:15',
     exitPrice: '',
     exitDate: '',
+    exitTime: '15:30',
     stopLoss: '',
     target: '',
     strategy: '',
     setupType: '',
-    tags: '',
+    tags: [],
     notes: '',
     exitReason: '',
-  });
+  };
+
+  const [form, setForm] = useState(initialForm);
 
   const [psychology, setPsychology] = useState({
     emotionBefore: '',
@@ -1454,6 +1768,32 @@ export default function AddTrade() {
     mistakeTags: [],
     notes: '',
   });
+
+  // Rehydrate on mount
+  useEffect(() => {
+    const saved = sessionStorage.getItem('add_trade_form');
+    if (saved) {
+      try {
+        setForm(JSON.parse(saved));
+        toast.success('Form draft restored', { icon: '📝', duration: 2000 });
+      } catch (e) {
+        console.error('Failed to parse saved form');
+      }
+    }
+  }, []);
+
+  // Persist on change (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      sessionStorage.setItem('add_trade_form', JSON.stringify(form));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [form]);
+
+  const clearFormPersistence = () => {
+    sessionStorage.removeItem('add_trade_form');
+    setForm(initialForm);
+  };
 
   const tabs = [
     { id: 'manual', label: 'Manual' },
@@ -1484,6 +1824,7 @@ export default function AddTrade() {
           <ManualEntryTab 
             form={form} setForm={setForm} 
             psychology={psychology} setPsychology={setPsychology} 
+            onSuccess={clearFormPersistence}
           />
         )}
         {activeTab === 'csv' && (

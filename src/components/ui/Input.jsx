@@ -42,7 +42,7 @@ export const Input = ({
         />
 
         {suffix && (
-          <div className="absolute right-3.5 text-text-muted flex items-center pointer-events-none shrink-0">
+          <div className="absolute right-3.5 text-text-muted flex items-center shrink-0">
             {suffix}
           </div>
         )}
