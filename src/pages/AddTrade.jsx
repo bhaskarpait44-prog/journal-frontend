@@ -59,12 +59,14 @@ const MISTAKE_TAGS = [
 ];
 
 const FALLBACK_SYMBOLS = [
-  { symbol: 'NIFTY', lotSize: 50 },
-  { symbol: 'BANKNIFTY', lotSize: 15 },
-  { symbol: 'FINNIFTY', lotSize: 40 },
-  { symbol: 'MIDCPNIFTY', lotSize: 75 },
-  { symbol: 'SENSEX', lotSize: 10 },
-  { symbol: 'BANKEX', lotSize: 15 },
+  { symbol: 'NIFTY', lotSize: 65 },
+  { symbol: 'BANKNIFTY', lotSize: 30 },
+  { symbol: 'FINNIFTY', lotSize: 60 },
+  { symbol: 'MIDCPNIFTY', lotSize: 120 },
+  { symbol: 'NIFTYNXT50', lotSize: 25 },
+  { symbol: 'SENSEX', lotSize: 20 },
+  { symbol: 'BANKEX', lotSize: 30 },
+  { symbol: 'SENSEX50', lotSize: 60 },
 ];
 
 const IST_OFFSET = '+05:30';
@@ -512,7 +514,8 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
           quantity: form.quantity,
           tradeType: form.tradeType,
           exchange: form.exchange,
-          status: form.status
+          status: form.status,
+          instrumentType: form.instrumentType
         });
         setCharges(data);
       } catch (err) {
@@ -522,7 +525,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
 
     const timer = setTimeout(fetchCharges, 300);
     return () => clearTimeout(timer);
-  }, [form.entryPrice, form.exitPrice, form.status, form.lotSize, form.quantity, form.tradeType, form.exchange]);
+  }, [form.entryPrice, form.exitPrice, form.status, form.lotSize, form.quantity, form.tradeType, form.exchange, form.instrumentType]);
 
   useEffect(() => {
     api.get('/nse/fno-symbols').then((data) => {
@@ -1000,7 +1003,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
                     <button
                       type="button"
                       className={`h-11 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all ${form.instrumentType === 'EQUITY' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
-                      onClick={() => setForm(prev => ({ ...prev, instrumentType: 'EQUITY', optionType: 'XX', strikePrice: '', expiryDate: '' }))}
+                      onClick={() => setForm(prev => ({ ...prev, instrumentType: 'EQUITY', optionType: 'XX', strikePrice: '', expiryDate: '', lotSize: '1' }))}
                     >EQUITY</button>
                     <button
                       type="button"
