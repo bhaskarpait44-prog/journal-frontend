@@ -11,6 +11,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { TabBar } from '../components/ui/TabBar';
+import { Modal } from '../components/ui/Modal';
 import { 
   IconSearch, IconArrowUp, IconArrowDown, IconDollar, 
   IconRefresh, IconCheck, IconPsychology, IconPlus, 
@@ -421,6 +422,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
   const [nseSymbols, setNseSymbols] = useState(FALLBACK_SYMBOLS);
   const [showPsychModal, setShowPsychModal] = useState(false);
   const [savedTrade, setSavedTrade] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
 
   const STEPS = [
     { id: 1, name: 'Setup', icon: IconSearch, desc: 'Contract' },
@@ -547,10 +549,46 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
   const [isManualExpiry, setIsManualExpiry] = useState(false);
 
   useEffect(() => {
-    if (form.underlying && currentStep === 1) {
-      fetchSpotPrice(form.underlying);
+    const fetchExpiries = async () => {
+      if (!form.underlying || form.underlying.length < 3) {
+        setAvailableExpiries([]);
+        return;
+      }
+
+      try {
+        const res = await api.get(`/nse/expiry-dates/${form.underlying}`);
+        if (res.expiryDates?.length) {
+          setAvailableExpiries(res.expiryDates);
+          if (!form.expiryDate) {
+            setForm(prev => ({ ...prev, expiryDate: res.expiryDates[0] }));
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch live expiries, using fallback:', err.message);
+      }
+
+      const dates = getAllAvailableExpiries(form.underlying);
+      setAvailableExpiries(dates);
+      if (!form.expiryDate && dates.length > 0) {
+        setForm(prev => ({ ...prev, expiryDate: dates[0] }));
+      }
+    };
+
+    if (currentStep === 1 && form.underlying) {
+      const timeout = setTimeout(fetchExpiries, 600);
+      return () => clearTimeout(timeout);
+    }
+  }, [form.underlying, currentStep]);
+
+  useEffect(() => {
+    if (form.underlying && form.underlying.length >= 3 && currentStep === 1) {
+      const timeout = setTimeout(() => fetchSpotPrice(form.underlying), 600);
       const timer = setInterval(() => fetchSpotPrice(form.underlying), 60000);
-      return () => clearInterval(timer);
+      return () => {
+        clearTimeout(timeout);
+        clearInterval(timer);
+      };
     }
   }, [form.underlying, currentStep]);
 
@@ -580,30 +618,38 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
     const hasData = form.strikePrice || form.entryPrice || form.exitPrice;
     const isDifferent = form.underlying !== symbol || (lotSize && parseInt(form.lotSize) !== parseInt(lotSize));
     
+    const proceed = () => {
+      const autoExchange = exchange || (['SENSEX', 'BANKEX'].includes(symbol) ? 'BSE' : 'NSE');
+      const finalLotSize = lotSize || form.lotSize;
+      
+      setForm(prev => ({ 
+        ...prev, 
+        underlying: symbol, 
+        lotSize: finalLotSize,
+        exchange: autoExchange,
+        strikePrice: '',
+        entryPrice: '',
+        stopLoss: '',
+        target: '',
+        exitPrice: '',
+        expiryDate: '' 
+      }));
+      setSearch(symbol);
+      setShowDropdown(false);
+      fetchSpotPrice(symbol);
+      setConfirmConfig(null);
+    };
+
     if (hasData && form.underlying && isDifferent) {
-      if (!window.confirm('Changing the asset or lot size will reset your execution pricing. Continue?')) {
-        return;
-      }
+      setConfirmConfig({
+        title: 'Reset Pricing?',
+        message: 'Changing the asset or lot size will reset your execution pricing. Continue?',
+        onConfirm: proceed
+      });
+      return;
     }
 
-    const autoExchange = exchange || (['SENSEX', 'BANKEX'].includes(symbol) ? 'BSE' : 'NSE');
-    const finalLotSize = lotSize || form.lotSize;
-    
-    setForm(prev => ({ 
-      ...prev, 
-      underlying: symbol, 
-      lotSize: finalLotSize,
-      exchange: autoExchange,
-      strikePrice: '',
-      entryPrice: '',
-      stopLoss: '',
-      target: '',
-      exitPrice: '',
-      expiryDate: '' 
-    }));
-    setSearch(symbol);
-    setShowDropdown(false);
-    fetchSpotPrice(symbol);
+    proceed();
   };
 
   const filteredSymbols = useMemo(() => {
@@ -648,8 +694,8 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
   const validateStep = (step) => {
     if (step === 1) {
       if (!form.underlying) return 'Please select an underlying symbol';
-      if (!form.strikePrice) return 'Please enter a strike price';
-      if (!form.expiryDate) return 'Please select an expiry date';
+      if (form.instrumentType === 'OPTIONS' && !form.strikePrice) return 'Please enter a strike price';
+      if (form.instrumentType !== 'EQUITY' && !form.expiryDate) return 'Please select an expiry date';
     }
     if (step === 2) {
       if (!form.lotSize) return 'Please enter lot size';
@@ -709,11 +755,22 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
         finalForm.exitDate = getPreviousTradingDay(finalForm.expiryDate);
       }
 
+      let displaySymbol = finalForm.underlying;
+      if (finalForm.instrumentType === 'OPTIONS') {
+        displaySymbol = buildSymbol(finalForm.underlying, finalForm.expiryDate, finalForm.strikePrice, finalForm.optionType);
+      } else if (finalForm.instrumentType === 'FUTURES') {
+        const d = new Date(finalForm.expiryDate);
+        const mon = d.toLocaleDateString('en-IN', { month: 'short' }).toUpperCase();
+        const yr = d.getFullYear().toString().slice(-2);
+        displaySymbol = `${finalForm.underlying}${yr}${mon}FUT`;
+      }
+
       const payload = {
         ...finalForm,
         entryDate: combineIstDateTime(finalForm.entryDate, finalForm.entryTime),
         exitDate: finalForm.exitDate ? combineIstDateTime(finalForm.exitDate, finalForm.exitTime) : undefined,
-        strikePrice: parseFloat(finalForm.strikePrice),
+        strikePrice: finalForm.instrumentType === 'OPTIONS' ? parseFloat(finalForm.strikePrice) : undefined,
+        expiryDate: finalForm.instrumentType !== 'EQUITY' ? finalForm.expiryDate : undefined,
         lotSize: parseInt(finalForm.lotSize),
         quantity: parseInt(finalForm.quantity),
         entryPrice: parseFloat(finalForm.entryPrice),
@@ -724,7 +781,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
         tags: Array.isArray(finalForm.tags) ? finalForm.tags : [],
         exitReason: finalForm.exitReason || undefined,
         // No psychology sent yet, will be handled by modal
-        symbol: buildSymbol(finalForm.underlying, finalForm.expiryDate, finalForm.strikePrice, finalForm.optionType) || finalForm.underlying,
+        symbol: displaySymbol,
       };
       const res = await api.post('/trades', payload);
       setSavedTrade(res.trade);
@@ -739,11 +796,29 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pb-32 sm:pb-8">
+      {/* Confirmation Modal */}
+      <Modal
+        isOpen={!!confirmConfig}
+        onClose={() => setConfirmConfig(null)}
+        title={confirmConfig?.title}
+        footer={
+          <div className="flex gap-3">
+            <Button variant="ghost" className="flex-1" onClick={() => setConfirmConfig(null)}>Cancel</Button>
+            <Button variant="primary" className="flex-1" onClick={confirmConfig?.onConfirm}>Proceed</Button>
+          </div>
+        }
+      >
+        <p className="text-sm font-bold text-text-muted">{confirmConfig?.message}</p>
+      </Modal>
+
       {/* Psychology Modal Injection */}
-      <PsychologyModal 
-        isOpen={showPsychModal} 
-        onClose={() => navigate('/trades')} 
-        trade={savedTrade} 
+      <PsychologyModal
+        isOpen={showPsychModal}
+        onClose={() => {
+          if (savedTrade) clearFormPersistence?.();
+          navigate('/trades');
+        }}
+        trade={savedTrade}
         psychology={psychology} 
         setPsychology={setPsychology} 
         onComplete={() => {
@@ -919,16 +994,37 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
               }
             >
               <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Instrument Type</label>
+                  <div className="grid grid-cols-3 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+                    <button
+                      type="button"
+                      className={`h-11 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all ${form.instrumentType === 'EQUITY' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
+                      onClick={() => setForm(prev => ({ ...prev, instrumentType: 'EQUITY', optionType: 'XX', strikePrice: '', expiryDate: '' }))}
+                    >EQUITY</button>
+                    <button
+                      type="button"
+                      className={`h-11 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all ${form.instrumentType === 'FUTURES' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
+                      onClick={() => setForm(prev => ({ ...prev, instrumentType: 'FUTURES', optionType: 'XX', strikePrice: '' }))}
+                    >FUTURES</button>
+                    <button
+                      type="button"
+                      className={`h-11 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all ${form.instrumentType === 'OPTIONS' ? 'bg-accent text-white shadow-glow-blue' : 'text-text-faint hover:text-text-muted'}`}
+                      onClick={() => setForm(prev => ({ ...prev, instrumentType: 'OPTIONS', optionType: 'CE' }))}
+                    >OPTIONS</button>
+                  </div>
+                </div>
+
                 <div className="relative symbol-dropdown-wrapper">
                   <Input
-                    label="Asset / Underlying *"
-                    placeholder="e.g. NIFTY, BANKNIFTY"
+                    label={form.instrumentType === 'EQUITY' ? "Stock / Scrip *" : "Underlying Asset *"}
+                    placeholder={form.instrumentType === 'EQUITY' ? "e.g. RELIANCE, TCS" : "e.g. NIFTY, BANKNIFTY"}
                     prefix={<IconSearch className="w-4 h-4" />}
                     value={search}
                     onChange={(e) => {
                       const val = e.target.value.toUpperCase();
                       setSearch(val);
-                      
+
                       // Find if it's a known symbol
                       const match = nseSymbols.find(s => s.symbol === val);
                       if (match) {
@@ -942,7 +1038,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
                           expiryDate: '' 
                         }));
                       }
-                      
+
                       setShowDropdown(true);
                     }}
                     onFocus={() => setShowDropdown(true)}
@@ -963,124 +1059,164 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Contract Type</label>
-                    <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
-                      <button
-                        type="button"
-                        className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'CE' ? 'bg-violet-500/10 text-violet-400 shadow-sm border border-violet-500/20' : 'text-text-faint hover:text-text-muted'}`}
-                        onClick={() => setForm(prev => ({ ...prev, optionType: 'CE' }))}
-                      >Call (CE)</button>
-                      <button
-                        type="button"
-                        className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'PE' ? 'bg-amber-500/10 text-amber-400 shadow-sm border border-amber-500/20' : 'text-text-faint hover:text-text-muted'}`}
-                        onClick={() => setForm(prev => ({ ...prev, optionType: 'PE' }))}
-                      >Put (PE)</button>
+                {form.instrumentType === 'OPTIONS' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Contract Type</label>
+                      <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+                        <button
+                          type="button"
+                          className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'CE' ? 'bg-violet-500/10 text-violet-400 shadow-sm border border-violet-500/20' : 'text-text-faint hover:text-text-muted'}`}
+                          onClick={() => setForm(prev => ({ ...prev, optionType: 'CE' }))}
+                        >Call (CE)</button>
+                        <button
+                          type="button"
+                          className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.optionType === 'PE' ? 'bg-amber-500/10 text-amber-400 shadow-sm border border-amber-500/20' : 'text-text-faint hover:text-text-muted'}`}
+                          onClick={() => setForm(prev => ({ ...prev, optionType: 'PE' }))}
+                        >Put (PE)</button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Trade Side</label>
+                      <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
+                        <button
+                          type="button"
+                          className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'BUY' ? 'bg-profit/10 text-profit shadow-sm border border-profit/20' : 'text-text-faint hover:text-text-muted'}`}
+                          onClick={() => setForm(prev => ({ ...prev, tradeType: 'BUY' }))}
+                        >BUY</button>
+                        <button
+                          type="button"
+                          className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'SELL' ? 'bg-loss/10 text-loss shadow-sm border border-loss/20' : 'text-text-faint hover:text-text-muted'}`}
+                          onClick={() => setForm(prev => ({ ...prev, tradeType: 'SELL' }))}
+                        >SELL</button>
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
+                )}
+
+                {form.instrumentType !== 'OPTIONS' && (
+                  <div className="space-y-2 animate-fade-in">
                     <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Trade Side</label>
                     <div className="grid grid-cols-2 w-full bg-card-alt p-1 rounded-2xl border border-border shadow-inner">
                       <button
                         type="button"
                         className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'BUY' ? 'bg-profit/10 text-profit shadow-sm border border-profit/20' : 'text-text-faint hover:text-text-muted'}`}
                         onClick={() => setForm(prev => ({ ...prev, tradeType: 'BUY' }))}
-                      >BUY</button>
+                      >BUY / LONG</button>
                       <button
                         type="button"
                         className={`h-11 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${form.tradeType === 'SELL' ? 'bg-loss/10 text-loss shadow-sm border border-loss/20' : 'text-text-faint hover:text-text-muted'}`}
                         onClick={() => setForm(prev => ({ ...prev, tradeType: 'SELL' }))}
-                      >SELL</button>
+                      >SELL / SHORT</button>
                     </div>
                   </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <Input
-                      label="Strike Price *"
-                      type="number"
-                      prefix="₹"
-                      value={form.strikePrice}
-                      onChange={(e) => setForm(prev => ({ ...prev, strikePrice: e.target.value }))}
-                      placeholder="22500"
-                    />
-                    {spotPrice && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between px-1">
-                          <span className="text-[9px] font-black text-text-faint uppercase tracking-widest">Live Spot: <span className="text-accent">₹{spotPrice.toFixed(2)}</span></span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(() => {
-                            const interval = form.underlying === 'NIFTY' ? 50 : 
-                                           form.underlying === 'BANKNIFTY' ? 100 :
-                                           form.underlying === 'FINNIFTY' ? 50 :
-                                           form.underlying === 'MIDCPNIFTY' ? 25 : 100;
-                            const atm = Math.round(spotPrice / interval) * interval;
-                            return [-2, -1, 0, 1, 2].map(offset => {
-                              const strike = atm + (offset * interval);
-                              const label = offset === 0 ? 'ATM' : (offset > 0 ? `+${offset * interval}` : `${offset * interval}`);
-                              return (
-                                <button
-                                  key={strike}
-                                  type="button"
-                                  onClick={() => setForm(prev => ({ ...prev, strikePrice: strike.toString() }))}
-                                  className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all border ${
-                                    form.strikePrice === strike.toString() 
-                                      ? 'bg-accent/10 border-accent text-accent shadow-sm' 
-                                      : 'bg-card border-border text-text-faint hover:text-text-muted hover:border-border-alt'
-                                  }`}
-                                >
-                                  {label} ({strike})
-                                </button>
-                              );
-                            });
-                          })()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Expiry Date *</label>
-                      <button 
-                        type="button" 
-                        onClick={() => setIsManualExpiry(prev => !prev)}
-                        className="text-[9px] font-black text-accent uppercase tracking-widest hover:underline"
-                      >
-                        {isManualExpiry ? 'Use Smart List' : 'Pick Manually'}
-                      </button>
-                    </div>
-                    {isManualExpiry ? (
+                  {form.instrumentType === 'OPTIONS' ? (
+                    <div className="space-y-3">
                       <Input
-                        type="date"
-                        value={form.expiryDate}
-                        onChange={(e) => setForm(prev => ({ ...prev, expiryDate: e.target.value }))}
-                        noLabel
+                        label="Strike Price *"
+                        type="number"
+                        prefix="₹"
+                        value={form.strikePrice}
+                        onChange={(e) => setForm(prev => ({ ...prev, strikePrice: e.target.value }))}
+                        placeholder="22500"
                       />
-                    ) : (
-                      <select
-                        className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
-                        value={form.expiryDate}
-                        onChange={(e) => setForm(prev => ({ ...prev, expiryDate: e.target.value }))}
-                      >
-                        {!form.expiryDate && <option value="">Select Expiry</option>}
-                        {availableExpiries.map((date) => {
-                          const d = new Date(date);
-                          const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-                          return <option key={date} value={date}>{label}</option>;
-                        })}
-                      </select>
-                    )}
-                  </div>
+                      {spotPrice && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-[9px] font-black text-text-faint uppercase tracking-widest">Live Spot: <span className="text-accent">₹{spotPrice.toFixed(2)}</span></span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(() => {
+                              const interval = form.underlying === 'NIFTY' ? 50 : 
+                                             form.underlying === 'BANKNIFTY' ? 100 :
+                                             form.underlying === 'FINNIFTY' ? 50 :
+                                             form.underlying === 'MIDCPNIFTY' ? 25 : 100;
+                              const atm = Math.round(spotPrice / interval) * interval;
+                              return [-2, -1, 0, 1, 2].map(offset => {
+                                const strike = atm + (offset * interval);
+                                const label = offset === 0 ? 'ATM' : (offset > 0 ? `+${offset * interval}` : `${offset * interval}`);
+                                return (
+                                  <button
+                                    key={strike}
+                                    type="button"
+                                    onClick={() => setForm(prev => ({ ...prev, strikePrice: strike.toString() }))}
+                                    className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all border ${
+                                      form.strikePrice === strike.toString() 
+                                        ? 'bg-accent/10 border-accent text-accent shadow-sm' 
+                                        : 'bg-card border-border text-text-faint hover:text-text-muted hover:border-border-alt'
+                                    }`}
+                                  >
+                                    {label} ({strike})
+                                  </button>
+                                );
+                              });
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center p-4 bg-card-alt/50 rounded-2xl border border-border h-fit self-start">
+                       <p className="text-[10px] font-bold text-text-faint uppercase leading-tight tracking-tight">
+                         {form.instrumentType === 'EQUITY' ? 'Cash segment selected. No strike or expiry required.' : 'Futures segment selected. No strike required.'}
+                       </p>
+                    </div>
+                  )}
+
+                  {form.instrumentType !== 'EQUITY' && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Expiry Date *</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setIsManualExpiry(prev => !prev)}
+                          className="text-[9px] font-black text-accent uppercase tracking-widest hover:underline"
+                        >
+                          {isManualExpiry ? 'Use Smart List' : 'Pick Manually'}
+                        </button>
+                      </div>
+                      {isManualExpiry ? (
+                        <Input
+                          type="date"
+                          value={form.expiryDate}
+                          onChange={(e) => setForm(prev => ({ ...prev, expiryDate: e.target.value }))}
+                          noLabel
+                        />
+                      ) : (
+                        <select
+                          className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
+                          value={form.expiryDate}
+                          onChange={(e) => setForm(prev => ({ ...prev, expiryDate: e.target.value }))}
+                        >
+                          {!form.expiryDate && <option value="">Select Expiry</option>}
+                          {availableExpiries.map((date) => {
+                            const d = new Date(date);
+                            const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+                            return <option key={date} value={date}>{label}</option>;
+                          })}
+                        </select>
+                      )}
+                    </div>
+                  )}
                 </div>
-                
-                {form.underlying && form.expiryDate && form.strikePrice && (
+
+                {form.instrumentType === 'OPTIONS' && form.underlying && form.expiryDate && form.strikePrice && (
                   <div className="p-4 bg-accent/5 rounded-2xl border border-accent/20 text-center animate-fade-up">
                     <span className="text-[10px] text-text-faint font-black uppercase tracking-widest block mb-1">Contract Symbol</span>
                     <span className="font-mono font-black text-accent text-lg tracking-tight">
                       {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType)}
+                    </span>
+                  </div>
+                )}
+
+                {form.instrumentType === 'FUTURES' && form.underlying && form.expiryDate && (
+                  <div className="p-4 bg-accent/5 rounded-2xl border border-accent/20 text-center animate-fade-up">
+                    <span className="text-[10px] text-text-faint font-black uppercase tracking-widest block mb-1">Futures Symbol</span>
+                    <span className="font-mono font-black text-accent text-lg tracking-tight">
+                      {form.underlying} {new Date(form.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }).toUpperCase()} FUT
                     </span>
                   </div>
                 )}
@@ -1209,6 +1345,13 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess })
                        parseInt(form.lotSize) !== nseSymbols.find(s => s.symbol === form.underlying).lotSize && (
                         <p className="text-[9px] font-bold text-amber-500 uppercase tracking-tight ml-1 animate-pulse">
                           ⚠ Mismatch (Std: {nseSymbols.find(s => s.symbol === form.underlying).lotSize})
+                          <button
+                            type="button"
+                            onClick={() => setForm(p => ({ ...p, lotSize: nseSymbols.find(s => s.symbol === form.underlying).lotSize.toString() }))}
+                            className="ml-2 text-accent underline hover:text-accent/80"
+                          >
+                            Use {nseSymbols.find(s => s.symbol === form.underlying).lotSize}
+                          </button>
                         </p>
                       )}
                     </div>
@@ -1735,6 +1878,7 @@ export default function AddTrade() {
   
   const initialForm = {
     underlying: '',
+    instrumentType: 'OPTIONS',
     optionType: 'CE',
     tradeType: 'BUY',
     strikePrice: '',

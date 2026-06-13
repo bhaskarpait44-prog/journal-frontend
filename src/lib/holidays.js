@@ -101,9 +101,19 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
 
   const sym = symbol.toUpperCase();
   const expiries = new Set();
-  const WEEKLY_INDICES = ['NIFTY', 'SENSEX'];
-  const NSE_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'];
-  const targetDay = NSE_INDICES.includes(sym) ? 2 : 4; // 2=Tue, 4=Thu
+  
+  // Expiry days: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  const EXPIRY_DAYS = {
+    'NIFTY': 4,
+    'BANKNIFTY': 3,
+    'FINNIFTY': 2,
+    'MIDCPNIFTY': 1,
+    'SENSEX': 5,
+    'BANKEX': 1
+  };
+  
+  const targetDay = EXPIRY_DAYS[sym] || 4; // Default to Thursday for Equities and unknown
+  const isIndex = !!EXPIRY_DAYS[sym];
 
   // If today is expiry day and after 3:30 PM IST, skip today
   let adjustedFromDate = new Date(baseDate);
@@ -122,7 +132,7 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
   const todayStr = adjustedFromDate.toISOString().split('T')[0];
 
   // 1. Weekly (If applicable) - Add next 5 weeklies
-  if (WEEKLY_INDICES.includes(sym) || ['BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'].includes(sym)) {
+  if (isIndex) {
     let d = new Date(adjustedFromDate);
     let diff = targetDay - d.getDay();
     if (diff < 0) diff += 7;

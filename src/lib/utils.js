@@ -22,8 +22,8 @@ export function buildSymbol(underlying, expiry, strike, optionType) {
   const monthCodes = ['1','2','3','4','5','6','7','8','9','O','N','D'];
   const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
-  const NSE_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'];
-  const targetDay = NSE_INDICES.includes(underlying) ? 2 : 4; // 2=Tue, 4=Thu
+  const EXPIRY_DAYS = { 'NIFTY': 4, 'BANKNIFTY': 3, 'FINNIFTY': 2, 'MIDCPNIFTY': 1, 'SENSEX': 5, 'BANKEX': 1 };
+  const targetDay = EXPIRY_DAYS[underlying] || 4;
   
   const lastTargetDay = getTargetDayInMonth(d.getFullYear(), d.getMonth(), targetDay);
   const isMonthly = expiry === lastTargetDay;

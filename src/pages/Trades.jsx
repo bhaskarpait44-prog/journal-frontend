@@ -35,6 +35,7 @@ export default function Trades() {
   // State
   const [filters, setFilters] = useState({
     status: searchParams.get('status') || '',
+    instrumentType: searchParams.get('instrumentType') || '',
     optionType: searchParams.get('optionType') || '',
     symbol: searchParams.get('symbol') || '',
     from: searchParams.get('from') || '',
@@ -58,6 +59,7 @@ export default function Trades() {
   const query = useMemo(() => {
     const params = new URLSearchParams();
     if (filters.status) params.append('status', filters.status);
+    if (filters.instrumentType) params.append('instrumentType', filters.instrumentType);
     if (filters.optionType) params.append('optionType', filters.optionType);
     if (filters.symbol) params.append('symbol', filters.symbol);
     if (filters.from) params.append('from', filters.from);
@@ -219,14 +221,25 @@ export default function Trades() {
               <option value="CLOSED">Closed</option>
             </select>
             <select 
+              name="instrumentType"
+              value={filters.instrumentType}
+              onChange={handleFilterChange}
+              className="h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none"
+            >
+              <option value="">Segment: All</option>
+              <option value="EQUITY">Equity</option>
+              <option value="FUTURES">Futures</option>
+              <option value="OPTIONS">Options</option>
+            </select>
+            <select 
               name="optionType"
               value={filters.optionType}
               onChange={handleFilterChange}
               className="h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none"
             >
               <option value="">Type: All</option>
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
+              <option value="CE">Call (CE)</option>
+              <option value="PE">Put (PE)</option>
             </select>
             <div className="relative group">
               <IconCalendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-accent" />
@@ -314,7 +327,12 @@ export default function Trades() {
                       </td>
                       <td className="p-4" onClick={() => navigate(`/trades/${trade.id}`)}>
                         <div className="cursor-pointer">
-                          <p className="font-black text-sm text-text-primary group-hover:text-accent transition-colors">{trade.symbol}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-black text-sm text-text-primary group-hover:text-accent transition-colors">{trade.symbol}</p>
+                            {trade.instrumentType !== 'OPTIONS' && trade.instrumentType && (
+                              <Badge className="bg-card-alt text-text-faint text-[8px] border-border py-0 h-4 px-1">{trade.instrumentType}</Badge>
+                            )}
+                          </div>
                           <p className="text-[10px] font-bold text-text-faint uppercase tracking-tighter mt-0.5">
                             {trade.strategy || 'Uncategorized'}
                           </p>

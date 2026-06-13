@@ -55,8 +55,21 @@ export default function QuickLogSheet({ isOpen, onClose, onSuccess }) {
 
     setLoading(true);
     try {
-      const expiries = getAllAvailableExpiries(form.underlying);
-      const expiry = expiries[0] || new Date().toISOString().split('T')[0];
+      let expiry;
+      try {
+        const res = await api.get(`/nse/expiry-dates/${form.underlying}`);
+        if (res.expiryDates?.length) {
+          expiry = res.expiryDates[0];
+        }
+      } catch (err) {
+        console.warn('Live expiry fetch failed in QuickLog, using fallback');
+      }
+
+      if (!expiry) {
+        const expiries = getAllAvailableExpiries(form.underlying);
+        expiry = expiries[0] || new Date().toISOString().split('T')[0];
+      }
+
       const payload = {
         underlying: form.underlying,
         optionType: form.optionType,
