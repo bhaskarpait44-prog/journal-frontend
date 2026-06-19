@@ -130,6 +130,26 @@ function combineIstDateTime(date, time = '09:15') {
   return `${date}T${time || '09:15'}:00${IST_OFFSET}`;
 }
 
+// Returns the next weekly expiry Thursday (or today if today is Thursday)
+function getNextThursday() {
+  const today = new Date();
+  const day = today.getDay(); // 0=Sun, 4=Thu
+  const daysUntil = (4 - day + 7) % 7;
+  const target = new Date(today);
+  target.setDate(today.getDate() + (daysUntil === 0 ? 0 : daysUntil));
+  return target.toISOString().split('T')[0];
+}
+
+// Returns a formatted lastSaved string with date+time
+function formatLastSaved(date) {
+  if (!date) return null;
+  const today = new Date();
+  const isToday = date.toDateString() === today.toDateString();
+  const timeStr = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+  if (isToday) return `today at ${timeStr}`;
+  return `${date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} at ${timeStr}`;
+}
+
 function getStrikeInterval(underlying, spotPrice) {
   const INDEX_MAP = {
     NIFTY: 50, BANKNIFTY: 100, FINNIFTY: 50,
@@ -385,7 +405,7 @@ function Step1Symbol({
   form, setForm, nseSymbols, spotPrice,
   availableExpiries, isManualExpiry, setIsManualExpiry,
   templates, setTemplates,
-  search, setSearch, showDropdown, setShowDropdown,
+  search, setSearch,
   filteredSymbols, safeSetUnderlying,
   showTemplateInput, setShowTemplateInput,
   templateName, setTemplateName, saveTemplate,
@@ -489,7 +509,9 @@ function Step1Symbol({
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontWeight: 'bold' }}>{s.symbol}</span>
                       <span style={{ fontSize: 10, color: 'var(--text-faint)', fontFamily: 'monospace' }}>
-                        {s.source === 'fno' ? `Lot ${s.lotSize}` : s.exchange || 'EQUITY'}
+                        {s.source === 'fno' && form.instrumentType !== 'EQUITY'
+                          ? `Lot ${s.lotSize}`
+                          : s.exchange || 'EQUITY'}
                       </span>
                     </div>
                   </Select.Option>
@@ -909,6 +931,14 @@ function Step2Execution({ form, setForm, nseSymbols, charges, pnlPreview }) {
               }]}
             />
 
+            {/* EXPIRED: auto-fill notice */}
+            {form.status === 'EXPIRED' && form.expiryDate && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, backgroundColor: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.18)', fontSize: 11, color: '#3b82f6' }}>
+                <CalendarOutlined />
+                <span>Exit date will be auto-set to: <strong>{getPreviousTradingDay(form.expiryDate)}</strong> (last trading day before expiry)</span>
+              </div>
+            )}
+
             <Divider style={{ margin: '8px 0' }} />
 
             {/* Stop Loss & Target */}
@@ -1018,9 +1048,9 @@ function Step2Execution({ form, setForm, nseSymbols, charges, pnlPreview }) {
                 size="large"
                 style={{ borderRadius: 10 }}
               />
-              {standardLotSize && parseInt(form.lotSize) !== standardLotSize && (
+              {standardLotSize && form.instrumentType !== 'EQUITY' && parseInt(form.lotSize) !== standardLotSize && (
                 <div style={{ fontSize: 9, color: '#eab308', marginTop: 4 }}>
-                  ⚠ Standard is {standardLotSize}.
+                  ⚠ Standard F&O lot is {standardLotSize}.
                   <Button
                     type="link"
                     size="small"
@@ -1038,6 +1068,7 @@ function Step2Execution({ form, setForm, nseSymbols, charges, pnlPreview }) {
               </label>
               <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 10, height: 40, overflow: 'hidden', backgroundColor: 'var(--bg-card-alt)' }}>
                 <Button
+                  htmlType="button"
                   onClick={() => setForm((p) => ({ ...p, quantity: Math.max(1, parseInt(p.quantity || 1) - 1).toString() }))}
                   style={{ border: 'none', height: '100%', width: 40, background: 'transparent' }}
                 >
@@ -1051,6 +1082,7 @@ function Step2Execution({ form, setForm, nseSymbols, charges, pnlPreview }) {
                   style={{ flex: 1, border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 'bold', fontFamily: 'monospace', outline: 'none' }}
                 />
                 <Button
+                  htmlType="button"
                   onClick={() => setForm((p) => ({ ...p, quantity: (parseInt(p.quantity || 0) + 1).toString() }))}
                   style={{ border: 'none', height: '100%', width: 40, background: 'transparent' }}
                 >
@@ -1240,7 +1272,7 @@ function Step3Categorize({ form, setForm, psychology, setPsychology, lastSaved }
           </Row>
 
           {/* Tags entry */}
-          <div>
+          <div style={{ position: 'relative' }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
               Trade Tags
             </div>
@@ -1275,7 +1307,7 @@ function Step3Categorize({ form, setForm, psychology, setPsychology, lastSaved }
               />
             </div>
             {showTagDropdown && popularTags.filter((t) => !form.tags.includes(t)).length > 0 && (
-              <Card size="small" style={{ position: 'absolute', zIndex: 100, width: 'calc(100% - 48px)', marginTop: 4, borderRadius: 10, border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              <Card size="small" style={{ position: 'absolute', zIndex: 100, left: 0, right: 0, marginTop: 4, borderRadius: 10, border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: 6 }}>Popular Tags</div>
                 <Space wrap>
                   {popularTags.filter((t) => !form.tags.includes(t)).map((tag) => (
@@ -1367,6 +1399,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [nseSymbols, setNseSymbols] = useState(FALLBACK_SYMBOLS);
+  const [symbolsLoading, setSymbolsLoading] = useState(true);
   const [confirmConfig, setConfirmConfig] = useState(null);
 
   const STEPS = [
@@ -1376,7 +1409,6 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
   ];
 
   const [search, setSearch] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
   const [remoteSymbols, setRemoteSymbols] = useState([]);
 
   useEffect(() => {
@@ -1483,7 +1515,10 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
   }, [form.entryPrice, form.exitPrice, form.status, form.lotSize, form.quantity, form.tradeType, form.exchange, form.instrumentType]);
 
   useEffect(() => {
-    api.get('/nse/fno-symbols').then((d) => { if (d?.symbols?.length) setNseSymbols(d.symbols); }).catch(() => {});
+    api.get('/nse/fno-symbols')
+      .then((d) => { if (d?.symbols?.length) setNseSymbols(d.symbols); })
+      .catch(() => {})
+      .finally(() => setSymbolsLoading(false));
     api.get('/profile/templates').then((d) => { if (Array.isArray(d)) setTemplates(d); }).catch(() => {});
   }, []);
 
@@ -1538,7 +1573,6 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
         expiryDate: ''
       }));
       setSearch(symbol);
-      setShowDropdown(false);
       fetchSpotPrice(symbol);
       setConfirmConfig(null);
     };
@@ -1585,6 +1619,9 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
       if (!form.underlying) return 'Please select an underlying symbol';
       if (form.instrumentType === 'OPTIONS' && !form.strikePrice) return 'Please enter a strike price';
       if (form.instrumentType !== 'EQUITY' && !form.expiryDate) return 'Please select an expiry date';
+      if (form.instrumentType !== 'EQUITY' && form.expiryDate && form.expiryDate < new Date().toISOString().split('T')[0]) {
+        return 'Expiry date cannot be in the past';
+      }
     }
     if (step === 2) {
       if (!form.lotSize || parseInt(form.lotSize) <= 0) return 'Lot size must be at least 1';
@@ -1594,6 +1631,8 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
       if (form.status === 'CLOSED' && !form.exitDate) return 'Exit date is required for a closed trade';
       const today = new Date().toISOString().split('T')[0];
       if (form.entryDate > today) return 'Entry date cannot be in the future';
+      const entryDay = new Date(form.entryDate).getDay();
+      if (entryDay === 0 || entryDay === 6) return 'Entry date cannot be on a weekend';
       if (form.status !== 'OPEN' && form.exitDate) {
         if (form.exitDate < form.entryDate) return 'Exit date cannot be before entry date';
         if (form.exitDate > today) return 'Exit date cannot be in the future';
@@ -1624,7 +1663,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
 
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
-    if (currentStep < 3) { handleNext(); return; }
+    // Only run save logic — navigation is handled by explicit button clicks only
     for (let s = 1; s <= 2; s++) {
       const error = validateStep(s);
       if (error) { if (s !== currentStep) setCurrentStep(s); return toast.error(error); }
@@ -1679,7 +1718,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 64 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 64 }}>
       <Modal
         open={!!confirmConfig}
         onCancel={() => setConfirmConfig(null)}
@@ -1813,10 +1852,11 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
                   form={form} setForm={setForm} nseSymbols={nseSymbols} spotPrice={spotPrice}
                   availableExpiries={availableExpiries} isManualExpiry={isManualExpiry} setIsManualExpiry={setIsManualExpiry}
                   templates={templates} setTemplates={setTemplates}
-                  search={search} setSearch={setSearch} showDropdown={showDropdown} setShowDropdown={setShowDropdown}
+                  search={search} setSearch={setSearch}
                   filteredSymbols={filteredSymbols} safeSetUnderlying={safeSetUnderlying}
                   showTemplateInput={showTemplateInput} setShowTemplateInput={setShowTemplateInput}
                   templateName={templateName} setTemplateName={setTemplateName} saveTemplate={saveTemplate}
+                  symbolsLoading={symbolsLoading}
                 />
               </Row>
             </motion.div>
@@ -1869,12 +1909,12 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
             Continue →
           </Button>
         ) : (
-          <Button size="large" type="primary" htmlType="submit" loading={loading} style={{ flex: 2, borderRadius: 10 }}>
+          <Button size="large" type="primary" htmlType="button" onClick={handleSubmit} loading={loading} style={{ flex: 2, borderRadius: 10 }}>
             Save Trade
           </Button>
         )}
       </div>
-    </form>
+    </div>
   );
 }
 
@@ -2254,7 +2294,7 @@ function BrokerAPITab() {
 
         <Col xs={24} md={12} className="space-y-4">
           <Card style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
-            <div style={{ display: 'flex', justify: 'space-between', items: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Apply Psychology</strong>
                 <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>Apply mindset metrics to sync results</div>
@@ -2289,8 +2329,8 @@ export default function AddTrade() {
 
   const initialForm = {
     underlying: '', instrumentType: 'OPTIONS', optionType: 'CE',
-    tradeType: 'BUY', strikePrice: '', expiryDate: '2026-06-25',
-    lotSize: '', quantity: '1', exchange: 'NSE', status: 'OPEN',
+    tradeType: 'BUY', strikePrice: '', expiryDate: getNextThursday(),
+    lotSize: '1', quantity: '1', exchange: 'NSE', status: 'OPEN',
     entryPrice: '', entryDate: new Date().toISOString().split('T')[0],
     entryTime: '09:15', exitPrice: '', exitDate: '', exitTime: '15:30',
     stopLoss: '', target: '', strategy: '', setupType: '',
@@ -2313,17 +2353,22 @@ export default function AddTrade() {
     const savedForm = sessionStorage.getItem('add_trade_form');
     const savedPsych = sessionStorage.getItem('add_trade_psychology');
     let restored = false;
-    if (savedForm) { try { setForm(JSON.parse(savedForm)); restored = true; } catch { /* ignore */ } }
+    if (savedForm) {
+      try {
+        const restored = JSON.parse(savedForm);
+        setForm(restored);
+        // Only show toast if user had actually typed something meaningful
+        if (restored.underlying) toast.success('Form draft restored', { icon: '📝', duration: 2000 });
+      } catch { /* ignore */ }
+    }
     if (savedPsych) { try { setPsychology(JSON.parse(savedPsych)); } catch { /* ignore */ } }
-    if (restored) toast.success('Form draft restored', { icon: '📝', duration: 2000 });
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       sessionStorage.setItem('add_trade_form', JSON.stringify(form));
       sessionStorage.setItem('add_trade_psychology', JSON.stringify(psychology));
-      const now = new Date();
-      setLastSaved(`${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`);
+      setLastSaved(formatLastSaved(new Date()));
     }, 1000);
     return () => clearTimeout(timer);
   }, [form, psychology]);
