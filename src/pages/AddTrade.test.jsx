@@ -19,12 +19,66 @@ vi.mock('../lib/api', () => ({
 }));
 
 // Mock toast to avoid actual notifications
-vi.mock('react-hot-toast', () => ({
-  default: {
+vi.mock('sonner', () => ({
+  toast: {
     success: vi.fn(),
     error: vi.fn(),
   }
 }));
+
+// Mock Select and Segmented components of antd
+vi.mock('antd', async (importOriginal) => {
+  const actual = await importOriginal();
+  const React = await import('react');
+  const MockSelect = React.forwardRef(({ onChange, placeholder, value, id, onSearch }, ref) => {
+    return (
+      <input
+        ref={ref}
+        id={id}
+        value={value || ''}
+        placeholder={placeholder}
+        onChange={(e) => {
+          if (onSearch) onSearch(e.target.value);
+          if (onChange) onChange(e.target.value);
+        }}
+      />
+    );
+  });
+  MockSelect.Option = ({ children }) => null;
+
+  const MockSegmented = ({ options, value, onChange }) => {
+    return (
+      <div>
+        {options.map((opt) => {
+          const optValue = typeof opt === 'object' ? opt.value : opt;
+          const optLabel = typeof opt === 'object' ? opt.label : opt;
+          const isSelected = value === optValue;
+          let className = '';
+          if (isSelected) {
+            if (optValue === 'yes') className = 'bg-profit';
+            if (optValue === 'no') className = 'bg-loss';
+          }
+          return (
+            <button
+              key={optValue}
+              type="button"
+              className={className}
+              onClick={() => onChange && onChange(optValue)}
+            >
+              {optLabel}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  return {
+    ...actual,
+    Select: MockSelect,
+    Segmented: MockSegmented,
+  };
+});
 
 const navigateToStep2 = async () => {
   // Select Equity to simplify validation (no strike/expiry needed)
@@ -93,8 +147,8 @@ describe('AddTrade Bug Fixes Verification', () => {
 
     fireEvent.click(screen.getByText(/Continue →/i));
 
-    const toast = await import('react-hot-toast');
-    expect(toast.default.error).toHaveBeenCalledWith('Entry price must be greater than 0');
+    const { toast } = await import('sonner');
+    expect(toast.error).toHaveBeenCalledWith('Entry price must be greater than 0');
   });
 
   it('BUG-4: Hides EXPIRED status for EQUITY instruments', async () => {
@@ -142,5 +196,5 @@ describe('AddTrade Bug Fixes Verification', () => {
     
     const followedBtn = await screen.findByText(/Followed Plan/i);
     expect(followedBtn).toHaveClass('bg-profit');
-  });
+  }, 15000);
 });

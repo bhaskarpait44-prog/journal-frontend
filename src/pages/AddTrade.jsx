@@ -1,20 +1,62 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { api } from '../lib/api';
 import { buildSymbol, fmtINR } from '../lib/utils';
 import { getPreviousTradingDay, getAllAvailableExpiries } from '../lib/holidays';
+import dayjs from 'dayjs';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// UI Components
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { TabBar } from '../components/ui/TabBar';
-import { Modal } from '../components/ui/Modal';
+// Ant Design Components
 import {
-  IconSearch, IconDollar,
-  IconRefresh, IconCheck, IconPsychology, IconPlus,
-  IconImport, IconEye, IconEyeOff, IconChevronDown, IconCalendar, IconTrash,
-} from '../components/ui/Icons';
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Button,
+  Segmented,
+  Steps,
+  Slider,
+  Collapse,
+  Modal,
+  Upload,
+  Table,
+  Radio,
+  Row,
+  Col,
+  Card,
+  Space,
+  Popconfirm,
+  Tooltip,
+  Badge,
+  Divider,
+  DatePicker,
+  TimePicker,
+} from 'antd';
+
+// Ant Design Icons
+import {
+  SearchOutlined,
+  DollarOutlined,
+  ReloadOutlined,
+  CheckOutlined,
+  PlusOutlined,
+  UploadOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  CalendarOutlined,
+  DeleteOutlined,
+  InboxOutlined,
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  SettingOutlined,
+  WarningOutlined,
+  CameraOutlined,
+  ClearOutlined,
+  EditOutlined,
+  FileExcelOutlined,
+  ApiOutlined,
+} from '@ant-design/icons';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -47,7 +89,6 @@ const EMOTIONS_AFTER = [
   { value: 'angry', label: '😠', name: 'Angry' },
 ];
 
-// #10: expanded mistake tags + exit reasons
 const MISTAKE_TAGS = [
   { value: 'no_stoploss', label: 'No Stop Loss' },
   { value: 'revenge_trade', label: 'Revenge Trade' },
@@ -73,47 +114,13 @@ const EXIT_REASONS = [
 
 const FALLBACK_SYMBOLS = [
   { symbol: 'NIFTY', lotSize: 75 },
-  { symbol: 'BANKNIFTY', lotSize: 30 },
+  { symbol: 'BANKNIFTY', status: 'Active', lotSize: 30 },
   { symbol: 'FINNIFTY', lotSize: 65 },
   { symbol: 'MIDCPNIFTY', lotSize: 120 },
   { symbol: 'NIFTYNXT50', lotSize: 25 },
   { symbol: 'SENSEX', lotSize: 20 },
   { symbol: 'BANKEX', lotSize: 30 },
   { symbol: 'SENSEX50', lotSize: 60 },
-];
-
-// #13: Broker definitions
-const BROKERS = [
-  {
-    id: 'dhan',
-    name: 'Dhan',
-    url: 'dhan.co/api',
-    fields: [
-      { key: 'clientId', label: 'Client ID', placeholder: 'Your 10-digit ID', type: 'text' },
-      { key: 'accessToken', label: 'Access Token', placeholder: 'Paste your active session token', type: 'password' },
-    ],
-    note: 'Tokens expire daily. Refresh your token in the Dhan portal before initiating sync.',
-  },
-  {
-    id: 'zerodha',
-    name: 'Zerodha',
-    url: 'kite.zerodha.com',
-    fields: [
-      { key: 'clientId', label: 'Client ID', placeholder: 'ZXXXXX', type: 'text' },
-      { key: 'accessToken', label: 'Kite Access Token', placeholder: 'Generated via Kite Connect', type: 'password' },
-    ],
-    note: 'Generate access token via Kite Connect API. Token refreshes daily at 6:30 AM.',
-  },
-  {
-    id: 'upstox',
-    name: 'Upstox',
-    url: 'api.upstox.com',
-    fields: [
-      { key: 'clientId', label: 'API Key', placeholder: 'Your Upstox API key', type: 'text' },
-      { key: 'accessToken', label: 'Access Token', placeholder: 'OAuth access token', type: 'password' },
-    ],
-    note: 'Use Upstox Developer Portal to generate your API key and access token.',
-  },
 ];
 
 const IST_OFFSET = '+05:30';
@@ -123,7 +130,6 @@ function combineIstDateTime(date, time = '09:15') {
   return `${date}T${time || '09:15'}:00${IST_OFFSET}`;
 }
 
-// #4: ATM strike interval — covers all indices + high-price stocks
 function getStrikeInterval(underlying, spotPrice) {
   const INDEX_MAP = {
     NIFTY: 50, BANKNIFTY: 100, FINNIFTY: 50,
@@ -139,7 +145,6 @@ function getStrikeInterval(underlying, spotPrice) {
   return 5;
 }
 
-// #12: CSV preview parser — client-side, first N rows
 function parseCSVPreview(text, maxRows = 6) {
   const lines = text.split('\n').filter((l) => l.trim());
   return lines.slice(0, maxRows).map((line) => {
@@ -157,108 +162,79 @@ function parseCSVPreview(text, maxRows = 6) {
   });
 }
 
-// ─── Shared UI Primitives ────────────────────────────────────────────────────
+const safeParseTime = (timeStr) => {
+  if (!timeStr) return null;
+  return dayjs(`2000-01-01T${timeStr}`);
+};
 
-function FormSection({ title, icon: Icon, children, action }) {
-  return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {Icon && <Icon className="w-3.5 h-3.5 text-text-faint" />}
-          <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
-            {title}
-          </span>
-        </div>
-        {action && <div className="flex items-center">{action}</div>}
-      </div>
-      <div className="p-5">{children}</div>
-    </div>
-  );
-}
-
-function SegmentedControl({ options, value, onChange, size = 'md' }) {
-  const h = size === 'sm' ? 'h-9' : 'h-11';
-  const txt = size === 'sm' ? 'text-[10px]' : 'text-xs';
-  return (
-    <div className={`flex bg-card-alt p-1 rounded-xl border border-border ${h}`}>
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`flex-1 flex items-center justify-center rounded-lg ${txt} font-semibold transition-all duration-200 ${
-            value === opt.value
-              ? opt.activeClass || 'bg-accent text-white'
-              : 'text-text-faint hover:text-text-muted'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ─── Emoji Picker — #23: larger tappable buttons ─────────────────────────────
+// ─── Custom Mindset Emoji Grid ──────────────────────────────────────────────
 
 function EmojiPicker({ label, value, options, onChange }) {
   return (
-    <div className="space-y-2.5">
-      <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
         {label}
-      </label>
-      <div className="grid grid-cols-6 gap-2">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onChange(opt.value)}
-            className={`flex flex-col items-center justify-center py-4 rounded-xl border-2 transition-all duration-200 ${
-              value === opt.value
-                ? 'bg-accent/10 border-accent scale-105'
-                : 'border-border bg-card-alt hover:border-border-alt hover:scale-102'
-            }`}
-          >
-            <span className="text-2xl mb-1.5">{opt.label}</span>
-            <span className={`text-[9px] font-semibold uppercase tracking-wide leading-none ${
-              value === opt.value ? 'text-accent' : 'text-text-faint'
-            }`}>
-              {opt.name}
-            </span>
-          </button>
-        ))}
       </div>
+      <Row gutter={[8, 8]}>
+        {options.map((opt) => {
+          const isSelected = value === opt.value;
+          return (
+            <Col xs={4} sm={4} md={2} key={opt.value}>
+              <motion.div
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.94 }}
+              >
+                <Card
+                  hoverable
+                  onClick={() => onChange(opt.value)}
+                  style={{
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    borderRadius: 12,
+                    border: isSelected ? '2px solid #3b82f6' : '1px solid var(--border)',
+                    backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-card-alt)',
+                    transition: 'all 0.2s',
+                  }}
+                  styles={{ body: { padding: '12px 4px' } }}
+                >
+                  <div style={{ fontSize: 24, marginBottom: 2 }}>{opt.label}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? '#3b82f6' : 'var(--text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {opt.name}
+                  </div>
+                </Card>
+              </motion.div>
+            </Col>
+          );
+        })}
+      </Row>
     </div>
   );
 }
 
-// ─── Discipline Slider — #22: color gradient track ───────────────────────────
+// ─── Custom Discipline Slider ───────────────────────────────────────────────
 
 function DisciplineSlider({ value, onChange }) {
   const pct = ((value - 1) / 9) * 100;
-  const thumbColor =
-    pct < 33 ? '#ef4444' : pct < 67 ? '#facc15' : '#22c55e';
+  const thumbColor = pct < 33 ? '#ef4444' : pct < 67 ? '#facc15' : '#22c55e';
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Discipline Score
-        </label>
-        <span className="text-xs font-mono font-bold transition-colors" style={{ color: thumbColor }}>
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 'bold', color: thumbColor, fontFamily: 'monospace' }}>
           {value}/10
         </span>
       </div>
-      {/* gradient track */}
       <div className="relative h-3 rounded-full" style={{
         background: 'linear-gradient(to right, #ef4444 0%, #facc15 50%, #22c55e 100%)',
+        marginBottom: 8,
       }}>
-        {/* grey overlay for unselected portion */}
         <div
           className="absolute top-0 right-0 h-full rounded-r-full bg-card-alt/70 transition-all duration-200"
           style={{ width: `${100 - pct}%` }}
         />
-        {/* range input sits on top (invisible but functional) */}
         <input
           type="range"
           min="1"
@@ -268,13 +244,12 @@ function DisciplineSlider({ value, onChange }) {
           className="absolute inset-0 w-full opacity-0 cursor-pointer h-full"
           style={{ zIndex: 10 }}
         />
-        {/* visible thumb */}
         <div
           className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white shadow-lg transition-all duration-200 pointer-events-none"
           style={{ left: `calc(${pct}% - 10px)`, background: thumbColor, zIndex: 5 }}
         />
       </div>
-      <div className="flex justify-between text-[9px] font-medium text-text-faint uppercase tracking-wide">
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 500, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         <span>Impulsive</span>
         <span>Mixed</span>
         <span>Robotic</span>
@@ -283,10 +258,10 @@ function DisciplineSlider({ value, onChange }) {
   );
 }
 
-// ─── Psychology Section — #17: collapsed by default ──────────────────────────
+// ─── Psychology Collapse Section ───────────────────────────────────────────
 
 function PsychologySection({ data, onChange }) {
-  const [isExpanded, setIsExpanded] = useState(false); // #17: default closed
+  const isFilled = data.emotionBefore || data.emotionAfter || data.mistakeTags.length > 0;
 
   const toggleMistake = (tag) => {
     const next = data.mistakeTags.includes(tag)
@@ -295,121 +270,112 @@ function PsychologySection({ data, onChange }) {
     onChange({ mistakeTags: next });
   };
 
-  const isFilled = data.emotionBefore || data.emotionAfter || data.mistakeTags.length > 0;
+  const collapseHeader = (
+    <Space>
+      <span>Trade Psychology &amp; Performance</span>
+      {isFilled && (
+        <Badge status="processing" color="#22c55e" text="Filled" style={{ fontSize: 10, fontWeight: 700 }} />
+      )}
+    </Space>
+  );
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        className="w-full px-4 py-2.5 border-b border-border flex items-center justify-between hover:bg-card-alt/30 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <IconPsychology className="w-3.5 h-3.5 text-text-faint" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
-            Trade Psychology &amp; Performance
-          </span>
-          {isFilled && !isExpanded && (
-            <span className="text-[9px] font-bold text-profit bg-profit/10 px-1.5 py-0.5 rounded-md ml-1">
-              ● Filled
-            </span>
-          )}
-        </div>
-        <IconChevronDown
-          className={`w-3.5 h-3.5 text-text-faint transition-transform duration-200 ${
-            isExpanded ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
-
-      {isExpanded && (
-        <div className="p-5 space-y-6 animate-fade-in">
-          <EmojiPicker
-            label="Entry Mindset"
-            value={data.emotionBefore}
-            options={EMOTIONS_BEFORE}
-            onChange={(val) => onChange({ emotionBefore: val })}
-          />
-          <EmojiPicker
-            label="Exit Mindset"
-            value={data.emotionAfter}
-            options={EMOTIONS_AFTER}
-            onChange={(val) => onChange({ emotionAfter: val })}
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-5 border-t border-border/50">
-            <DisciplineSlider
-              value={data.disciplineRating}
-              onChange={(val) => onChange({ disciplineRating: val })}
+    <Collapse
+      ghost
+      size="small"
+      defaultActiveKey={['psychology']}
+      style={{
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        backgroundColor: 'var(--bg-card)',
+        overflow: 'hidden',
+        marginTop: 16,
+      }}
+      items={[{
+        key: 'psychology',
+        label: collapseHeader,
+        children: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <EmojiPicker
+              label="Entry Mindset"
+              value={data.emotionBefore}
+              options={EMOTIONS_BEFORE}
+              onChange={(val) => onChange({ emotionBefore: val })}
             />
-            <div className="space-y-3">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
-                Plan Adherence
-              </label>
-              <div className="flex bg-card-alt p-1 rounded-xl border border-border h-11">
-                <button
-                  type="button"
-                  onClick={() => onChange({ followedPlan: true })}
-                  className={`flex-1 rounded-lg text-xs font-semibold transition-all ${
-                    data.followedPlan === true
-                      ? 'bg-profit text-white'
-                      : 'text-text-faint hover:text-text-muted'
-                  }`}
-                >
-                  Followed Plan
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChange({ followedPlan: false })}
-                  className={`flex-1 rounded-lg text-xs font-semibold transition-all ${
-                    data.followedPlan === false
-                      ? 'bg-loss text-white'
-                      : 'text-text-faint hover:text-text-muted'
-                  }`}
-                >
-                  Deviated
-                </button>
+            <EmojiPicker
+              label="Exit Mindset"
+              value={data.emotionAfter}
+              options={EMOTIONS_AFTER}
+              onChange={(val) => onChange({ emotionAfter: val })}
+            />
+
+            <Divider style={{ margin: '8px 0' }} />
+
+            <Row gutter={[24, 24]}>
+              <Col xs={24} md={12}>
+                <DisciplineSlider
+                  value={data.disciplineRating}
+                  onChange={(val) => onChange({ disciplineRating: val })}
+                />
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  Plan Adherence
+                </div>
+                <Segmented
+                  block
+                  value={data.followedPlan === null ? undefined : data.followedPlan ? 'yes' : 'no'}
+                  onChange={(val) => onChange({ followedPlan: val === 'yes' })}
+                  options={[
+                    { label: 'Followed Plan', value: 'yes' },
+                    { label: 'Deviated', value: 'no' },
+                  ]}
+                  size="large"
+                />
+              </Col>
+            </Row>
+
+            <Divider style={{ margin: '8px 0' }} />
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Execution Mistakes
               </div>
+              <Space wrap size={[4, 8]}>
+                {MISTAKE_TAGS.map((m) => {
+                  const active = data.mistakeTags.includes(m.value);
+                  return (
+                    <Button
+                      key={m.value}
+                      size="small"
+                      type={active ? 'primary' : 'default'}
+                      danger={active}
+                      onClick={() => toggleMistake(m.value)}
+                      style={{ borderRadius: 8, fontSize: 10, fontWeight: 600 }}
+                    >
+                      {m.label}
+                    </Button>
+                  );
+                })}
+              </Space>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Psychological Debrief
+              </div>
+              <Input.TextArea
+                rows={4}
+                placeholder="How did emotions affect decisions? What will you do differently next time from a mental standpoint?"
+                value={data.notes}
+                onChange={(e) => onChange({ notes: e.target.value })}
+                style={{ borderRadius: 10, backgroundColor: 'var(--bg-card-alt)' }}
+              />
             </div>
           </div>
-
-          <div className="space-y-3 pt-5 border-t border-border/50">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
-              Execution Mistakes
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {MISTAKE_TAGS.map((m) => (
-                <button
-                  key={m.value}
-                  type="button"
-                  onClick={() => toggleMistake(m.value)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold border transition-all ${
-                    data.mistakeTags.includes(m.value)
-                      ? 'bg-loss/8 border-loss/30 text-loss'
-                      : 'bg-card border-border text-text-faint hover:border-border-alt hover:text-text-muted'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* #1: Clearly labelled as "Psychological Debrief" (not trade journal) */}
-          <div className="space-y-3 pt-5 border-t border-border/50">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
-              Psychological Debrief
-            </label>
-            <textarea
-              className="w-full p-4 rounded-xl bg-card-alt border border-border text-sm focus:ring-2 focus:ring-accent/20 outline-none min-h-[120px] resize-none"
-              placeholder="How did emotions affect decisions? What will you do differently next time from a mental standpoint?"
-              value={data.notes}
-              onChange={(e) => onChange({ notes: e.target.value })}
-            />
-          </div>
-        </div>
-      )}
-    </div>
+        )
+      }]}
+    />
   );
 }
 
@@ -425,48 +391,51 @@ function Step1Symbol({
   templateName, setTemplateName, saveTemplate,
 }) {
   return (
-    <div className="lg:col-span-2 animate-fade-in">
-      <FormSection
-        title="Symbol & Configuration"
-        icon={IconSearch}
-        action={
+    <Col xs={24} lg={16} className="animate-fade-in">
+      <Card
+        title={
+          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
+            Symbol &amp; Configuration
+          </span>
+        }
+        extra={
           showTemplateInput ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
+            <Space size={4}>
+              <Input
+                size="small"
                 autoFocus
-                placeholder="Template name…"
-                className="h-7 w-28 px-2 rounded-md bg-card border border-border text-[10px] font-medium outline-none focus:border-accent"
+                placeholder="Template name..."
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 onKeyDown={async (e) => {
                   if (e.key === 'Escape') { setShowTemplateInput(false); setTemplateName(''); }
                   else if (e.key === 'Enter') { e.preventDefault(); await saveTemplate(); }
                 }}
+                style={{ width: 120 }}
               />
-              <button type="button" onClick={saveTemplate}
-                className="text-[10px] font-semibold text-white bg-accent px-2.5 py-1 rounded-md hover:bg-accent/90 transition-colors">
-                Save
-              </button>
-              <button type="button" onClick={() => setShowTemplateInput(false)}
-                className="text-[10px] text-text-faint hover:text-text-muted px-1">✕</button>
-            </div>
+              <Button size="small" type="primary" onClick={saveTemplate}>Save</Button>
+              <Button size="small" type="text" onClick={() => setShowTemplateInput(false)}>✕</Button>
+            </Space>
           ) : (
-            <button type="button"
+            <Button
+              size="small"
+              type="link"
               onClick={() => { if (!form.underlying) return toast.error('Select a symbol first'); setShowTemplateInput(true); }}
-              className="text-[10px] font-semibold text-accent hover:text-blue-400 transition-colors">
-              Save as Template
-            </button>
+            >
+              Save Template
+            </Button>
           )
         }
+        style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
       >
-        <div className="space-y-5">
-          {/* Instrument type */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%' }}>
+          {/* Instrument Type */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
               Instrument Type
-            </label>
-            <SegmentedControl
+            </div>
+            <Segmented
+              block
               value={form.instrumentType}
               onChange={(val) => {
                 if (val === 'EQUITY')
@@ -477,260 +446,289 @@ function Step1Symbol({
                   setForm((p) => ({ ...p, instrumentType: 'OPTIONS', optionType: 'CE' }));
               }}
               options={[
-                { value: 'EQUITY', label: 'Equity' },
-                { value: 'FUTURES', label: 'Futures' },
-                { value: 'OPTIONS', label: 'Options' },
+                { label: 'Equity', value: 'EQUITY' },
+                { label: 'Futures', value: 'FUTURES' },
+                { label: 'Options', value: 'OPTIONS' },
               ]}
+              size="large"
             />
           </div>
 
-          {/* Symbol search */}
-          <div className="relative symbol-dropdown-wrapper">
-            <Input
-              label={form.instrumentType === 'EQUITY' ? 'Stock / Scrip *' : 'Underlying Asset *'}
-              placeholder={form.instrumentType === 'EQUITY' ? 'e.g. RELIANCE, TCS' : 'e.g. NIFTY, BANKNIFTY'}
-              prefix={<IconSearch className="w-4 h-4" />}
-              value={search}
-              onChange={(e) => {
-                const val = e.target.value.toUpperCase();
-                setSearch(val);
-                setShowDropdown(true);
-                const match = nseSymbols.find((s) => s.symbol === val);
-                if (match) safeSetUnderlying(val, match.lotSize);
-                else setForm((p) => ({ ...p, underlying: val }));
+          {/* Symbol Auto Complete */}
+          <div>
+            <label htmlFor="symbol-select" style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+              {form.instrumentType === 'EQUITY' ? 'Stock / Scrip *' : 'Underlying Asset *'}
+            </label>
+            <Select
+              id="symbol-select"
+              showSearch
+              placeholder={form.instrumentType === 'EQUITY' ? 'Search Stock (e.g. RELIANCE, TCS)' : 'Search Asset (e.g. NIFTY, BANKNIFTY)'}
+              value={form.underlying || undefined}
+              defaultActiveFirstOption={false}
+              suffixIcon={null}
+              filterOption={false}
+              onSearch={(val) => setSearch(val.toUpperCase())}
+              onChange={(val) => {
+                const match = filteredSymbols.find((s) => s.symbol === val);
+                if (match) {
+                  safeSetUnderlying(val, match.lotSize, match.exchange);
+                } else {
+                  setForm((p) => ({ ...p, underlying: val }));
+                }
               }}
-              onFocus={() => setShowDropdown(true)}
-            />
-            {showDropdown && filteredSymbols.length > 0 && (
-              <div className="absolute z-50 w-full mt-1.5 bg-card border border-border rounded-xl shadow-xl max-h-[220px] overflow-y-auto no-scrollbar animate-scale-in origin-top">
-                {filteredSymbols.map((s) => (
-                  <div key={s.symbol}
-                    className="px-4 py-3 hover:bg-card-alt cursor-pointer flex justify-between items-center transition-colors group min-h-[44px]"
-                    onClick={() => safeSetUnderlying(s.symbol, s.lotSize)}>
-                    <span className="font-bold text-sm text-text-primary group-hover:text-accent transition-colors">{s.symbol}</span>
-                    <span className="text-[10px] font-mono text-text-faint">Lot {s.lotSize}</span>
+              style={{ width: '100%' }}
+              size="large"
+            >
+              {filteredSymbols.map((s) => (
+                <Select.Option key={s.symbol} value={s.symbol}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 'bold' }}>{s.symbol}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-faint)', fontFamily: 'monospace' }}>
+                      {s.source === 'fno' ? `Lot ${s.lotSize}` : s.exchange || 'EQUITY'}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
+                </Select.Option>
+              ))}
+            </Select>
           </div>
 
-          {/* Options: CE/PE */}
+          {/* CE/PE and Buy/Sell */}
           {form.instrumentType === 'OPTIONS' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
-              <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Contract Type</label>
-                <div className="flex bg-card-alt p-1 rounded-xl border border-border h-11">
-                  <button type="button"
-                    onClick={() => setForm((p) => ({ ...p, optionType: 'CE' }))}
-                    className={`flex-1 rounded-lg text-xs font-semibold transition-all ${form.optionType === 'CE' ? 'bg-violet-500/10 text-violet-400 border border-violet-500/25' : 'text-text-faint hover:text-text-muted'}`}>
-                    Call (CE)
-                  </button>
-                  <button type="button"
-                    onClick={() => setForm((p) => ({ ...p, optionType: 'PE' }))}
-                    className={`flex-1 rounded-lg text-xs font-semibold transition-all ${form.optionType === 'PE' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25' : 'text-text-faint hover:text-text-muted'}`}>
-                    Put (PE)
-                  </button>
+            <Row gutter={16}>
+              <Col xs={24} sm={12}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Contract Type
                 </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Trade Side</label>
-                <div className="flex bg-card-alt p-1 rounded-xl border border-border h-11">
-                  <button type="button"
-                    onClick={() => setForm((p) => ({ ...p, tradeType: 'BUY' }))}
-                    className={`flex-1 rounded-lg text-xs font-semibold transition-all ${form.tradeType === 'BUY' ? 'bg-profit/10 text-profit border border-profit/25' : 'text-text-faint hover:text-text-muted'}`}>
-                    Buy
-                  </button>
-                  <button type="button"
-                    onClick={() => setForm((p) => ({ ...p, tradeType: 'SELL' }))}
-                    className={`flex-1 rounded-lg text-xs font-semibold transition-all ${form.tradeType === 'SELL' ? 'bg-loss/10 text-loss border border-loss/25' : 'text-text-faint hover:text-text-muted'}`}>
-                    Sell
-                  </button>
+                <Segmented
+                  block
+                  value={form.optionType}
+                  onChange={(val) => setForm((p) => ({ ...p, optionType: val }))}
+                  options={[
+                    { label: <span style={{ color: form.optionType === 'CE' ? '#a855f7' : 'inherit' }}>Call (CE)</span>, value: 'CE' },
+                    { label: <span style={{ color: form.optionType === 'PE' ? '#eab308' : 'inherit' }}>Put (PE)</span>, value: 'PE' },
+                  ]}
+                  size="large"
+                />
+              </Col>
+              <Col xs={24} sm={12}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Trade Side
                 </div>
-              </div>
-            </div>
+                <Segmented
+                  block
+                  value={form.tradeType}
+                  onChange={(val) => setForm((p) => ({ ...p, tradeType: val }))}
+                  options={[
+                    { label: <span style={{ color: form.tradeType === 'BUY' ? '#22c55e' : 'inherit', fontWeight: 'bold' }}>Buy</span>, value: 'BUY' },
+                    { label: <span style={{ color: form.tradeType === 'SELL' ? '#ef4444' : 'inherit', fontWeight: 'bold' }}>Sell</span>, value: 'SELL' },
+                  ]}
+                  size="large"
+                />
+              </Col>
+            </Row>
           )}
 
-          {/* Equity/Futures BUY/SELL */}
+          {/* Equity/Futures Trade Side */}
           {form.instrumentType !== 'OPTIONS' && (
-            <div className="space-y-2 animate-fade-in">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Trade Side</label>
-              <div className="flex bg-card-alt p-1 rounded-xl border border-border h-11">
-                <button type="button"
-                  onClick={() => setForm((p) => ({ ...p, tradeType: 'BUY' }))}
-                  className={`flex-1 rounded-lg text-xs font-semibold transition-all ${form.tradeType === 'BUY' ? 'bg-profit/10 text-profit border border-profit/25' : 'text-text-faint hover:text-text-muted'}`}>
-                  Buy / Long
-                </button>
-                <button type="button"
-                  onClick={() => setForm((p) => ({ ...p, tradeType: 'SELL' }))}
-                  className={`flex-1 rounded-lg text-xs font-semibold transition-all ${form.tradeType === 'SELL' ? 'bg-loss/10 text-loss border border-loss/25' : 'text-text-faint hover:text-text-muted'}`}>
-                  Sell / Short
-                </button>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                Trade Side
               </div>
+              <Segmented
+                block
+                value={form.tradeType}
+                onChange={(val) => setForm((p) => ({ ...p, tradeType: val }))}
+                options={[
+                  { label: <span style={{ color: form.tradeType === 'BUY' ? '#22c55e' : 'inherit', fontWeight: 'bold' }}>Buy / Long</span>, value: 'BUY' },
+                  { label: <span style={{ color: form.tradeType === 'SELL' ? '#ef4444' : 'inherit', fontWeight: 'bold' }}>Sell / Short</span>, value: 'SELL' },
+                ]}
+                size="large"
+              />
             </div>
           )}
 
-          {/* Strike + Expiry */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Strike + Expiry Grid */}
+          <Row gutter={16}>
             {form.instrumentType === 'OPTIONS' ? (
-              <div className="space-y-3">
+              <Col xs={24} sm={12}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Strike Price *
+                </div>
                 <Input
-                  label="Strike Price *"
-                  type="number"
                   prefix="₹"
+                  type="number"
+                  placeholder="22500"
                   value={form.strikePrice}
                   onChange={(e) => setForm((p) => ({ ...p, strikePrice: e.target.value }))}
-                  placeholder="22500"
+                  size="large"
+                  style={{ borderRadius: 10 }}
                 />
                 {spotPrice && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-medium text-text-faint uppercase tracking-wide">Spot</span>
-                      <span className="text-[10px] font-mono font-bold text-accent">₹{spotPrice.toFixed(2)}</span>
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 4 }}>
+                      Spot: <strong style={{ color: '#3b82f6', fontFamily: 'monospace' }}>₹{spotPrice.toFixed(2)}</strong>
                     </div>
-                    <div className="flex flex-wrap gap-1">
+                    <Space wrap size={4}>
                       {(() => {
-                        const interval = getStrikeInterval(form.underlying, spotPrice); // #4
+                        const interval = getStrikeInterval(form.underlying, spotPrice);
                         const atm = Math.round(spotPrice / interval) * interval;
                         return [-2, -1, 0, 1, 2].map((offset) => {
                           const strike = atm + offset * interval;
                           const lbl = offset === 0 ? 'ATM' : offset > 0 ? `+${offset * interval}` : `${offset * interval}`;
+                          const isSelected = form.strikePrice === strike.toString();
                           return (
-                            <button key={strike} type="button"
+                            <Button
+                              key={strike}
+                              size="small"
+                              type={isSelected ? 'primary' : 'default'}
                               onClick={() => setForm((p) => ({ ...p, strikePrice: strike.toString() }))}
-                              className={`px-2 py-1 rounded-lg text-[9px] font-mono font-semibold border transition-all ${
-                                form.strikePrice === strike.toString()
-                                  ? 'bg-accent/10 border-accent text-accent'
-                                  : 'bg-card border-border text-text-faint hover:border-border-alt hover:text-text-muted'
-                              }`}>
+                              style={{ fontSize: 10, fontFamily: 'monospace', borderRadius: 6 }}
+                            >
                               {lbl} {strike}
-                            </button>
+                            </Button>
                           );
                         });
                       })()}
-                    </div>
+                    </Space>
                   </div>
                 )}
-              </div>
+              </Col>
             ) : (
-              <div className="flex items-center p-4 bg-card-alt/50 rounded-xl border border-border/60">
-                <p className="text-[10px] font-medium text-text-faint leading-relaxed">
-                  {form.instrumentType === 'EQUITY' ? 'Cash segment — no strike or expiry needed.' : 'Futures segment — no strike needed.'}
-                </p>
-              </div>
+              <Col xs={24} sm={12}>
+                <Card styles={{ body: { padding: '12px 16px' } }} style={{ height: '100%', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card-alt)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: '1.4' }}>
+                    {form.instrumentType === 'EQUITY' ? 'Cash Equity segment — no strike or expiry needed.' : 'Futures contract — strike price not applicable.'}
+                  </span>
+                </Card>
+              </Col>
             )}
 
             {form.instrumentType !== 'EQUITY' && (
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Expiry Date *</label>
-                  <button type="button"
+              <Col xs={24} sm={12}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Expiry Date *
+                  </span>
+                  <Button
+                    size="small"
+                    type="link"
                     onClick={() => setIsManualExpiry((p) => !p)}
-                    className="text-[9px] font-semibold text-accent hover:text-blue-400 transition-colors">
-                    {isManualExpiry ? 'Use Smart List' : 'Pick Manually'}
-                  </button>
+                    style={{ padding: 0, height: 'auto', fontSize: 10 }}
+                  >
+                    {isManualExpiry ? 'Smart List' : 'Pick Date'}
+                  </Button>
                 </div>
                 {isManualExpiry ? (
-                  <Input type="date" value={form.expiryDate}
-                    onChange={(e) => setForm((p) => ({ ...p, expiryDate: e.target.value }))} noLabel />
+                  <DatePicker
+                    value={form.expiryDate ? dayjs(form.expiryDate) : null}
+                    onChange={(date, dateStr) => setForm((p) => ({ ...p, expiryDate: dateStr }))}
+                    format="YYYY-MM-DD"
+                    style={{ width: '100%', borderRadius: 10 }}
+                    size="large"
+                  />
                 ) : (
-                  <select
-                    className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-semibold focus:ring-2 focus:ring-accent/20 outline-none"
-                    value={form.expiryDate}
-                    onChange={(e) => setForm((p) => ({ ...p, expiryDate: e.target.value }))}>
-                    {!form.expiryDate && <option value="">Select Expiry</option>}
+                  <Select
+                    placeholder="Select Expiry"
+                    value={form.expiryDate || undefined}
+                    onChange={(val) => setForm((p) => ({ ...p, expiryDate: val }))}
+                    style={{ width: '100%' }}
+                    size="large"
+                  >
                     {availableExpiries.map((date) => {
                       const d = new Date(date);
                       const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-                      return <option key={date} value={date}>{label}</option>;
+                      return <Select.Option key={date} value={date}>{label}</Select.Option>;
                     })}
-                  </select>
+                  </Select>
                 )}
-              </div>
+              </Col>
             )}
-          </div>
+          </Row>
 
           {/* Contract preview */}
-          {form.instrumentType === 'OPTIONS' && form.underlying && form.expiryDate && form.strikePrice && (
-            <div className="p-3.5 bg-card-alt rounded-xl border border-border flex items-center justify-between animate-fade-up">
-              <span className="text-[9px] font-medium text-text-faint uppercase tracking-[0.1em]">Contract</span>
-              <span className="font-mono font-bold text-accent text-sm">
-                {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType)}
-              </span>
-            </div>
-          )}
-          {form.instrumentType === 'FUTURES' && form.underlying && form.expiryDate && (
-            <div className="p-3.5 bg-card-alt rounded-xl border border-border flex items-center justify-between animate-fade-up">
-              <span className="text-[9px] font-medium text-text-faint uppercase tracking-[0.1em]">Contract</span>
-              <span className="font-mono font-bold text-accent text-sm">
-                {form.underlying} {new Date(form.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }).toUpperCase()} FUT
-              </span>
-            </div>
+          {((form.instrumentType === 'OPTIONS' && form.underlying && form.expiryDate && form.strikePrice) ||
+            (form.instrumentType === 'FUTURES' && form.underlying && form.expiryDate)) && (
+            <Card styles={{ body: { padding: '12px 16px' } }} style={{ borderRadius: 12, backgroundColor: 'var(--bg-card-alt)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Formatted Contract Code</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#3b82f6', fontSize: 13 }}>
+                  {form.instrumentType === 'OPTIONS'
+                    ? buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType)
+                    : `${form.underlying} ${new Date(form.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }).toUpperCase()} FUT`
+                  }
+                </span>
+              </div>
+            </Card>
           )}
 
           {/* Exchange */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Exchange</label>
-            <div className="flex bg-card-alt p-1 rounded-xl border border-border h-11">
-              <button type="button"
-                onClick={() => setForm((p) => ({ ...p, exchange: 'NSE' }))}
-                className={`flex-1 rounded-lg text-xs font-semibold transition-all ${form.exchange === 'NSE' ? 'bg-accent text-white' : 'text-text-faint hover:text-text-muted'}`}>
-                NSE
-              </button>
-              <button type="button"
-                onClick={() => setForm((p) => ({ ...p, exchange: 'BSE' }))}
-                className={`flex-1 rounded-lg text-xs font-semibold transition-all ${form.exchange === 'BSE' ? 'bg-accent text-white' : 'text-text-faint hover:text-text-muted'}`}>
-                BSE
-              </button>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+              Exchange
             </div>
+            <Segmented
+              block
+              value={form.exchange}
+              onChange={(val) => setForm((p) => ({ ...p, exchange: val }))}
+              options={[
+                { label: 'NSE', value: 'NSE' },
+                { label: 'BSE', value: 'BSE' },
+              ]}
+              size="large"
+            />
           </div>
 
-          {/* #8: Exposure preview on Step 1 */}
+          {/* Exposure Preview card */}
           {form.underlying && parseInt(form.lotSize) > 0 && (
-            <div className="p-4 rounded-xl border border-accent/20 bg-gradient-to-r from-accent/5 to-transparent animate-fade-in">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-faint mb-3">
+            <Card
+              styles={{ body: { padding: 16 } }}
+              style={{
+                borderRadius: 12,
+                border: '1px solid rgba(59, 130, 246, 0.2)',
+                background: 'linear-gradient(to right, rgba(59, 130, 246, 0.04), transparent)',
+              }}
+            >
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)', marginBottom: 12 }}>
                 Estimated Position Exposure
-              </p>
-              <div className="flex items-end justify-between flex-wrap gap-3">
-                <div>
-                  <p className="text-[9px] text-text-faint mb-0.5">Spot × Lot Size × Lots</p>
-                  <p className="font-mono font-bold text-accent text-xl">
+              </div>
+              <Row align="bottom" justify="space-between" gutter={[12, 12]}>
+                <Col>
+                  <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 2 }}>Spot × Lot Size × Lots</div>
+                  <div style={{ fontSize: 20, fontWeight: 'bold', color: '#3b82f6', fontFamily: 'monospace' }}>
                     {spotPrice
                       ? `₹${fmtINR(spotPrice * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 1))}`
-                      : '—'}
-                  </p>
-                </div>
-                <div className="text-[10px] text-text-faint space-y-0.5 text-right">
-                  <p>Lot Size <span className="font-mono font-bold text-text-primary ml-1">{form.lotSize || '—'}</span></p>
-                  <p>Lots <span className="font-mono font-bold text-text-primary ml-1">{form.quantity || 1}</span></p>
-                  <p>Units <span className="font-mono font-bold text-text-primary ml-1">{(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 1)}</span></p>
-                </div>
-              </div>
+                      : '—'
+                    }
+                  </div>
+                </Col>
+                <Col style={{ textAlign: 'right', fontSize: 11, color: 'var(--text-faint)', lineHeight: '1.5' }}>
+                  <div>Lot Size: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{form.lotSize || '—'}</strong></div>
+                  <div>Lots: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{form.quantity || 1}</strong></div>
+                  <div>Units: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 1)}</strong></div>
+                </Col>
+              </Row>
               {spotPrice && (
-                <p className="text-[9px] text-text-faint/60 mt-2">* Based on live spot ₹{spotPrice.toFixed(0)}</p>
+                <div style={{ fontSize: 9, color: 'var(--text-faint)', opacity: 0.6, marginTop: 10 }}>
+                  * Calculated using live spot value of ₹{spotPrice.toFixed(2)}
+                </div>
               )}
-            </div>
+            </Card>
           )}
         </div>
-      </FormSection>
-    </div>
+      </Card>
+    </Col>
   );
 }
 
 // ─── Step 2: Execution + Sizing + Settlement ─────────────────────────────────
 
 function Step2Execution({ form, setForm, nseSymbols, charges, pnlPreview }) {
-  const quantityId = React.useId();
-  const exitReasonId = React.useId();
-
-  // #16: single memoised lookup instead of 3 separate .find() calls
   const standardLotMatch = useMemo(
     () => (form.underlying ? nseSymbols.find((s) => s.symbol === form.underlying) : null),
     [form.underlying, nseSymbols]
   );
   const standardLotSize = standardLotMatch?.lotSize;
 
-  // #9: live R:R ratio
   const rrRatio = useMemo(() => {
     const entry = parseFloat(form.entryPrice);
     const sl = parseFloat(form.stopLoss);
@@ -745,231 +743,374 @@ function Step2Execution({ form, setForm, nseSymbols, charges, pnlPreview }) {
 
   return (
     <>
-      {/* Left column */}
-      <div className="space-y-5 animate-fade-in">
-        <FormSection
-          title="Execution Pricing"
-          icon={IconDollar}
-          action={
-            <div className="flex items-center bg-card-alt p-0.5 rounded-lg border border-border gap-0.5">
-              {['OPEN', 'CLOSED', ...(form.instrumentType !== 'EQUITY' ? ['EXPIRED'] : [])].map((s) => (
-                <button key={s} type="button"
-                  onClick={() => setForm((p) => ({
-                    ...p,
-                    status: s,
-                    exitPrice: s === 'EXPIRED' ? 0 : p.exitPrice, // #3: number 0, not string '0'
-                  }))}
-                  className={`px-2.5 py-1 rounded-md text-[9px] font-semibold uppercase tracking-wide transition-all ${
-                    form.status === s
-                      ? s === 'OPEN' ? 'bg-blue-500 text-white'
-                        : s === 'CLOSED' ? 'bg-profit text-white'
-                        : 'bg-slate-500 text-white'
-                      : 'text-text-faint hover:text-text-muted'
-                  }`}>
-                  {s}
-                </button>
-              ))}
-            </div>
+      <Col xs={24} lg={16} className="space-y-6 animate-fade-in">
+        {/* Execution Pricing Card */}
+        <Card
+          title={
+            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
+              Execution Pricing
+            </span>
           }
+          extra={
+            <Segmented
+              value={form.status}
+              onChange={(val) => setForm((p) => ({
+                ...p,
+                status: val,
+                exitPrice: val === 'EXPIRED' ? 0 : p.exitPrice,
+              }))}
+              options={[
+                { label: 'Open', value: 'OPEN' },
+                { label: 'Closed', value: 'CLOSED' },
+                ...(form.instrumentType !== 'EQUITY' ? [{ label: 'Expired', value: 'EXPIRED' }] : []),
+              ]}
+              size="small"
+            />
+          }
+          style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
         >
-          <div className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Input label="Entry Price *" type="number" step="0.05" prefix="₹"
-                value={form.entryPrice} onChange={(e) => setForm((p) => ({ ...p, entryPrice: e.target.value }))} />
-              <Input label="Entry Date *" type="date"
-                value={form.entryDate} onChange={(e) => setForm((p) => ({ ...p, entryDate: e.target.value }))} />
-              <Input label="Entry Time (IST)" type="time"
-                value={form.entryTime} onChange={(e) => setForm((p) => ({ ...p, entryTime: e.target.value }))} />
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+            {/* Entry Grid */}
+            <Row gutter={16}>
+              <Col xs={24} sm={8}>
+                <label htmlFor="entry-price-input" style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Entry Price *
+                </label>
+                <Input
+                  id="entry-price-input"
+                  prefix="₹"
+                  type="number"
+                  step="0.05"
+                  value={form.entryPrice}
+                  onChange={(e) => setForm((p) => ({ ...p, entryPrice: e.target.value }))}
+                  size="large"
+                  style={{ borderRadius: 10 }}
+                />
+              </Col>
+              <Col xs={24} sm={8}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Entry Date *
+                </div>
+                <DatePicker
+                  value={form.entryDate ? dayjs(form.entryDate) : null}
+                  onChange={(date, dateStr) => setForm((p) => ({ ...p, entryDate: dateStr }))}
+                  format="YYYY-MM-DD"
+                  style={{ width: '100%', borderRadius: 10 }}
+                  size="large"
+                />
+              </Col>
+              <Col xs={24} sm={8}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Entry Time (IST)
+                </div>
+                <TimePicker
+                  value={safeParseTime(form.entryTime)}
+                  onChange={(time, timeStr) => setForm((p) => ({ ...p, entryTime: timeStr }))}
+                  format="HH:mm"
+                  style={{ width: '100%', borderRadius: 10 }}
+                  size="large"
+                />
+              </Col>
+            </Row>
 
-            <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border/50 transition-opacity ${form.status === 'OPEN' ? 'opacity-40' : ''}`}>
-              <Input label="Exit Price" type="number" step="0.05" prefix="₹"
-                value={form.exitPrice} onChange={(e) => setForm((p) => ({ ...p, exitPrice: e.target.value }))}
-                disabled={form.status === 'OPEN' || form.status === 'EXPIRED'} />
-              <Input label="Exit Date" type="date"
-                value={form.exitDate} onChange={(e) => setForm((p) => ({ ...p, exitDate: e.target.value }))}
-                disabled={form.status === 'OPEN' || form.status === 'EXPIRED'} />
-              <Input label="Exit Time (IST)" type="time"
-                value={form.exitTime} onChange={(e) => setForm((p) => ({ ...p, exitTime: e.target.value }))}
-                disabled={form.status === 'OPEN' || form.status === 'EXPIRED'} />
-            </div>
+            {/* Exit Grid (Closed trade only) */}
+            <Collapse
+              ghost
+              activeKey={form.status === 'CLOSED' ? ['exit_fields'] : []}
+              style={{ padding: 0 }}
+              items={[{
+                key: 'exit_fields',
+                showArrow: false,
+                collapsible: 'disabled',
+                children: (
+                  <Row gutter={16}>
+                    <Col xs={24} sm={8}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                        Exit Price
+                      </div>
+                      <Input
+                        prefix="₹"
+                        type="number"
+                        step="0.05"
+                        value={form.exitPrice}
+                        onChange={(e) => setForm((p) => ({ ...p, exitPrice: e.target.value }))}
+                        disabled={form.status !== 'CLOSED'}
+                        size="large"
+                        style={{ borderRadius: 10 }}
+                      />
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                        Exit Date
+                      </div>
+                      <DatePicker
+                        value={form.exitDate ? dayjs(form.exitDate) : null}
+                        onChange={(date, dateStr) => setForm((p) => ({ ...p, exitDate: dateStr }))}
+                        format="YYYY-MM-DD"
+                        disabled={form.status !== 'CLOSED'}
+                        style={{ width: '100%', borderRadius: 10 }}
+                        size="large"
+                      />
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                        Exit Time (IST)
+                      </div>
+                      <TimePicker
+                        value={safeParseTime(form.exitTime)}
+                        onChange={(time, timeStr) => setForm((p) => ({ ...p, exitTime: timeStr }))}
+                        format="HH:mm"
+                        disabled={form.status !== 'CLOSED'}
+                        style={{ width: '100%', borderRadius: 10 }}
+                        size="large"
+                      />
+                    </Col>
+                  </Row>
+                )
+              }]}
+            />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50">
-              <Input label="Stop Loss" type="number" step="0.05" prefix="₹"
-                value={form.stopLoss} onChange={(e) => setForm((p) => ({ ...p, stopLoss: e.target.value }))} placeholder="Optional" />
-              <Input label="Target" type="number" step="0.05" prefix="₹"
-                value={form.target} onChange={(e) => setForm((p) => ({ ...p, target: e.target.value }))} placeholder="Optional" />
-            </div>
+            <Divider style={{ margin: '8px 0' }} />
 
-            {/* #9: R:R Ratio display */}
+            {/* Stop Loss & Target */}
+            <Row gutter={16}>
+              <Col xs={12}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Stop Loss
+                </div>
+                <Input
+                  prefix="₹"
+                  type="number"
+                  step="0.05"
+                  value={form.stopLoss}
+                  onChange={(e) => setForm((p) => ({ ...p, stopLoss: e.target.value }))}
+                  placeholder="Optional"
+                  size="large"
+                  style={{ borderRadius: 10 }}
+                />
+              </Col>
+              <Col xs={12}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Target
+                </div>
+                <Input
+                  prefix="₹"
+                  type="number"
+                  step="0.05"
+                  value={form.target}
+                  onChange={(e) => setForm((p) => ({ ...p, target: e.target.value }))}
+                  placeholder="Optional"
+                  size="large"
+                  style={{ borderRadius: 10 }}
+                />
+              </Col>
+            </Row>
+
+            {/* R:R Ratio Graphic */}
             {rrRatio !== null && (
-              <div className="flex items-center gap-3 px-4 py-3 bg-card-alt rounded-xl border border-border/60 animate-fade-in">
-                <div className="text-center min-w-[36px]">
-                  <p className="text-[8px] font-semibold uppercase tracking-wide text-text-faint">Risk</p>
-                  <p className="text-base font-mono font-bold text-loss">1</p>
+              <Card styles={{ body: { padding: '12px 16px' } }} style={{ borderRadius: 12, backgroundColor: 'var(--bg-card-alt)', border: '1px solid var(--border)' }}>
+                <Row align="middle" justify="space-between" gutter={12}>
+                  <Col xs={6} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 8, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase' }}>Risk</div>
+                    <div style={{ fontSize: 16, fontWeight: 'bold', color: '#ef4444', fontFamily: 'monospace' }}>1.00</div>
+                  </Col>
+                  <Col xs={12}>
+                    <div style={{ height: 3, background: 'linear-gradient(to right, #ef4444, var(--border), #22c55e)', borderRadius: 2 }} />
+                  </Col>
+                  <Col xs={6} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 8, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase' }}>Reward</div>
+                    <div style={{ fontSize: 16, fontWeight: 'bold', color: '#22c55e', fontFamily: 'monospace' }}>{rrRatio}</div>
+                  </Col>
+                </Row>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>Risk-to-Reward Ratio</span>
+                  <strong style={{
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                    color: parseFloat(rrRatio) >= 2 ? '#22c55e' : parseFloat(rrRatio) >= 1 ? '#eab308' : '#ef4444'
+                  }}>
+                    1 : {rrRatio}
+                  </strong>
                 </div>
-                <div className="flex-1 h-0.5 bg-gradient-to-r from-loss via-border to-profit rounded-full" />
-                <div className="text-center min-w-[36px]">
-                  <p className="text-[8px] font-semibold uppercase tracking-wide text-text-faint">Reward</p>
-                  <p className="text-base font-mono font-bold text-profit">{rrRatio}</p>
-                </div>
-                <div className="pl-3 border-l border-border text-right">
-                  <p className="text-[9px] text-text-faint">R:R</p>
-                  <p className={`text-sm font-mono font-bold ${
-                    parseFloat(rrRatio) >= 2 ? 'text-profit' : parseFloat(rrRatio) >= 1 ? 'text-amber-400' : 'text-loss'
-                  }`}>
-                    1:{rrRatio}
-                  </p>
-                </div>
-              </div>
+              </Card>
             )}
 
+            {/* Exit Reason Selection */}
             {form.status !== 'OPEN' && (
-              <div className="space-y-1.5 animate-fade-in">
-                <label htmlFor={exitReasonId}
-                  className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
                   Exit Reason
-                </label>
-                <select id={exitReasonId}
-                  className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-semibold focus:ring-2 focus:ring-accent/20 outline-none"
-                  value={form.exitReason}
-                  onChange={(e) => setForm((p) => ({ ...p, exitReason: e.target.value }))}>
-                  <option value="">Select Reason</option>
-                  {/* #10: expanded exit reasons */}
+                </div>
+                <Select
+                  placeholder="Select Reason"
+                  value={form.exitReason || undefined}
+                  onChange={(val) => setForm((p) => ({ ...p, exitReason: val }))}
+                  style={{ width: '100%' }}
+                  size="large"
+                >
                   {EXIT_REASONS.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
+                    <Select.Option key={r.value} value={r.value}>{r.label}</Select.Option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
           </div>
-        </FormSection>
+        </Card>
 
-        {/* Position Sizing */}
-        <FormSection title="Position Sizing" icon={IconRefresh}>
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Input label="Lot Size *" type="number"
-                  value={form.lotSize} onChange={(e) => setForm((p) => ({ ...p, lotSize: e.target.value }))} />
-                {/* #16: uses memoised standardLotSize */}
-                {standardLotSize && parseInt(form.lotSize) !== standardLotSize && (
-                  <p className="text-[9px] font-medium text-amber-500 flex items-center gap-1 mt-1">
-                    ⚠ Std: {standardLotSize}
-                    <button type="button"
-                      onClick={() => setForm((p) => ({ ...p, lotSize: standardLotSize.toString() }))}
-                      className="text-accent underline hover:no-underline font-semibold ml-0.5">
-                      Use it
-                    </button>
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor={quantityId}
-                  className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
-                  Lots *
-                </label>
-                <div className="flex items-center bg-card-alt border border-border rounded-xl h-11 overflow-hidden">
-                  <button type="button"
-                    onClick={() => setForm((p) => ({ ...p, quantity: Math.max(1, parseInt(p.quantity || 1) - 1).toString() }))}
-                    className="w-11 h-full flex items-center justify-center text-text-faint hover:text-text-primary hover:bg-card transition-colors shrink-0">
-                    <span className="text-lg font-medium leading-none">−</span>
-                  </button>
-                  <input id={quantityId} type="number" value={form.quantity}
-                    onChange={(e) => setForm((p) => ({ ...p, quantity: e.target.value }))}
-                    className="flex-1 w-full bg-transparent border-none outline-none text-center font-mono font-bold text-sm" />
-                  <button type="button"
-                    onClick={() => setForm((p) => ({ ...p, quantity: (parseInt(p.quantity || 0) + 1).toString() }))}
-                    className="w-11 h-full flex items-center justify-center text-text-faint hover:text-text-primary hover:bg-card transition-colors shrink-0">
-                    <span className="text-lg font-medium leading-none">+</span>
-                  </button>
+        {/* Sizing Card */}
+        <Card
+          title={
+            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
+              Position Sizing
+            </span>
+          }
+          style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
+        >
+          <Row gutter={16}>
+            <Col xs={12}>
+              <label htmlFor="lot-size-input" style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                Lot Size *
+              </label>
+              <Input
+                id="lot-size-input"
+                type="number"
+                value={form.lotSize}
+                onChange={(e) => setForm((p) => ({ ...p, lotSize: e.target.value }))}
+                size="large"
+                style={{ borderRadius: 10 }}
+              />
+              {standardLotSize && parseInt(form.lotSize) !== standardLotSize && (
+                <div style={{ fontSize: 9, color: '#eab308', marginTop: 4 }}>
+                  ⚠ Standard is {standardLotSize}.
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => setForm((p) => ({ ...p, lotSize: standardLotSize.toString() }))}
+                    style={{ height: 'auto', padding: '0 4px', fontSize: 9 }}
+                  >
+                    Fix
+                  </Button>
                 </div>
+              )}
+            </Col>
+            <Col xs={12}>
+              <label htmlFor="quantity-input" style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                Lots *
+              </label>
+              <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 10, height: 40, overflow: 'hidden', backgroundColor: 'var(--bg-card-alt)' }}>
+                <Button
+                  onClick={() => setForm((p) => ({ ...p, quantity: Math.max(1, parseInt(p.quantity || 1) - 1).toString() }))}
+                  style={{ border: 'none', height: '100%', width: 40, background: 'transparent' }}
+                >
+                  −
+                </Button>
+                <input
+                  id="quantity-input"
+                  type="number"
+                  value={form.quantity}
+                  onChange={(e) => setForm((p) => ({ ...p, quantity: e.target.value }))}
+                  style={{ flex: 1, border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 'bold', fontFamily: 'monospace', outline: 'none' }}
+                />
+                <Button
+                  onClick={() => setForm((p) => ({ ...p, quantity: (parseInt(p.quantity || 0) + 1).toString() }))}
+                  style={{ border: 'none', height: '100%', width: 40, background: 'transparent' }}
+                >
+                  +
+                </Button>
               </div>
-            </div>
+            </Col>
+          </Row>
 
-            <div className="flex items-center justify-between px-4 py-3 bg-card-alt rounded-xl border border-border/60">
-              <span className="text-[10px] font-medium text-text-faint uppercase tracking-[0.08em]">Position Exposure</span>
-              <span className="text-xs font-mono font-bold text-text-primary">
-                {(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0)} units
-              </span>
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--bg-card-alt)', borderRadius: 10, marginTop: 16, border: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 10, color: 'var(--text-faint)', textTransform: 'uppercase', fontWeight: 600 }}>Total Exposure Units</span>
+            <strong style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+              {(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0)} Units
+            </strong>
           </div>
-        </FormSection>
-      </div>
+        </Card>
+      </Col>
 
-      {/* Right column — Settlement */}
-      <div className="animate-fade-in">
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Settlement</span>
-            {pnlPreview && (
-              <span className={`text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md ${
-                pnlPreview.net >= 0 ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss'
-              }`}>
-                {pnlPreview.net >= 0 ? 'Profit' : 'Loss'}
-              </span>
-            )}
-          </div>
-          <div className="p-5 space-y-6">
-            {pnlPreview ? (
-              <div className="pb-5 border-b border-border/50">
-                <p className="text-[9px] font-medium text-text-faint uppercase tracking-[0.1em] mb-1.5">Net Realized P&amp;L</p>
-                <p className={`text-3xl font-mono font-bold tracking-tight ${pnlPreview.net >= 0 ? 'text-profit' : 'text-loss'}`}>
-                  {pnlPreview.net >= 0 ? '+' : ''}{fmtINR(pnlPreview.net, true)}
-                </p>
-                <div className="flex items-center gap-3 mt-1.5">
-                  <span className="text-[10px] font-medium text-text-faint">
-                    Gross: <span className={`font-mono font-semibold ${pnlPreview.gross >= 0 ? 'text-profit' : 'text-loss'}`}>{fmtINR(pnlPreview.gross)}</span>
-                  </span>
-                  {pnlPreview.rMultiple !== null && (
-                    <>
-                      <span className="text-border">·</span>
-                      <span className="text-[10px] font-mono font-bold text-text-muted">
-                        {pnlPreview.rMultiple > 0 ? '+' : ''}{pnlPreview.rMultiple.toFixed(2)}R
-                      </span>
-                    </>
-                  )}
-                </div>
+      {/* Right Column — Settlement Preview */}
+      <Col xs={24} lg={8} className="animate-fade-in">
+        <Card
+          title={
+            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
+              Settlement
+            </span>
+          }
+          extra={
+            pnlPreview && (
+              <Badge
+                color={pnlPreview.net >= 0 ? '#22c55e' : '#ef4444'}
+                text={pnlPreview.net >= 0 ? 'PROFIT' : 'LOSS'}
+                style={{ fontSize: 9, fontWeight: 700 }}
+              />
+            )
+          }
+          style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', height: '100%' }}
+        >
+          {pnlPreview ? (
+            <div style={{ paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                Net Realized P&amp;L
               </div>
-            ) : (
-              <div className="py-8 text-center border-b border-border/50">
-                <IconDollar className="w-7 h-7 mx-auto mb-2 text-text-faint opacity-40" />
-                <p className="text-[10px] font-medium text-text-faint uppercase tracking-[0.1em]">Awaiting execution data</p>
+              <div style={{ fontSize: 26, fontWeight: 'bold', fontFamily: 'monospace', color: pnlPreview.net >= 0 ? '#22c55e' : '#ef4444', tracking: '-0.02em' }}>
+                {pnlPreview.net >= 0 ? '+' : ''}{fmtINR(pnlPreview.net, true)}
               </div>
-            )}
-
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-faint mb-3">Transaction Costs</p>
-              <div className="space-y-0">
-                {[
-                  { label: 'Brokerage (Flat)', value: charges?.brokerage },
-                  { label: 'GST (18% on Bkrg+Exc+SEBI)', value: charges?.gst },
-                  { label: 'Exchange Txn Charges', value: charges?.exchangeTxn },
-                  { label: 'SEBI Turnover Fees', value: charges?.sebi },
-                  { label: 'STT (on SELL turnover)', value: charges?.stt },
-                  { label: 'Stamp Duty (on BUY turnover)', value: charges?.stampDuty },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
-                    <span className="text-[10px] text-text-faint">{label}</span>
-                    <span className="text-[10px] font-mono text-text-muted">₹{(value || 0).toFixed(2)}</span>
-                  </div>
-                ))}
-                {form.status === 'EXPIRED' && (
-                  <p className="text-[9px] text-text-faint italic py-1">* ITM expiry STT not included</p>
+              <Space style={{ marginTop: 6, fontSize: 11, color: 'var(--text-faint)' }}>
+                <span>Gross: <strong style={{ color: pnlPreview.gross >= 0 ? '#22c55e' : '#ef4444', fontFamily: 'monospace' }}>{fmtINR(pnlPreview.gross)}</strong></span>
+                {pnlPreview.rMultiple !== null && (
+                  <>
+                    <span>•</span>
+                    <strong style={{ color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                      {pnlPreview.rMultiple > 0 ? '+' : ''}{pnlPreview.rMultiple.toFixed(2)}R
+                    </strong>
+                  </>
                 )}
-              </div>
-              <div className="flex items-center justify-between pt-3 mt-1 border-t border-border">
-                <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.08em]">Total Fees</span>
-                <span className="text-xs font-mono font-bold text-loss">−{fmtINR(charges?.total || 0)}</span>
+              </Space>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '32px 0', borderBottom: '1px solid var(--border)' }}>
+              <DollarOutlined style={{ fontSize: 32, color: 'var(--text-faint)', opacity: 0.3, marginBottom: 8 }} />
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Awaiting Execution Details
               </div>
             </div>
-            <p className="text-[9px] font-medium text-text-faint/60 text-center">
-              Calculated using 2026 {form.exchange} regulatory norms
-            </p>
+          )}
+
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)', marginBottom: 12 }}>
+              Transaction Fees
+            </div>
+            {[
+              { label: 'Brokerage (Flat)', value: charges?.brokerage },
+              { label: 'GST (18% Bkrg+Exc+SEBI)', value: charges?.gst },
+              { label: 'Exchange Txn Charges', value: charges?.exchangeTxn },
+              { label: 'SEBI Turnover Fees', value: charges?.sebi },
+              { label: 'STT (on SELL turnover)', value: charges?.stt },
+              { label: 'Stamp Duty (on BUY)', value: charges?.stampDuty },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.03)' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</span>
+                <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-muted)' }}>₹{(value || 0).toFixed(2)}</span>
+              </div>
+            ))}
+            {form.status === 'EXPIRED' && (
+              <div style={{ fontSize: 9, color: 'var(--text-faint)', fontStyle: 'italic', marginTop: 4 }}>
+                * ITM expiry STT not included
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+              <strong style={{ fontSize: 11, color: 'var(--text-primary)', textTransform: 'uppercase' }}>Total Fees</strong>
+              <strong style={{ fontSize: 12, fontFamily: 'monospace', color: '#ef4444' }}>−{fmtINR(charges?.total || 0)}</strong>
+            </div>
           </div>
-        </div>
-      </div>
+
+          <div style={{ fontSize: 9, color: 'var(--text-faint)', opacity: 0.5, textAlign: 'center', marginTop: 24 }}>
+            Calculated under 2026 {form.exchange} rules
+          </div>
+        </Card>
+      </Col>
     </>
   );
 }
@@ -977,8 +1118,6 @@ function Step2Execution({ form, setForm, nseSymbols, charges, pnlPreview }) {
 // ─── Step 3: Categorize ──────────────────────────────────────────────────────
 
 function Step3Categorize({ form, setForm, psychology, setPsychology, lastSaved }) {
-  const strategyId = React.useId();
-  const setupId = React.useId();
   const [tagInput, setTagInput] = useState('');
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [popularTags, setPopularTags] = useState([]);
@@ -1003,139 +1142,182 @@ function Step3Categorize({ form, setForm, psychology, setPsychology, lastSaved }
     else if (e.key === 'Backspace' && !tagInput && form.tags.length > 0) removeTag(form.tags[form.tags.length - 1]);
   };
 
-  // #11: Screenshot upload handler
-  const handleScreenshot = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error('Screenshot must be under 5MB');
+  const handleScreenshot = (file) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Screenshot must be under 5MB');
+      return false;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       setScreenshotPreview(ev.target.result);
       setForm((p) => ({ ...p, screenshot: ev.target.result }));
     };
     reader.readAsDataURL(file);
+    return false;
   };
 
   return (
-    <div className="lg:col-span-2 space-y-6 animate-fade-in max-w-2xl mx-auto w-full">
-      <FormSection title="Finalize Categorization" icon={IconPlus}>
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor={strategyId} className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Strategy Used</label>
-              <select id={strategyId}
-                className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-semibold focus:ring-2 focus:ring-accent/20 outline-none"
-                value={form.strategy} onChange={(e) => setForm((p) => ({ ...p, strategy: e.target.value }))}>
-                <option value="">No Strategy</option>
-                {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor={setupId} className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Setup / Pattern</label>
-              <select id={setupId}
-                className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm font-semibold focus:ring-2 focus:ring-accent/20 outline-none"
-                value={form.setupType} onChange={(e) => setForm((p) => ({ ...p, setupType: e.target.value }))}>
-                <option value="">No Setup</option>
-                {SETUPS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Trade Tags</label>
-            <div className="relative tag-input-wrapper">
-              <div className="min-h-[44px] p-1.5 rounded-xl bg-card border border-border focus-within:ring-2 focus-within:ring-accent/20 transition-all flex flex-wrap gap-1.5 items-center">
-                {form.tags.map((tag) => (
-                  <span key={tag} className="pl-2.5 pr-1.5 py-1 rounded-lg bg-accent/10 border border-accent/20 text-accent text-[10px] font-semibold flex items-center gap-1 animate-scale-in">
-                    {tag}
-                    <button type="button" onClick={() => removeTag(tag)} className="hover:text-loss transition-colors leading-none">×</button>
-                  </span>
-                ))}
-                <input type="text"
-                  placeholder={form.tags.length === 0 ? 'e.g. scalp, expiry, breakout' : ''}
-                  className="flex-1 bg-transparent border-none outline-none text-sm px-1 py-0.5 min-w-[100px]"
-                  value={tagInput} onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown} onFocus={() => setShowTagDropdown(true)} />
+    <Col xs={24} className="space-y-6 animate-fade-in max-w-3xl mx-auto w-full">
+      <Card
+        title={
+          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
+            Categorize &amp; Notes
+          </span>
+        }
+        style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%' }}>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                Strategy Used
               </div>
-              {showTagDropdown && popularTags.filter((t) => !form.tags.includes(t)).length > 0 && (
-                <div className="absolute z-50 w-full mt-1.5 bg-card border border-border rounded-xl shadow-xl max-h-[180px] overflow-y-auto no-scrollbar animate-scale-in origin-top">
-                  <div className="px-3 py-2 border-b border-border">
-                    <span className="text-[9px] font-semibold text-text-faint uppercase tracking-[0.1em]">Most Used</span>
-                  </div>
-                  {popularTags.filter((t) => !form.tags.includes(t)).map((tag) => (
-                    <div key={tag}
-                      className="px-4 py-2.5 hover:bg-card-alt cursor-pointer flex justify-between items-center transition-colors group min-h-[40px]"
-                      onClick={() => addTag(tag)}>
-                      <span className="text-xs font-semibold text-text-primary group-hover:text-accent transition-colors uppercase tracking-wide">{tag}</span>
-                      <IconPlus className="w-3 h-3 text-text-faint group-hover:text-accent" />
-                    </div>
-                  ))}
-                </div>
-              )}
+              <Select
+                placeholder="No Strategy"
+                value={form.strategy || undefined}
+                onChange={(val) => setForm((p) => ({ ...p, strategy: val || '' }))}
+                style={{ width: '100%' }}
+                size="large"
+                allowClear
+              >
+                {STRATEGIES.map((s) => <Select.Option key={s} value={s}>{s}</Select.Option>)}
+              </Select>
+            </Col>
+            <Col xs={24} sm={12}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                Setup / Pattern
+              </div>
+              <Select
+                placeholder="No Setup"
+                value={form.setupType || undefined}
+                onChange={(val) => setForm((p) => ({ ...p, setupType: val || '' }))}
+                style={{ width: '100%' }}
+                size="large"
+                allowClear
+              >
+                {SETUPS.map((s) => <Select.Option key={s} value={s}>{s}</Select.Option>)}
+              </Select>
+            </Col>
+          </Row>
+
+          {/* Tags entry */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+              Trade Tags
             </div>
-            <p className="text-[9px] font-medium text-text-faint">Press Enter or comma to add a tag</p>
+            <div className="tag-input-wrapper" style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 6, minHeight: 40, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', backgroundColor: 'var(--bg-card-alt)' }}>
+              {form.tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  count={
+                    <span
+                      onClick={() => removeTag(tag)}
+                      style={{ cursor: 'pointer', padding: '0 4px', fontSize: 10, color: 'var(--text-faint)' }}
+                    >
+                      ×
+                    </span>
+                  }
+                  style={{ backgroundColor: 'transparent' }}
+                  offset={[0, 0]}
+                >
+                  <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '4px 10px', borderRadius: 8, fontSize: 10, fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+                    {tag}
+                  </span>
+                </Badge>
+              ))}
+              <input
+                type="text"
+                placeholder={form.tags.length === 0 ? 'Type tag and press Enter...' : ''}
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onFocus={() => setShowTagDropdown(true)}
+                style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 12, padding: '2px 4px' }}
+              />
+            </div>
+            {showTagDropdown && popularTags.filter((t) => !form.tags.includes(t)).length > 0 && (
+              <Card size="small" style={{ position: 'absolute', zIndex: 100, width: 'calc(100% - 48px)', marginTop: 4, borderRadius: 10, border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: 6 }}>Popular Tags</div>
+                <Space wrap>
+                  {popularTags.filter((t) => !form.tags.includes(t)).map((tag) => (
+                    <Button key={tag} size="small" onClick={() => addTag(tag)} style={{ fontSize: 10, borderRadius: 6 }}>
+                      + {tag}
+                    </Button>
+                  ))}
+                </Space>
+              </Card>
+            )}
           </div>
 
-          {/* #1: Trade Journal (clearly separate from psychology debrief below) */}
-          <div className="space-y-2 pt-4 border-t border-border/50">
-            <div className="flex justify-between items-center">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
+          <Divider style={{ margin: '8px 0' }} />
+
+          {/* Trade Journal entry */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Trade Journal
-              </label>
-              {/* #5: Real saved timestamp */}
-              <span className="text-[9px] font-medium text-text-faint">
-                {lastSaved ? `Saved ${lastSaved}` : 'Not saved yet'}
+              </span>
+              <span style={{ fontSize: 9, color: 'var(--text-faint)' }}>
+                {lastSaved ? `Autosaved ${lastSaved}` : 'No saved drafts'}
               </span>
             </div>
-            <textarea
-              className="w-full min-h-[160px] p-4 rounded-xl bg-card-alt border border-border text-sm focus:ring-2 focus:ring-accent/20 outline-none resize-none leading-relaxed"
+            <Input.TextArea
+              rows={6}
               placeholder="Trade narrative: What was the entry logic? Was the setup clean? How did you size the position? Any deviations from plan?"
               value={form.notes}
               onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+              style={{ borderRadius: 12, backgroundColor: 'var(--bg-card-alt)', lineHeight: '1.6' }}
             />
           </div>
 
-          {/* #11: Screenshot attachment */}
-          <div className="space-y-3 pt-4 border-t border-border/50">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
+          <Divider style={{ margin: '8px 0' }} />
+
+          {/* Screenshot upload */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               Chart Screenshot
-            </label>
+            </div>
             {screenshotPreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-border group">
-                <img src={screenshotPreview} alt="Chart screenshot"
-                  className="w-full max-h-52 object-cover" />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                <button type="button"
-                  onClick={() => { setScreenshotPreview(null); setForm((p) => ({ ...p, screenshot: null })); }}
-                  className="absolute top-2 right-2 w-8 h-8 bg-card/90 backdrop-blur-sm rounded-lg border border-border flex items-center justify-center text-text-faint hover:text-loss transition-all opacity-0 group-hover:opacity-100 shadow-md">
-                  <IconTrash className="w-3.5 h-3.5" />
-                </button>
-                <label className="absolute bottom-2 left-2 px-2.5 py-1 bg-card/90 backdrop-blur-sm rounded-lg border border-border text-[9px] font-semibold text-text-muted cursor-pointer hover:text-accent transition-colors opacity-0 group-hover:opacity-100">
-                  Replace
-                  <input type="file" accept="image/*" className="hidden" onChange={handleScreenshot} />
-                </label>
+              <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <img src={screenshotPreview} alt="Screenshot preview" style={{ width: '100%', maxHeight: 240, objectFit: 'cover' }} />
+                <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
+                  <Upload
+                    accept="image/*"
+                    showUploadList={false}
+                    beforeUpload={handleScreenshot}
+                  >
+                    <Button size="small" icon={<CameraOutlined />}>Replace</Button>
+                  </Upload>
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => { setScreenshotPreview(null); setForm((p) => ({ ...p, screenshot: null })); }}
+                  />
+                </div>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center py-7 border-2 border-dashed border-border rounded-xl hover:border-accent/40 cursor-pointer transition-colors group">
-                <div className="w-11 h-11 rounded-xl bg-card-alt flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
-                  <span className="text-2xl">📸</span>
-                </div>
-                <p className="text-xs font-semibold text-text-muted">Attach chart screenshot</p>
-                <p className="text-[9px] font-medium text-text-faint mt-0.5">PNG, JPG, WEBP — max 5MB</p>
-                <input type="file" accept="image/*" className="hidden" onChange={handleScreenshot} />
-              </label>
+              <Upload.Dragger
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={handleScreenshot}
+                style={{ borderRadius: 12 }}
+              >
+                <p style={{ fontSize: 24, color: '#3b82f6', marginBottom: 4 }}><CameraOutlined /></p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>Upload Chart Screenshot</p>
+                <p style={{ fontSize: 9, color: 'var(--text-faint)' }}>PNG, JPG, WEBP — Max 5MB</p>
+              </Upload.Dragger>
             )}
           </div>
         </div>
-      </FormSection>
+      </Card>
 
-      {/* #1: PsychologySection labelled as "Debrief" — separate from trade journal above */}
+      {/* Psychological Debrief Panel */}
       <PsychologySection
         data={psychology}
         onChange={(val) => setPsychology((p) => ({ ...p, ...val }))}
       />
-    </div>
+    </Col>
   );
 }
 
@@ -1149,16 +1331,15 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
   const [confirmConfig, setConfirmConfig] = useState(null);
 
   const STEPS = [
-    { id: 1, name: 'Setup', icon: IconSearch },
-    { id: 2, name: 'Execution', icon: IconDollar },
-    { id: 3, name: 'Categorize', icon: IconPlus },
+    { title: 'Setup' },
+    { title: 'Execution' },
+    { title: 'Categorize' },
   ];
 
   const [search, setSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [remoteSymbols, setRemoteSymbols] = useState([]);
 
-  // Remote symbol search
   useEffect(() => {
     if (!search || search.length < 2) { setRemoteSymbols([]); return; }
     const timer = setTimeout(async () => {
@@ -1186,7 +1367,6 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
     } catch { /* silent */ }
   }, []);
 
-  // #18: Extracted saveTemplate
   const saveTemplate = useCallback(async () => {
     if (!templateName.trim()) { setShowTemplateInput(false); return; }
     try {
@@ -1207,7 +1387,6 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
     }
   }, [templateName, form.underlying, form.lotSize, form.optionType, form.exchange, form.strategy]);
 
-  // #2: Clone resets to step 1
   const cloneLastTrade = async () => {
     try {
       const lastTrade = await api.get('/trades/latest');
@@ -1235,21 +1414,19 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
         notes: lastTrade.notes || '',
       }));
       setSearch(lastTrade.underlying);
-      setCurrentStep(1); // #2: always go back to step 1
+      setCurrentStep(1);
       toast.success('Cloned last trade details');
     } catch (err) {
       toast.error('Failed to clone trade: ' + err.message);
     }
   };
 
-  // #19: fix stale closure with ref
   const searchRef = useRef(search);
   useEffect(() => { searchRef.current = search; }, [search]);
   useEffect(() => {
     if (form.underlying && searchRef.current !== form.underlying) setSearch(form.underlying);
   }, [form.underlying]);
 
-  // Charges estimation
   useEffect(() => {
     if (!form.entryPrice || !form.lotSize || !form.quantity) { setCharges(null); return; }
     const timer = setTimeout(async () => {
@@ -1266,16 +1443,11 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
     return () => clearTimeout(timer);
   }, [form.entryPrice, form.exitPrice, form.status, form.lotSize, form.quantity, form.tradeType, form.exchange, form.instrumentType]);
 
-  // Bootstrap
   useEffect(() => {
     api.get('/nse/fno-symbols').then((d) => { if (d?.symbols?.length) setNseSymbols(d.symbols); }).catch(() => {});
     api.get('/profile/templates').then((d) => { if (Array.isArray(d)) setTemplates(d); }).catch(() => {});
-    const handler = (e) => { if (!e.target.closest('.symbol-dropdown-wrapper')) setShowDropdown(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Expiry fetch
   useEffect(() => {
     if (currentStep !== 1 || !form.underlying || form.underlying.length < 3) return;
     const timeout = setTimeout(async () => {
@@ -1297,7 +1469,6 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
     return () => clearTimeout(timeout);
   }, [form.underlying, currentStep]);
 
-  // Spot price polling
   useEffect(() => {
     if (!form.underlying || form.underlying.length < 3 || currentStep !== 1) return;
     const timeout = setTimeout(() => fetchSpotPrice(form.underlying), 600);
@@ -1376,11 +1547,21 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
     return null;
   };
 
-  // #7: All steps freely clickable
-  const goToStep = (stepId) => setCurrentStep(stepId);
+  const goToStep = (stepId) => {
+    if (stepId > currentStep) {
+      // Validate up to the clicked step
+      for (let s = currentStep; s < stepId; s++) {
+        const err = validateStep(s);
+        if (err) {
+          toast.error(err);
+          return;
+        }
+      }
+    }
+    setCurrentStep(stepId);
+  };
 
-  const handleNext = (e) => {
-    if (e?.preventDefault) e.preventDefault();
+  const handleNext = () => {
     const error = validateStep(currentStep);
     if (error) return toast.error(error);
     setCurrentStep((p) => p + 1);
@@ -1397,7 +1578,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
     try {
       const finalForm = { ...form };
       if (finalForm.status === 'EXPIRED') {
-        finalForm.exitPrice = 0; // #3: number not string
+        finalForm.exitPrice = 0;
         finalForm.exitDate = finalForm.expiryDate ? getPreviousTradingDay(finalForm.expiryDate) : finalForm.entryDate;
       }
       let displaySymbol = finalForm.underlying;
@@ -1425,7 +1606,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
         tags: Array.isArray(finalForm.tags) ? finalForm.tags : [],
         exitReason: finalForm.exitReason || undefined,
         symbol: displaySymbol,
-        screenshot: undefined, // sent separately
+        screenshot: undefined,
       };
       const res = await api.post('/trades', payload);
       try { await api.post(`/trades/${res.trade.id}/psychology`, psychology); } catch { /* non-fatal */ }
@@ -1443,168 +1624,197 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 pb-32 sm:pb-8">
-      <Modal isOpen={!!confirmConfig} onClose={() => setConfirmConfig(null)}
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 64 }}>
+      <Modal
+        open={!!confirmConfig}
+        onCancel={() => setConfirmConfig(null)}
         title={confirmConfig?.title}
-        footer={
-          <div className="flex gap-3">
-            <Button variant="ghost" className="flex-1" onClick={() => setConfirmConfig(null)}>Cancel</Button>
-            <Button variant="primary" className="flex-1" onClick={confirmConfig?.onConfirm}>Proceed</Button>
-          </div>
-        }>
-        <p className="text-sm text-text-muted">{confirmConfig?.message}</p>
+        footer={[
+          <Button key="cancel" onClick={() => setConfirmConfig(null)}>Cancel</Button>,
+          <Button key="ok" type="primary" onClick={confirmConfig?.onConfirm}>Proceed</Button>,
+        ]}
+      >
+        <p>{confirmConfig?.message}</p>
       </Modal>
 
       {/* Top action row */}
-      <div className="flex items-center justify-end">
-        <button type="button" onClick={cloneLastTrade}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] font-semibold text-text-faint hover:text-text-muted hover:border-border-alt transition-all group">
-          <IconRefresh className="w-3 h-3 group-hover:rotate-180 transition-transform duration-500" />
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          type="default"
+          icon={<ReloadOutlined />}
+          onClick={cloneLastTrade}
+          size="middle"
+          style={{ borderRadius: 8, fontSize: 12, fontWeight: 600, color: 'var(--text-faint)' }}
+        >
           Clone Last
-        </button>
+        </Button>
       </div>
 
-      {/* ── Step Indicator ─────────────────────────────────────────────── */}
-      <div className="flex items-start">
-        {STEPS.map((step, idx) => {
-          const isActive = currentStep === step.id;
-          const isCompleted = currentStep > step.id;
-          return (
-            <React.Fragment key={step.id}>
-              <div className="flex flex-col items-center gap-1 min-w-0">
-                {/* #7: freely clickable */}
-                <button type="button" onClick={() => goToStep(step.id)}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center border-2 text-xs font-bold transition-all duration-300 shrink-0 cursor-pointer ${
-                    isActive ? 'bg-accent border-accent text-white shadow-glow-blue'
-                      : isCompleted ? 'bg-profit/10 border-profit text-profit hover:bg-profit/20'
-                      : 'bg-card border-border/60 text-text-faint hover:border-accent/40'
-                  }`}>
-                  {isCompleted ? <IconCheck className="w-3.5 h-3.5" /> : step.id}
-                </button>
-                <span className={`text-[9px] font-semibold uppercase tracking-[0.08em] text-center leading-none ${
-                  isActive ? 'text-text-primary' : isCompleted ? 'text-profit' : 'text-text-faint'
-                }`}>
-                  {step.name}
-                </span>
-                {/* #24: ✓ Done badge */}
-                {isCompleted && (
-                  <span className="text-[8px] font-bold text-profit uppercase tracking-wide">✓ Done</span>
-                )}
-              </div>
-              {idx < STEPS.length - 1 && (
-                <div className={`flex-1 h-px mt-4 mx-2 transition-colors duration-500 ${currentStep > step.id ? 'bg-profit' : 'bg-border'}`} />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
+      {/* Ant Design Steps indicator */}
+      <Card styles={{ body: { padding: '16px 24px' } }} style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
+        <Steps
+          current={currentStep - 1}
+          onChange={(current) => goToStep(current + 1)}
+          size="small"
+          items={STEPS.map((s) => ({
+            title: s.title,
+          }))}
+        />
+      </Card>
 
       {/* Templates row */}
       {templates.length > 0 && currentStep === 1 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[9px] font-semibold text-text-faint uppercase tracking-[0.1em] mr-1">Templates</span>
+        <Space wrap style={{ padding: '0 8px' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 4 }}>Templates:</span>
           {templates.map((t) => (
-            <div key={t.name} className="flex items-center bg-card border border-border rounded-lg pl-3 pr-1 py-1 gap-1.5">
-              <button type="button" onClick={() => safeSetUnderlying(t.underlying, t.lotSize, t.exchange)}
-                className="text-xs font-semibold text-text-primary hover:text-accent transition-colors">
-                {t.name}
-              </button>
-              <button type="button"
-                onClick={async () => { try { const res = await api.delete(`/profile/templates/${t.name}`); setTemplates(res); } catch { toast.error('Failed to delete template'); } }}
-                className="w-5 h-5 flex items-center justify-center text-text-faint hover:text-loss rounded transition-colors">
-                ×
-              </button>
-            </div>
+            <motion.div
+              key={t.name}
+              style={{ display: 'inline-block' }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Badge
+                count={
+                  <span
+                    onClick={async () => { try { const res = await api.delete(`/profile/templates/${t.name}`); setTemplates(res); } catch { toast.error('Failed to delete template'); } }}
+                    style={{ cursor: 'pointer', padding: '0 4px', fontSize: 10, color: 'var(--text-faint)', fontWeight: 'bold' }}
+                  >
+                    ×
+                  </span>
+                }
+                offset={[0, 0]}
+                style={{ backgroundColor: 'transparent' }}
+              >
+                <Button
+                  size="small"
+                  onClick={() => safeSetUnderlying(t.underlying, t.lotSize, t.exchange)}
+                  style={{ fontSize: 11, borderRadius: 8, fontWeight: 500 }}
+                >
+                  {t.name}
+                </Button>
+              </Badge>
+            </motion.div>
           ))}
-        </div>
+        </Space>
       )}
 
-      {/* ── Sticky Contract Summary (Steps 2 & 3) — #21: z-30 ────────── */}
+      {/* Sticky Contract Summary (Steps 2 & 3) */}
       {currentStep > 1 && (
-        <div className="sticky top-0 z-30 -mx-px bg-card/95 backdrop-blur-md border-b border-border px-5 py-2.5 flex items-center justify-between animate-fade-in">
-          <div className="flex items-center gap-2.5">
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${form.tradeType === 'BUY' ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss'}`}>
-              {form.tradeType}
-            </span>
-            <span className="text-sm font-mono font-bold text-text-primary truncate max-w-[180px] sm:max-w-none">
-              {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType) || 'Unknown Contract'}
-            </span>
-          </div>
-          <div className="hidden sm:flex items-center gap-4 text-[10px] text-text-faint">
-            <span>Lots: <span className="font-mono font-bold text-text-primary">{form.quantity || 0}</span></span>
-            <span>Entry: <span className="font-mono font-bold text-text-primary">₹{form.entryPrice || 0}</span></span>
-            <span>Exposure: <span className="font-mono font-bold text-text-primary">₹{fmtINR((parseFloat(form.entryPrice) || 0) * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0))}</span></span>
-          </div>
-          <div className="sm:hidden text-sm font-mono font-bold text-text-primary">
-            ₹{fmtINR((parseFloat(form.entryPrice) || 0) * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0))}
-          </div>
-        </div>
+        <Card
+          size="small"
+          styles={{ body: { padding: '10px 20px' } }}
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 30,
+            borderRadius: 12,
+            border: '1px solid var(--border)',
+            backgroundColor: 'var(--bg-card)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          }}
+        >
+          <Row align="middle" justify="space-between" gutter={12}>
+            <Col>
+              <Space size={8}>
+                <Badge
+                  color={form.tradeType === 'BUY' ? '#22c55e' : '#ef4444'}
+                  text={form.tradeType}
+                  style={{ fontSize: 10, fontWeight: 700 }}
+                />
+                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: 14 }}>
+                  {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType) || 'Unknown Contract'}
+                </span>
+              </Space>
+            </Col>
+            <Col xs={0} sm={12} style={{ textAlign: 'right', fontSize: 11, color: 'var(--text-faint)' }}>
+              <Space size={16}>
+                <span>Lots: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{form.quantity || 0}</strong></span>
+                <span>Entry: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>₹{form.entryPrice || 0}</strong></span>
+                <span>Exposure: <strong style={{ color: '#3b82f6', fontFamily: 'monospace' }}>₹{fmtINR((parseFloat(form.entryPrice) || 0) * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0))}</strong></span>
+              </Space>
+            </Col>
+            <Col sm={0}>
+              <strong style={{ color: '#3b82f6', fontFamily: 'monospace', fontSize: 13 }}>
+                ₹{fmtINR((parseFloat(form.entryPrice) || 0) * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0))}
+              </strong>
+            </Col>
+          </Row>
+        </Card>
       )}
 
-      {/* ── Step Content ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* #20: Split into sub-components */}
-        {currentStep === 1 && (
-          <Step1Symbol
-            form={form} setForm={setForm} nseSymbols={nseSymbols} spotPrice={spotPrice}
-            availableExpiries={availableExpiries} isManualExpiry={isManualExpiry} setIsManualExpiry={setIsManualExpiry}
-            templates={templates} setTemplates={setTemplates}
-            search={search} setSearch={setSearch} showDropdown={showDropdown} setShowDropdown={setShowDropdown}
-            filteredSymbols={filteredSymbols} safeSetUnderlying={safeSetUnderlying}
-            showTemplateInput={showTemplateInput} setShowTemplateInput={setShowTemplateInput}
-            templateName={templateName} setTemplateName={setTemplateName} saveTemplate={saveTemplate}
-          />
-        )}
-        {currentStep === 2 && (
-          <Step2Execution
-            form={form} setForm={setForm} nseSymbols={nseSymbols}
-            charges={charges} pnlPreview={pnlPreview}
-          />
-        )}
-        {currentStep === 3 && (
-          <Step3Categorize
-            form={form} setForm={setForm}
-            psychology={psychology} setPsychology={setPsychology}
-            lastSaved={lastSaved}
-          />
-        )}
+      {/* Step Content */}
+      <div style={{ minHeight: 380 }}>
+        <AnimatePresence mode="wait">
+          {currentStep === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -15 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+            >
+              <Row gutter={[20, 20]}>
+                <Step1Symbol
+                  form={form} setForm={setForm} nseSymbols={nseSymbols} spotPrice={spotPrice}
+                  availableExpiries={availableExpiries} isManualExpiry={isManualExpiry} setIsManualExpiry={setIsManualExpiry}
+                  templates={templates} setTemplates={setTemplates}
+                  search={search} setSearch={setSearch} showDropdown={showDropdown} setShowDropdown={setShowDropdown}
+                  filteredSymbols={filteredSymbols} safeSetUnderlying={safeSetUnderlying}
+                  showTemplateInput={showTemplateInput} setShowTemplateInput={setShowTemplateInput}
+                  templateName={templateName} setTemplateName={setTemplateName} saveTemplate={saveTemplate}
+                />
+              </Row>
+            </motion.div>
+          )}
+          {currentStep === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -15 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+            >
+              <Row gutter={[20, 20]}>
+                <Step2Execution
+                  form={form} setForm={setForm} nseSymbols={nseSymbols}
+                  charges={charges} pnlPreview={pnlPreview}
+                />
+              </Row>
+            </motion.div>
+          )}
+          {currentStep === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -15 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+            >
+              <Row gutter={[20, 20]}>
+                <Step3Categorize
+                  form={form} setForm={setForm}
+                  psychology={psychology} setPsychology={setPsychology}
+                  lastSaved={lastSaved}
+                />
+              </Row>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* ── Desktop Action Bar ─────────────────────────────────────────── */}
-      <div className="hidden sm:flex gap-3 pt-4 border-t border-border/50">
+      {/* Navigation Buttons */}
+      <div style={{ display: 'flex', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
         {currentStep > 1 && (
-          <Button type="button" variant="ghost" className="flex-1 h-11 font-semibold border border-border"
-            onClick={() => setCurrentStep((p) => p - 1)}>
+          <Button size="large" onClick={() => setCurrentStep((p) => p - 1)} style={{ flex: 1, borderRadius: 10 }}>
             ← Back
           </Button>
         )}
         {currentStep < 3 ? (
-          <Button type="button" variant="primary" className="flex-[2] h-11 font-semibold shadow-glow-blue" onClick={handleNext}>
+          <Button size="large" type="primary" onClick={handleNext} style={{ flex: 2, borderRadius: 10 }}>
             Continue →
           </Button>
         ) : (
-          <Button variant="primary" className="flex-[2] h-11 font-semibold shadow-glow-blue" type="submit" loading={loading}>
-            Save Trade
-          </Button>
-        )}
-      </div>
-
-      {/* ── Mobile Sticky Action Bar — #21: z-50 ──────────────────────── */}
-      <div className="sm:hidden fixed left-0 right-0 px-4 py-3 bg-card/95 backdrop-blur-md border-t border-border z-50 flex gap-2.5"
-        style={{ bottom: 'var(--mobile-nav-height)' }}>
-        {currentStep > 1 ? (
-          <Button type="button" variant="ghost" className="flex-1 h-12 rounded-xl font-semibold text-sm border border-border"
-            onClick={() => setCurrentStep((p) => p - 1)}>Back</Button>
-        ) : (
-          <Button type="button" variant="ghost" className="flex-1 h-12 rounded-xl font-semibold text-sm border border-border"
-            onClick={() => navigate('/trades')}>Cancel</Button>
-        )}
-        {currentStep < 3 ? (
-          <Button type="button" variant="primary" className="flex-[2] h-12 rounded-xl font-semibold shadow-glow-blue" onClick={handleNext}>
-            Next →
-          </Button>
-        ) : (
-          <Button variant="primary" className="flex-[2] h-12 rounded-xl font-semibold shadow-glow-blue" type="submit" loading={loading}>
+          <Button size="large" type="primary" htmlType="submit" loading={loading} style={{ flex: 2, borderRadius: 10 }}>
             Save Trade
           </Button>
         )}
@@ -1620,16 +1830,14 @@ function CSVImportTab({ form, setForm, psychology, setPsychology }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [psychEnabled, setPsychEnabled] = useState(false);
-  const [csvPreview, setCsvPreview] = useState(null); // #12
+  const [csvPreview, setCsvPreview] = useState(null);
 
-  const handleFileChange = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  const beforeUpload = (f) => {
     setFile(f);
-    // #12: parse preview
     const reader = new FileReader();
     reader.onload = (ev) => setCsvPreview(parseCSVPreview(ev.target.result, 6));
     reader.readAsText(f);
+    return false;
   };
 
   const handleImport = async (e) => {
@@ -1656,115 +1864,172 @@ function CSVImportTab({ form, setForm, psychology, setPsychology }) {
   };
 
   return (
-    <form onSubmit={handleImport} className="space-y-6 pb-32 lg:pb-0">
-      {/* File drop zone */}
-      <div className="border-2 border-dashed border-border rounded-xl overflow-hidden hover:border-accent/40 transition-colors">
-        <div className="relative p-10 text-center cursor-pointer group">
-          <input type="file" accept=".csv" onChange={handleFileChange}
-            className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-          <div className="w-14 h-14 rounded-2xl bg-accent/8 border border-accent/15 flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform">
-            <IconImport className="w-7 h-7 text-accent" strokeWidth={1.5} />
-          </div>
-          <p className="text-sm font-semibold text-text-primary">
-            {file ? file.name : 'Drop your broker CSV here'}
-          </p>
-          <p className="text-[10px] font-medium text-text-faint mt-1 uppercase tracking-[0.08em]">
-            Zerodha · Fyers · Upstox
-          </p>
-        </div>
-      </div>
+    <form onSubmit={handleImport} className="space-y-6" style={{ paddingBottom: 64 }}>
+      {/* File Drag Drop Zone */}
+      <Upload.Dragger
+        accept=".csv"
+        beforeUpload={beforeUpload}
+        showUploadList={false}
+        style={{ borderRadius: 16 }}
+      >
+        <p style={{ fontSize: 36, color: '#3b82f6', marginBottom: 8 }}><InboxOutlined /></p>
+        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+          {file ? file.name : 'Click or Drag Broker CSV here'}
+        </p>
+        <p style={{ fontSize: 10, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>
+          Zerodha • Fyers • Upstox
+        </p>
+      </Upload.Dragger>
 
-      {/* #12: CSV preview table */}
+      {/* CSV Preview Table */}
       {csvPreview && csvPreview.length > 1 && (
-        <div className="rounded-xl border border-border overflow-hidden animate-fade-in">
-          <div className="px-4 py-2.5 border-b border-border bg-card-alt flex items-center justify-between">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-text-faint">
-              Preview — first {csvPreview.length - 1} rows
+        <Card
+          title={
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
+              CSV Preview (First {csvPreview.length - 1} rows)
             </span>
-            <span className="text-[9px] font-medium text-text-faint">
-              {csvPreview[0]?.length} columns detected
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-[10px]">
-              <thead>
-                <tr className="border-b border-border">
-                  {(csvPreview[0] || []).map((col, i) => (
-                    <th key={i} className="px-3 py-2 text-left font-semibold text-text-faint uppercase tracking-wide whitespace-nowrap">
-                      {col || `Col ${i + 1}`}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {csvPreview.slice(1).map((row, ri) => (
-                  <tr key={ri} className="border-b border-border/40 last:border-0 hover:bg-card-alt/50 transition-colors">
-                    {row.map((cell, ci) => (
-                      <td key={ci} className="px-3 py-2 text-text-muted font-mono whitespace-nowrap">{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          }
+          extra={<span style={{ fontSize: 9, color: 'var(--text-faint)' }}>{csvPreview[0]?.length} columns</span>}
+          style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
+          styles={{ body: { padding: 0 } }}
+        >
+          <Table
+            dataSource={csvPreview.slice(1).map((row, index) => {
+              const obj = { key: index };
+              row.forEach((cell, ci) => {
+                obj[`col_${ci}`] = cell;
+              });
+              return obj;
+            })}
+            columns={csvPreview[0].map((col, ci) => ({
+              title: col || `Col ${ci + 1}`,
+              dataIndex: `col_${ci}`,
+              key: `col_${ci}`,
+              render: (text) => <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{text}</span>,
+            }))}
+            pagination={false}
+            size="small"
+            scroll={{ x: 'max-content' }}
+          />
+        </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <FormSection title="Batch Categorization" icon={IconPlus}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Strategy</label>
-                <select className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-semibold focus:ring-2 focus:ring-accent/20 outline-none"
-                  value={form.strategy} onChange={(e) => setForm((p) => ({ ...p, strategy: e.target.value }))}>
-                  <option value="">None</option>
-                  {STRATEGIES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Setup</label>
-                <select className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-semibold focus:ring-2 focus:ring-accent/20 outline-none"
-                  value={form.setupType} onChange={(e) => setForm((p) => ({ ...p, setupType: e.target.value }))}>
-                  <option value="">None</option>
-                  {SETUPS.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+      {/* Settings Grid */}
+      <Row gutter={[20, 20]}>
+        <Col xs={24} md={12}>
+          <Card
+            title={
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-faint)' }}>
+                Batch Categorization
+              </span>
+            }
+            style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
+              <Row gutter={16}>
+                <Col xs={12}>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: 4 }}>Strategy</div>
+                  <Select
+                    placeholder="None"
+                    value={form.strategy || undefined}
+                    onChange={(val) => setForm((p) => ({ ...p, strategy: val || '' }))}
+                    style={{ width: '100%' }}
+                    allowClear
+                  >
+                    {STRATEGIES.map((s) => <Select.Option key={s} value={s}>{s}</Select.Option>)}
+                  </Select>
+                </Col>
+                <Col xs={12}>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: 4 }}>Setup</div>
+                  <Select
+                    placeholder="None"
+                    value={form.setupType || undefined}
+                    onChange={(val) => setForm((p) => ({ ...p, setupType: val || '' }))}
+                    style={{ width: '100%' }}
+                    allowClear
+                  >
+                    {SETUPS.map((s) => <Select.Option key={s} value={s}>{s}</Select.Option>)}
+                  </Select>
+                </Col>
+              </Row>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: 4 }}>Observations</div>
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Log notes for all imported records..."
+                  value={form.notes}
+                  onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                />
               </div>
             </div>
-            <Input as="textarea" label="Batch Observations" placeholder="Log notes for all imported records…"
-              value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} />
-          </div>
-        </FormSection>
+          </Card>
+        </Col>
 
-        <div className="space-y-5">
-          <div className="flex items-center justify-between p-4 bg-card border border-border rounded-xl">
-            <div>
-              <p className="text-sm font-semibold text-text-primary">Batch Psychology</p>
-              <p className="text-[10px] font-medium text-text-faint mt-0.5">Apply mindset data to all imports</p>
+        <Col xs={24} md={12} className="space-y-4">
+          <Card style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Batch Psychology</strong>
+                <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>Apply mindset metrics to all entries</div>
+              </div>
+              <Segmented
+                value={psychEnabled ? 'on' : 'off'}
+                onChange={(val) => setPsychEnabled(val === 'on')}
+                options={[
+                  { label: 'On', value: 'on' },
+                  { label: 'Off', value: 'off' },
+                ]}
+              />
             </div>
-            <button type="button" onClick={() => setPsychEnabled((p) => !p)}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wide transition-all ${
-                psychEnabled ? 'bg-accent text-white' : 'bg-card-alt border border-border text-text-faint hover:border-border-alt'
-              }`}>
-              {psychEnabled ? 'On' : 'Off'}
-            </button>
-          </div>
+          </Card>
+
           {psychEnabled && (
             <PsychologySection data={psychology} onChange={(val) => setPsychology((p) => ({ ...p, ...val }))} />
           )}
-        </div>
-      </div>
+        </Col>
+      </Row>
 
-      <div className="hidden lg:block">
-        <Button variant="primary" className="w-full h-12 font-semibold shadow-glow-blue" type="submit" disabled={!file} loading={loading}>
-          Execute Import
-        </Button>
-      </div>
+      <Button size="large" type="primary" htmlType="submit" disabled={!file} loading={loading} style={{ width: '100%', borderRadius: 10 }}>
+        Execute Batch Import
+      </Button>
     </form>
   );
 }
 
-// ─── Broker API Tab — #13: multi-broker ─────────────────────────────────────
+// ─── Broker API Tab ──────────────────────────────────────────────────────────
+
+const BROKERS = [
+  {
+    id: 'dhan',
+    name: 'Dhan',
+    url: 'dhan.co/api',
+    fields: [
+      { key: 'clientId', label: 'Client ID', placeholder: 'Your 10-digit ID', type: 'text' },
+      { key: 'accessToken', label: 'Access Token', placeholder: 'Session Token', type: 'password' },
+    ],
+    note: 'Tokens expire daily. Refresh in the Dhan portal before running sync.',
+  },
+  {
+    id: 'zerodha',
+    name: 'Zerodha',
+    url: 'kite.zerodha.com',
+    fields: [
+      { key: 'clientId', label: 'Client ID', placeholder: 'ZXXXXX', type: 'text' },
+      { key: 'accessToken', label: 'Access Token', placeholder: 'Kite Connect Session Token', type: 'password' },
+    ],
+    note: 'Generate session token via Kite Connect API dashboard daily.',
+  },
+  {
+    id: 'upstox',
+    name: 'Upstox',
+    url: 'api.upstox.com',
+    fields: [
+      { key: 'clientId', label: 'API Key', placeholder: 'API Key', type: 'text' },
+      { key: 'accessToken', label: 'Access Token', placeholder: 'OAuth Access Token', type: 'password' },
+    ],
+    note: 'Use the Upstox developer console to configure redirect URI and fetch tokens.',
+  },
+];
 
 function BrokerAPITab() {
   const navigate = useNavigate();
@@ -1806,110 +2071,163 @@ function BrokerAPITab() {
   };
 
   return (
-    <form onSubmit={handleSync} className="space-y-6 pb-32 lg:pb-0">
-      {/* Broker selector */}
-      <div className="space-y-2">
-        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">Select Broker</label>
-        <div className="grid grid-cols-3 gap-3">
-          {BROKERS.map((b) => (
-            <button key={b.id} type="button" onClick={() => setSelectedBroker(b.id)}
-              className={`py-3.5 px-4 rounded-xl border-2 text-sm font-bold transition-all ${
-                selectedBroker === b.id ? 'border-accent bg-accent/10 text-accent shadow-glow-blue' : 'border-border bg-card text-text-muted hover:border-border-alt'
-              }`}>
-              {b.name}
-            </button>
-          ))}
+    <form onSubmit={handleSync} className="space-y-6" style={{ paddingBottom: 64 }}>
+      {/* Broker Cards Grid */}
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-faint)', letterSpacing: '0.08em', marginBottom: 8 }}>
+          Select Broker
         </div>
+        <Row gutter={12}>
+          {BROKERS.map((b) => {
+            const isSelected = selectedBroker === b.id;
+            return (
+              <Col xs={8} key={b.id}>
+                <Card
+                  hoverable
+                  onClick={() => setSelectedBroker(b.id)}
+                  style={{
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    borderRadius: 12,
+                    border: isSelected ? '2px solid #3b82f6' : '1px solid var(--border)',
+                    backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-card)',
+                  }}
+                  styles={{ body: { padding: '16px 8px' } }}
+                >
+                  <strong style={{ fontSize: 14, color: isSelected ? '#3b82f6' : 'var(--text-primary)' }}>{b.name}</strong>
+                </Card>
+              </Col>
+            );
+          })}
+        </Row>
       </div>
 
-      {/* Credentials card */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center">
-              <IconPlus className="w-3.5 h-3.5 text-blue-400" />
-            </div>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-faint">
-              {broker.name} API Credentials
-            </span>
-          </div>
-          <span className="text-[9px] font-mono font-medium text-text-faint bg-card-alt px-2 py-0.5 rounded border border-border">
-            {broker.url}
+      {/* Credentials Area */}
+      <Card
+        title={
+          <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-faint)' }}>
+            API Connection Details
           </span>
-        </div>
-        <div className="p-5 space-y-4">
+        }
+        extra={<span style={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--text-faint)' }}>{broker.url}</span>}
+        style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
           {broker.fields.map((field) => (
-            <Input key={field.key}
-              label={field.label}
-              type={field.type === 'password' ? (showToken ? 'text' : 'password') : field.type}
-              value={form[field.key]}
-              onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
-              placeholder={field.placeholder}
-              suffix={field.type === 'password' ? (
-                <button type="button" onClick={() => setShowToken((p) => !p)}
-                  className="text-text-faint hover:text-text-muted transition-colors">
-                  {showToken ? <IconEyeOff className="w-4 h-4" /> : <IconEye className="w-4 h-4" />}
-                </button>
-              ) : undefined}
-            />
+            <div key={field.key}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', marginBottom: 4 }}>{field.label}</div>
+              <Input
+                type={field.type === 'password' && !showToken ? 'password' : 'text'}
+                value={form[field.key]}
+                onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
+                placeholder={field.placeholder}
+                size="large"
+                style={{ borderRadius: 10 }}
+                suffix={
+                  field.type === 'password' ? (
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={showToken ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                      onClick={() => setShowToken((p) => !p)}
+                    />
+                  ) : null
+                }
+              />
+            </div>
           ))}
-          <div className="flex gap-3 p-3.5 bg-amber-500/5 border border-amber-500/15 rounded-xl items-start">
-            <span className="text-amber-500 shrink-0 mt-0.5 text-sm">⚠</span>
-            <p className="text-[10px] font-medium text-amber-600 leading-relaxed">{broker.note}</p>
-          </div>
+
+          <Card styles={{ body: { padding: '12px 16px' } }} style={{ borderRadius: 10, backgroundColor: 'rgba(234, 179, 8, 0.05)', border: '1px solid rgba(234, 179, 8, 0.15)' }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <WarningOutlined style={{ color: '#eab308', marginTop: 2 }} />
+              <span style={{ fontSize: 11, color: '#a16207', lineHeight: '1.4' }}>{broker.note}</span>
+            </div>
+          </Card>
         </div>
-      </div>
+      </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <FormSection title="Sync Window" icon={IconCalendar}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="From Date" type="date" value={form.fromDate} onChange={(e) => setForm((p) => ({ ...p, fromDate: e.target.value }))} />
-              <Input label="To Date" type="date" value={form.toDate} onChange={(e) => setForm((p) => ({ ...p, toDate: e.target.value }))} />
-            </div>
-            <div className="flex gap-2">
-              {[7, 30, 90].map((days) => (
-                <button key={days} type="button"
-                  className="flex-1 py-2 rounded-xl bg-card-alt border border-border text-[10px] font-semibold text-text-faint hover:border-accent hover:text-accent transition-all"
-                  onClick={() => {
-                    const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                    setForm((p) => ({ ...p, fromDate: from, toDate: new Date().toISOString().split('T')[0] }));
-                  }}>
-                  {days}d
-                </button>
-              ))}
-            </div>
-          </div>
-        </FormSection>
-
-        <FormSection title="Mindset Mapping" icon={IconPsychology}>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3.5 bg-card-alt rounded-xl border border-border">
-              <span className="text-xs font-semibold text-text-secondary">Apply Psychology?</span>
-              <button type="button" onClick={() => setPsychEnabled((p) => !p)}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wide transition-all ${
-                  psychEnabled ? 'bg-accent text-white' : 'bg-card border border-border text-text-faint hover:border-border-alt'
-                }`}>
-                {psychEnabled ? 'On' : 'Off'}
-              </button>
-            </div>
-            {psychEnabled && (
-              <div className="pt-1">
-                <PsychologySection data={psychology} onChange={(val) => setPsychology((p) => ({ ...p, ...val }))} />
+      {/* Sync Window Grid */}
+      <Row gutter={[20, 20]}>
+        <Col xs={24} md={12}>
+          <Card
+            title={
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-faint)' }}>
+                Sync Timeline
+              </span>
+            }
+            style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
+              <Row gutter={12}>
+                <Col xs={12}>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: 4 }}>From Date</div>
+                  <DatePicker
+                    value={form.fromDate ? dayjs(form.fromDate) : null}
+                    onChange={(date, dateStr) => setForm((p) => ({ ...p, fromDate: dateStr }))}
+                    format="YYYY-MM-DD"
+                    style={{ width: '100%' }}
+                  />
+                </Col>
+                <Col xs={12}>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: 4 }}>To Date</div>
+                  <DatePicker
+                    value={form.toDate ? dayjs(form.toDate) : null}
+                    onChange={(date, dateStr) => setForm((p) => ({ ...p, toDate: dateStr }))}
+                    format="YYYY-MM-DD"
+                    style={{ width: '100%' }}
+                  />
+                </Col>
+              </Row>
+              <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+                {[7, 30, 90].map((days) => (
+                  <Button
+                    key={days}
+                    size="small"
+                    style={{ width: '100%', borderRadius: 8 }}
+                    onClick={() => {
+                      const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      setForm((p) => ({ ...p, fromDate: from, toDate: new Date().toISOString().split('T')[0] }));
+                    }}
+                  >
+                    Last {days}d
+                  </Button>
+                ))}
               </div>
-            )}
-          </div>
-        </FormSection>
-      </div>
+            </div>
+          </Card>
+        </Col>
 
-      <Button variant="primary" className="w-full h-12 font-semibold shadow-glow-blue" type="submit" loading={loading}>
-        Start Automated Sync — {broker.name}
+        <Col xs={24} md={12} className="space-y-4">
+          <Card style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
+            <div style={{ display: 'flex', justify: 'space-between', items: 'center' }}>
+              <div>
+                <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Apply Psychology</strong>
+                <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>Apply mindset metrics to sync results</div>
+              </div>
+              <Segmented
+                value={psychEnabled ? 'on' : 'off'}
+                onChange={(val) => setPsychEnabled(val === 'on')}
+                options={[
+                  { label: 'On', value: 'on' },
+                  { label: 'Off', value: 'off' },
+                ]}
+              />
+            </div>
+          </Card>
+          {psychEnabled && (
+            <PsychologySection data={psychology} onChange={(val) => setPsychology((p) => ({ ...p, ...val }))} />
+          )}
+        </Col>
+      </Row>
+
+      <Button size="large" type="primary" htmlType="submit" loading={loading} style={{ width: '100%', borderRadius: 10 }}>
+        Synchronize trades from {broker.name}
       </Button>
     </form>
   );
 }
 
-// ─── Root ────────────────────────────────────────────────────────────────────
+// ─── Root AddTrade Component ──────────────────────────────────────────────────
 
 export default function AddTrade() {
   const [activeTab, setActiveTab] = useState('manual');
@@ -1933,11 +2251,9 @@ export default function AddTrade() {
 
   const [psychology, setPsychology] = useState(initialPsychology);
 
-  // #5: Real saved timestamp
   const [lastSaved, setLastSaved] = useState(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  // Rehydrate draft from sessionStorage
   useEffect(() => {
     const savedForm = sessionStorage.getItem('add_trade_form');
     const savedPsych = sessionStorage.getItem('add_trade_psychology');
@@ -1947,7 +2263,6 @@ export default function AddTrade() {
     if (restored) toast.success('Form draft restored', { icon: '📝', duration: 2000 });
   }, []);
 
-  // #5: Persist with real timestamp feedback
   useEffect(() => {
     const timer = setTimeout(() => {
       sessionStorage.setItem('add_trade_form', JSON.stringify(form));
@@ -1958,7 +2273,6 @@ export default function AddTrade() {
     return () => clearTimeout(timer);
   }, [form, psychology]);
 
-  // #6: Clear form
   const clearFormPersistence = () => {
     sessionStorage.removeItem('add_trade_form');
     sessionStorage.removeItem('add_trade_psychology');
@@ -1966,72 +2280,159 @@ export default function AddTrade() {
     setPsychology(initialPsychology);
     setLastSaved(null);
     setShowClearConfirm(false);
-    toast.success('Form cleared');
+    toast.success('Form reset complete');
   };
 
-  const tabs = [
-    { id: 'manual', label: 'Manual' },
-    { id: 'csv', label: 'CSV' },
-    { id: 'broker', label: 'API' },
-  ];
-
   return (
-    <div className="max-w-4xl mx-auto space-y-4 animate-fade-up">
-      {/* #6: Clear form confirm modal */}
-      <Modal isOpen={showClearConfirm} onClose={() => setShowClearConfirm(false)}
-        title="Clear Form?"
-        footer={
-          <div className="flex gap-3">
-            <Button variant="ghost" className="flex-1" onClick={() => setShowClearConfirm(false)}>Cancel</Button>
-            <Button variant="primary" className="flex-1" onClick={clearFormPersistence}
-              style={{ background: 'var(--color-loss)' }}>
-              Clear All
-            </Button>
-          </div>
-        }>
-        <p className="text-sm text-text-muted">
-          This will reset all fields and delete the saved draft. This cannot be undone.
-        </p>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}
+    >
+      {/* Reset Popconfirm/Modal */}
+      <Modal
+        open={showClearConfirm}
+        onCancel={() => setShowClearConfirm(false)}
+        title="Clear Form Draft?"
+        footer={[
+          <Button key="cancel" onClick={() => setShowClearConfirm(false)}>Cancel</Button>,
+          <Button key="clear" type="primary" danger onClick={clearFormPersistence}>Clear All</Button>,
+        ]}
+      >
+        <p>This action will reset all inputs and delete the current autosaved draft. This cannot be undone.</p>
       </Modal>
 
-      {/* Page header */}
-      <div className="flex items-center justify-between pb-3 border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <h1 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-faint">Log Activity</h1>
-          <span className="h-3 w-px bg-border" />
-          <p className="text-[10px] font-medium text-text-faint">Trading Journal</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* #6: Clear button */}
-          <button type="button" onClick={() => setShowClearConfirm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] font-semibold text-text-faint hover:text-loss hover:border-loss/30 transition-all">
-            <IconTrash className="w-3 h-3" />
-            Clear
-          </button>
-          <TabBar
-            tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab}
-            variant="pills" className="bg-card-alt p-0.5 rounded-lg border border-border w-fit h-7 text-[10px]"
-          />
-        </div>
+      {/* Page Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+        <Space size={12}>
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-faint)' }}>Log Activity</span>
+          <span style={{ height: 12, width: 1, backgroundColor: 'var(--border)', display: 'inline-block' }} />
+          <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-faint)' }}>Trading Journal</span>
+        </Space>
+        <Space size={12}>
+          <Button
+            size="small"
+            danger
+            type="dashed"
+            icon={<ClearOutlined />}
+            onClick={() => setShowClearConfirm(true)}
+            style={{ borderRadius: 8 }}
+          >
+            Clear Form
+          </Button>
+          <div style={{
+            display: 'flex',
+            gap: 2,
+            backgroundColor: 'var(--bg-card-alt)',
+            padding: 3,
+            borderRadius: 10,
+            border: '1px solid var(--border)',
+            position: 'relative'
+          }}>
+            {[
+              { id: 'manual', label: 'Manual', icon: <EditOutlined /> },
+              { id: 'csv', label: 'CSV Import', icon: <FileExcelOutlined /> },
+              { id: 'broker', label: 'API Sync', icon: <ApiOutlined /> }
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '5px 12px',
+                    borderRadius: 8,
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-faint)',
+                    fontSize: 11,
+                    fontWeight: isActive ? 600 : 500,
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'color 0.2s',
+                    zIndex: 1,
+                    outline: 'none',
+                  }}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTabIndicator"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'var(--bg-card)',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                        borderRadius: 8,
+                        zIndex: -1,
+                      }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span style={{ fontSize: 12, display: 'flex', alignItems: 'center' }}>
+                    {tab.icon}
+                  </span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Space>
       </div>
 
-      <div className="mt-1">
-        {activeTab === 'manual' && (
-          <ManualEntryTab
-            form={form} setForm={setForm}
-            psychology={psychology} setPsychology={setPsychology}
-            onSuccess={clearFormPersistence}
-            lastSaved={lastSaved}
-          />
-        )}
-        {activeTab === 'csv' && (
-          <CSVImportTab
-            form={form} setForm={setForm}
-            psychology={psychology} setPsychology={setPsychology}
-          />
-        )}
-        {activeTab === 'broker' && <BrokerAPITab />}
+      <div style={{ minHeight: 450 }}>
+        <AnimatePresence mode="wait">
+          {activeTab === 'manual' && (
+            <motion.div
+              key="manual"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <ManualEntryTab
+                form={form} setForm={setForm}
+                psychology={psychology} setPsychology={setPsychology}
+                onSuccess={clearFormPersistence}
+                lastSaved={lastSaved}
+              />
+            </motion.div>
+          )}
+          {activeTab === 'csv' && (
+            <motion.div
+              key="csv"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <CSVImportTab
+                form={form} setForm={setForm}
+                psychology={psychology} setPsychology={setPsychology}
+              />
+            </motion.div>
+          )}
+          {activeTab === 'broker' && (
+            <motion.div
+              key="broker"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <BrokerAPITab />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

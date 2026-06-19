@@ -1,7 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from 'sonner';
+import { ConfigProvider, theme as antdTheme } from 'antd';
 import { useAuthStore } from './store/authStore';
+import { useThemeStore } from './store/themeStore';
 import { setNavigate } from './lib/api';
 
 // Layouts
@@ -38,30 +40,45 @@ const ProtectedRoute = ({ children }) => {
 };
 
 export default function App() {
+  const currentTheme = useThemeStore((s) => s.theme);
+
   return (
-    <BrowserRouter>
-      <AppRoutes />
-      <Toaster 
-        position="top-center" 
-        containerStyle={{ top: 16 }}
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: 'var(--bg-card)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            fontSize: '13px',
-            fontWeight: '500',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.16)',
-            padding: '12px 16px',
-            maxWidth: '90vw',
+    <ConfigProvider
+      theme={{
+        algorithm: currentTheme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: '#3b82f6',
+          borderRadius: 12,
+          fontFamily: "'Inter', 'Plus Jakarta Sans', sans-serif",
+        },
+        components: {
+          Card: {
+            colorBgContainer: currentTheme === 'dark' ? '#0d1525' : '#ffffff',
           },
-          success: { iconTheme: { primary: '#22c55e', secondary: 'white' } },
-          error:   { iconTheme: { primary: '#ef4444', secondary: 'white' } },
-        }}
-      />
-    </BrowserRouter>
+          Input: {
+            colorBgContainer: currentTheme === 'dark' ? '#0a1220' : '#f8fafc',
+          },
+          Select: {
+            colorBgContainer: currentTheme === 'dark' ? '#0a1220' : '#f8fafc',
+          },
+        }
+      }}
+    >
+      <BrowserRouter>
+        <AppRoutes />
+        <Toaster 
+          position="top-center" 
+          richColors
+          theme={currentTheme === 'dark' ? 'dark' : 'light'}
+          toastOptions={{
+            style: {
+              borderRadius: '12px',
+              fontFamily: "'Inter', sans-serif",
+            }
+          }}
+        />
+      </BrowserRouter>
+    </ConfigProvider>
   );
 }
 

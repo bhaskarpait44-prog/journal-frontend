@@ -9,11 +9,14 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.2.5",
+    "antd": "^6.4.4",
+    "framer-motion": "^12.40.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "react-hot-toast": "^2.4.0",
     "react-router-dom": "^6.26.0",
     "recharts": "^2.12.0",
+    "sonner": "^2.0.7",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

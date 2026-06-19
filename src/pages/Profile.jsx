@@ -7,7 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { 
   IconProfile, IconRisk, IconTrash, 

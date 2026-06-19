@@ -4,7 +4,7 @@ import { buildSymbol } from '../lib/utils';
 import { getAllAvailableExpiries } from '../lib/holidays';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const FALLBACK_SYMBOLS = [
   { symbol: 'NIFTY', lotSize: 50 },

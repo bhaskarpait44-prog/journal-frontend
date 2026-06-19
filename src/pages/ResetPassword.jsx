@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { 
   IconArrowUp, IconCheck, IconShieldCheck, 
   IconRefresh, IconEye, IconEyeOff 
