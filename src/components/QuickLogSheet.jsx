@@ -7,12 +7,12 @@ import { Button } from './ui/Button';
 import { toast } from 'sonner';
 
 const FALLBACK_SYMBOLS = [
-  { symbol: 'NIFTY', lotSize: 50 },
-  { symbol: 'BANKNIFTY', lotSize: 15 },
-  { symbol: 'FINNIFTY', lotSize: 40 },
-  { symbol: 'MIDCPNIFTY', lotSize: 75 },
-  { symbol: 'SENSEX', lotSize: 10 },
-  { symbol: 'BANKEX', lotSize: 15 },
+  { symbol: 'NIFTY', lotSize: 65 },
+  { symbol: 'BANKNIFTY', lotSize: 30 },
+  { symbol: 'FINNIFTY', lotSize: 60 },
+  { symbol: 'MIDCPNIFTY', lotSize: 120 },
+  { symbol: 'SENSEX', lotSize: 20 },
+  { symbol: 'BANKEX', lotSize: 30 },
 ];
 
 export default function QuickLogSheet({ isOpen, onClose, onSuccess }) {

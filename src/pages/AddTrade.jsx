@@ -113,9 +113,9 @@ const EXIT_REASONS = [
 ];
 
 const FALLBACK_SYMBOLS = [
-  { symbol: 'NIFTY', lotSize: 75 },
+  { symbol: 'NIFTY', lotSize: 65 },
   { symbol: 'BANKNIFTY', status: 'Active', lotSize: 30 },
-  { symbol: 'FINNIFTY', lotSize: 65 },
+  { symbol: 'FINNIFTY', lotSize: 60 },
   { symbol: 'MIDCPNIFTY', lotSize: 120 },
   { symbol: 'NIFTYNXT50', lotSize: 25 },
   { symbol: 'SENSEX', lotSize: 20 },
@@ -391,126 +391,151 @@ function Step1Symbol({
   templateName, setTemplateName, saveTemplate,
 }) {
   return (
-    <Col xs={24} lg={16} className="animate-fade-in">
-      <Card
-        title={
-          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
-            Symbol &amp; Configuration
-          </span>
-        }
-        extra={
-          showTemplateInput ? (
-            <Space size={4}>
-              <Input
-                size="small"
-                autoFocus
-                placeholder="Template name..."
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                onKeyDown={async (e) => {
-                  if (e.key === 'Escape') { setShowTemplateInput(false); setTemplateName(''); }
-                  else if (e.key === 'Enter') { e.preventDefault(); await saveTemplate(); }
-                }}
-                style={{ width: 120 }}
-              />
-              <Button size="small" type="primary" onClick={saveTemplate}>Save</Button>
-              <Button size="small" type="text" onClick={() => setShowTemplateInput(false)}>✕</Button>
-            </Space>
-          ) : (
-            <Button
-              size="small"
-              type="link"
-              onClick={() => { if (!form.underlying) return toast.error('Select a symbol first'); setShowTemplateInput(true); }}
-            >
-              Save Template
-            </Button>
-          )
-        }
-        style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%' }}>
-          {/* Instrument Type */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-              Instrument Type
-            </div>
-            <Segmented
-              block
-              value={form.instrumentType}
-              onChange={(val) => {
-                if (val === 'EQUITY')
-                  setForm((p) => ({ ...p, instrumentType: 'EQUITY', optionType: 'XX', strikePrice: '', expiryDate: '', lotSize: '1' }));
-                else if (val === 'FUTURES')
-                  setForm((p) => ({ ...p, instrumentType: 'FUTURES', optionType: 'XX', strikePrice: '' }));
-                else
-                  setForm((p) => ({ ...p, instrumentType: 'OPTIONS', optionType: 'CE' }));
-              }}
-              options={[
-                { label: 'Equity', value: 'EQUITY' },
-                { label: 'Futures', value: 'FUTURES' },
-                { label: 'Options', value: 'OPTIONS' },
-              ]}
-              size="large"
-            />
-          </div>
-
-          {/* Symbol Auto Complete */}
-          <div>
-            <label htmlFor="symbol-select" style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-              {form.instrumentType === 'EQUITY' ? 'Stock / Scrip *' : 'Underlying Asset *'}
-            </label>
-            <Select
-              id="symbol-select"
-              showSearch
-              placeholder={form.instrumentType === 'EQUITY' ? 'Search Stock (e.g. RELIANCE, TCS)' : 'Search Asset (e.g. NIFTY, BANKNIFTY)'}
-              value={form.underlying || undefined}
-              defaultActiveFirstOption={false}
-              suffixIcon={null}
-              filterOption={false}
-              onSearch={(val) => setSearch(val.toUpperCase())}
-              onChange={(val) => {
-                const match = filteredSymbols.find((s) => s.symbol === val);
-                if (match) {
-                  safeSetUnderlying(val, match.lotSize, match.exchange);
-                } else {
-                  setForm((p) => ({ ...p, underlying: val }));
-                }
-              }}
-              style={{ width: '100%' }}
-              size="large"
-            >
-              {filteredSymbols.map((s) => (
-                <Select.Option key={s.symbol} value={s.symbol}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 'bold' }}>{s.symbol}</span>
-                    <span style={{ fontSize: 10, color: 'var(--text-faint)', fontFamily: 'monospace' }}>
-                      {s.source === 'fno' ? `Lot ${s.lotSize}` : s.exchange || 'EQUITY'}
-                    </span>
-                  </div>
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
-
-          {/* CE/PE and Buy/Sell */}
-          {form.instrumentType === 'OPTIONS' && (
-            <Row gutter={16}>
-              <Col xs={24} sm={12}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                  Contract Type
-                </div>
-                <Segmented
-                  block
-                  value={form.optionType}
-                  onChange={(val) => setForm((p) => ({ ...p, optionType: val }))}
-                  options={[
-                    { label: <span style={{ color: form.optionType === 'CE' ? '#a855f7' : 'inherit' }}>Call (CE)</span>, value: 'CE' },
-                    { label: <span style={{ color: form.optionType === 'PE' ? '#eab308' : 'inherit' }}>Put (PE)</span>, value: 'PE' },
-                  ]}
-                  size="large"
+    <>
+      <Col xs={24} lg={16} className="animate-fade-in">
+        <Card
+          title={
+            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
+              Symbol & Configuration
+            </span>
+          }
+          extra={
+            showTemplateInput ? (
+              <Space size={4}>
+                <Input
+                  size="small"
+                  autoFocus
+                  placeholder="Template name..."
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  style={{ width: 120, borderRadius: 6 }}
+                  onPressEnter={saveTemplate}
                 />
-              </Col>
-              <Col xs={24} sm={12}>
+                <Button size="small" type="primary" onClick={saveTemplate} style={{ borderRadius: 6 }}>
+                  Save
+                </Button>
+                <Button size="small" onClick={() => setShowTemplateInput(false)} style={{ borderRadius: 6 }}>
+                  Cancel
+                </Button>
+              </Space>
+            ) : (
+              <Button
+                type="link"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() => setShowTemplateInput(true)}
+                style={{ fontSize: 11, padding: 0 }}
+                disabled={!form.underlying}
+              >
+                Save Template
+              </Button>
+            )
+          }
+          style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Instrument Type */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                Instrument Type
+              </div>
+              <Segmented
+                block
+                value={form.instrumentType}
+                onChange={(val) => {
+                  if (val === 'EQUITY')
+                    setForm((p) => ({ ...p, instrumentType: 'EQUITY', optionType: 'XX', strikePrice: '', expiryDate: '', lotSize: '1' }));
+                  else if (val === 'FUTURES')
+                    setForm((p) => ({ ...p, instrumentType: 'FUTURES', optionType: 'XX', strikePrice: '' }));
+                  else
+                    setForm((p) => ({ ...p, instrumentType: 'OPTIONS', optionType: 'CE' }));
+                }}
+                options={[
+                  { label: 'Equity', value: 'EQUITY' },
+                  { label: 'Futures', value: 'FUTURES' },
+                  { label: 'Options', value: 'OPTIONS' },
+                ]}
+                size="large"
+              />
+            </div>
+
+            {/* Symbol Auto Complete */}
+            <div>
+              <label htmlFor="symbol-select" style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                {form.instrumentType === 'EQUITY' ? 'Stock / Scrip *' : 'Underlying Asset *'}
+              </label>
+              <Select
+                id="symbol-select"
+                showSearch
+                placeholder={form.instrumentType === 'EQUITY' ? 'Search Stock (e.g. RELIANCE, TCS)' : 'Search Asset (e.g. NIFTY, BANKNIFTY)'}
+                value={form.underlying || undefined}
+                defaultActiveFirstOption={false}
+                suffixIcon={null}
+                filterOption={false}
+                onSearch={(val) => setSearch(val.toUpperCase())}
+                onChange={(val) => {
+                  const match = filteredSymbols.find((s) => s.symbol === val);
+                  if (match) {
+                    safeSetUnderlying(val, match.lotSize, match.exchange);
+                  } else {
+                    setForm((p) => ({ ...p, underlying: val }));
+                  }
+                }}
+                style={{ width: '100%' }}
+                size="large"
+              >
+                {filteredSymbols.map((s) => (
+                  <Select.Option key={s.symbol} value={s.symbol}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 'bold' }}>{s.symbol}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-faint)', fontFamily: 'monospace' }}>
+                        {s.source === 'fno' ? `Lot ${s.lotSize}` : s.exchange || 'EQUITY'}
+                      </span>
+                    </div>
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Options Row (Option Type & Trade Side) */}
+            {form.instrumentType === 'OPTIONS' && (
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                    Option Type
+                  </div>
+                  <Segmented
+                    block
+                    value={form.optionType}
+                    onChange={(val) => setForm((p) => ({ ...p, optionType: val }))}
+                    options={[
+                      { label: <span style={{ color: form.optionType === 'CE' ? '#3b82f6' : 'inherit', fontWeight: 'bold' }}>Call (CE)</span>, value: 'CE' },
+                      { label: <span style={{ color: form.optionType === 'PE' ? '#eab308' : 'inherit', fontWeight: 'bold' }}>Put (PE)</span>, value: 'PE' },
+                    ]}
+                    size="large"
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                    Trade Side
+                  </div>
+                  <Segmented
+                    block
+                    value={form.tradeType}
+                    onChange={(val) => setForm((p) => ({ ...p, tradeType: val }))}
+                    options={[
+                      { label: <span style={{ color: form.tradeType === 'BUY' ? '#22c55e' : 'inherit', fontWeight: 'bold' }}>Buy</span>, value: 'BUY' },
+                      { label: <span style={{ color: form.tradeType === 'SELL' ? '#ef4444' : 'inherit', fontWeight: 'bold' }}>Sell</span>, value: 'SELL' },
+                    ]}
+                    size="large"
+                  />
+                </Col>
+              </Row>
+            )}
+
+            {/* Equity/Futures Trade Side */}
+            {form.instrumentType !== 'OPTIONS' && (
+              <div>
                 <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
                   Trade Side
                 </div>
@@ -519,207 +544,221 @@ function Step1Symbol({
                   value={form.tradeType}
                   onChange={(val) => setForm((p) => ({ ...p, tradeType: val }))}
                   options={[
-                    { label: <span style={{ color: form.tradeType === 'BUY' ? '#22c55e' : 'inherit', fontWeight: 'bold' }}>Buy</span>, value: 'BUY' },
-                    { label: <span style={{ color: form.tradeType === 'SELL' ? '#ef4444' : 'inherit', fontWeight: 'bold' }}>Sell</span>, value: 'SELL' },
+                    { label: <span style={{ color: form.tradeType === 'BUY' ? '#22c55e' : 'inherit', fontWeight: 'bold' }}>Buy / Long</span>, value: 'BUY' },
+                    { label: <span style={{ color: form.tradeType === 'SELL' ? '#ef4444' : 'inherit', fontWeight: 'bold' }}>Sell / Short</span>, value: 'SELL' },
                   ]}
                   size="large"
                 />
-              </Col>
-            </Row>
-          )}
+              </div>
+            )}
 
-          {/* Equity/Futures Trade Side */}
-          {form.instrumentType !== 'OPTIONS' && (
+            {/* Strike + Expiry Grid */}
+            <Row gutter={16}>
+              {form.instrumentType === 'OPTIONS' ? (
+                <Col xs={24} sm={12}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                    Strike Price *
+                  </div>
+                  <Input
+                    prefix="₹"
+                    type="number"
+                    placeholder="22500"
+                    value={form.strikePrice}
+                    onChange={(e) => setForm((p) => ({ ...p, strikePrice: e.target.value }))}
+                    size="large"
+                    style={{ borderRadius: 10 }}
+                  />
+                  {spotPrice && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 4 }}>
+                        Spot: <strong style={{ color: '#3b82f6', fontFamily: 'monospace' }}>₹{spotPrice.toFixed(2)}</strong>
+                      </div>
+                      <Space wrap size={4}>
+                        {(() => {
+                          const interval = getStrikeInterval(form.underlying, spotPrice);
+                          const atm = Math.round(spotPrice / interval) * interval;
+                          return [-2, -1, 0, 1, 2].map((offset) => {
+                            const strike = atm + offset * interval;
+                            const lbl = offset === 0 ? 'ATM' : offset > 0 ? `+${offset * interval}` : `${offset * interval}`;
+                            const isSelected = form.strikePrice === strike.toString();
+                            return (
+                              <Button
+                                key={strike}
+                                size="small"
+                                type={isSelected ? 'primary' : 'default'}
+                                onClick={() => setForm((p) => ({ ...p, strikePrice: strike.toString() }))}
+                                style={{ fontSize: 10, fontFamily: 'monospace', borderRadius: 6 }}
+                              >
+                                {lbl} {strike}
+                              </Button>
+                            );
+                          });
+                        })()}
+                      </Space>
+                    </div>
+                  )}
+                </Col>
+              ) : (
+                <Col xs={24} sm={12}>
+                  <Card styles={{ body: { padding: '12px 16px' } }} style={{ height: '100%', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card-alt)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: '1.4' }}>
+                      {form.instrumentType === 'EQUITY' ? 'Cash Equity segment — no strike or expiry needed.' : 'Futures contract — strike price not applicable.'}
+                    </span>
+                  </Card>
+                </Col>
+              )}
+
+              {form.instrumentType !== 'EQUITY' && (
+                <Col xs={24} sm={12}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Expiry Date *
+                    </span>
+                    <Button
+                      size="small"
+                      type="link"
+                      onClick={() => setIsManualExpiry((p) => !p)}
+                      style={{ padding: 0, height: 'auto', fontSize: 10 }}
+                    >
+                      {isManualExpiry ? 'Smart List' : 'Pick Date'}
+                    </Button>
+                  </div>
+                  {isManualExpiry ? (
+                    <DatePicker
+                      value={form.expiryDate ? dayjs(form.expiryDate) : null}
+                      onChange={(date, dateStr) => setForm((p) => ({ ...p, expiryDate: dateStr }))}
+                      format="YYYY-MM-DD"
+                      style={{ width: '100%', borderRadius: 10 }}
+                      size="large"
+                    />
+                  ) : (
+                    <Select
+                      placeholder="Select Expiry"
+                      value={form.expiryDate || undefined}
+                      onChange={(val) => setForm((p) => ({ ...p, expiryDate: val }))}
+                      style={{ width: '100%' }}
+                      size="large"
+                    >
+                      {availableExpiries.map((date) => {
+                        const d = new Date(date);
+                        const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+                        return <Select.Option key={date} value={date}>{label}</Select.Option>;
+                      })}
+                    </Select>
+                  )}
+                </Col>
+              )}
+            </Row>
+
+            {/* Contract preview */}
+            {((form.instrumentType === 'OPTIONS' && form.underlying && form.expiryDate && form.strikePrice) ||
+              (form.instrumentType === 'FUTURES' && form.underlying && form.expiryDate)) && (
+              <Card styles={{ body: { padding: '12px 16px' } }} style={{ borderRadius: 12, backgroundColor: 'var(--bg-card-alt)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Formatted Contract Code</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#3b82f6', fontSize: 13 }}>
+                    {form.instrumentType === 'OPTIONS'
+                      ? buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType)
+                      : `${form.underlying} ${new Date(form.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }).toUpperCase()} FUT`
+                    }
+                  </span>
+                </div>
+              </Card>
+            )}
+
+            {/* Exchange */}
             <div>
               <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                Trade Side
+                Exchange
               </div>
               <Segmented
                 block
-                value={form.tradeType}
-                onChange={(val) => setForm((p) => ({ ...p, tradeType: val }))}
+                value={form.exchange}
+                onChange={(val) => setForm((p) => ({ ...p, exchange: val }))}
                 options={[
-                  { label: <span style={{ color: form.tradeType === 'BUY' ? '#22c55e' : 'inherit', fontWeight: 'bold' }}>Buy / Long</span>, value: 'BUY' },
-                  { label: <span style={{ color: form.tradeType === 'SELL' ? '#ef4444' : 'inherit', fontWeight: 'bold' }}>Sell / Short</span>, value: 'SELL' },
+                  { label: 'NSE', value: 'NSE' },
+                  { label: 'BSE', value: 'BSE' },
                 ]}
                 size="large"
               />
             </div>
-          )}
-
-          {/* Strike + Expiry Grid */}
-          <Row gutter={16}>
-            {form.instrumentType === 'OPTIONS' ? (
-              <Col xs={24} sm={12}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                  Strike Price *
-                </div>
-                <Input
-                  prefix="₹"
-                  type="number"
-                  placeholder="22500"
-                  value={form.strikePrice}
-                  onChange={(e) => setForm((p) => ({ ...p, strikePrice: e.target.value }))}
-                  size="large"
-                  style={{ borderRadius: 10 }}
-                />
-                {spotPrice && (
-                  <div style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 4 }}>
-                      Spot: <strong style={{ color: '#3b82f6', fontFamily: 'monospace' }}>₹{spotPrice.toFixed(2)}</strong>
-                    </div>
-                    <Space wrap size={4}>
-                      {(() => {
-                        const interval = getStrikeInterval(form.underlying, spotPrice);
-                        const atm = Math.round(spotPrice / interval) * interval;
-                        return [-2, -1, 0, 1, 2].map((offset) => {
-                          const strike = atm + offset * interval;
-                          const lbl = offset === 0 ? 'ATM' : offset > 0 ? `+${offset * interval}` : `${offset * interval}`;
-                          const isSelected = form.strikePrice === strike.toString();
-                          return (
-                            <Button
-                              key={strike}
-                              size="small"
-                              type={isSelected ? 'primary' : 'default'}
-                              onClick={() => setForm((p) => ({ ...p, strikePrice: strike.toString() }))}
-                              style={{ fontSize: 10, fontFamily: 'monospace', borderRadius: 6 }}
-                            >
-                              {lbl} {strike}
-                            </Button>
-                          );
-                        });
-                      })()}
-                    </Space>
-                  </div>
-                )}
-              </Col>
-            ) : (
-              <Col xs={24} sm={12}>
-                <Card styles={{ body: { padding: '12px 16px' } }} style={{ height: '100%', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card-alt)', borderRadius: 10, border: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: '1.4' }}>
-                    {form.instrumentType === 'EQUITY' ? 'Cash Equity segment — no strike or expiry needed.' : 'Futures contract — strike price not applicable.'}
-                  </span>
-                </Card>
-              </Col>
-            )}
-
-            {form.instrumentType !== 'EQUITY' && (
-              <Col xs={24} sm={12}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    Expiry Date *
-                  </span>
-                  <Button
-                    size="small"
-                    type="link"
-                    onClick={() => setIsManualExpiry((p) => !p)}
-                    style={{ padding: 0, height: 'auto', fontSize: 10 }}
-                  >
-                    {isManualExpiry ? 'Smart List' : 'Pick Date'}
-                  </Button>
-                </div>
-                {isManualExpiry ? (
-                  <DatePicker
-                    value={form.expiryDate ? dayjs(form.expiryDate) : null}
-                    onChange={(date, dateStr) => setForm((p) => ({ ...p, expiryDate: dateStr }))}
-                    format="YYYY-MM-DD"
-                    style={{ width: '100%', borderRadius: 10 }}
-                    size="large"
-                  />
-                ) : (
-                  <Select
-                    placeholder="Select Expiry"
-                    value={form.expiryDate || undefined}
-                    onChange={(val) => setForm((p) => ({ ...p, expiryDate: val }))}
-                    style={{ width: '100%' }}
-                    size="large"
-                  >
-                    {availableExpiries.map((date) => {
-                      const d = new Date(date);
-                      const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-                      return <Select.Option key={date} value={date}>{label}</Select.Option>;
-                    })}
-                  </Select>
-                )}
-              </Col>
-            )}
-          </Row>
-
-          {/* Contract preview */}
-          {((form.instrumentType === 'OPTIONS' && form.underlying && form.expiryDate && form.strikePrice) ||
-            (form.instrumentType === 'FUTURES' && form.underlying && form.expiryDate)) && (
-            <Card styles={{ body: { padding: '12px 16px' } }} style={{ borderRadius: 12, backgroundColor: 'var(--bg-card-alt)', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Formatted Contract Code</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#3b82f6', fontSize: 13 }}>
-                  {form.instrumentType === 'OPTIONS'
-                    ? buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType)
-                    : `${form.underlying} ${new Date(form.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }).toUpperCase()} FUT`
-                  }
-                </span>
-              </div>
-            </Card>
-          )}
-
-          {/* Exchange */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-              Exchange
-            </div>
-            <Segmented
-              block
-              value={form.exchange}
-              onChange={(val) => setForm((p) => ({ ...p, exchange: val }))}
-              options={[
-                { label: 'NSE', value: 'NSE' },
-                { label: 'BSE', value: 'BSE' },
-              ]}
-              size="large"
-            />
           </div>
+        </Card>
+      </Col>
 
-          {/* Exposure Preview card */}
-          {form.underlying && parseInt(form.lotSize) > 0 && (
-            <Card
-              styles={{ body: { padding: 16 } }}
-              style={{
-                borderRadius: 12,
-                border: '1px solid rgba(59, 130, 246, 0.2)',
-                background: 'linear-gradient(to right, rgba(59, 130, 246, 0.04), transparent)',
-              }}
-            >
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)', marginBottom: 12 }}>
+      <Col xs={24} lg={8}>
+        {form.underlying && parseInt(form.lotSize) > 0 ? (
+          <Card
+            title={
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
                 Estimated Position Exposure
+              </span>
+            }
+            styles={{ body: { padding: 20 } }}
+            style={{
+              borderRadius: 16,
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              backgroundImage: 'linear-gradient(to bottom, rgba(59, 130, 246, 0.04), transparent)',
+              backgroundColor: 'var(--bg-card)',
+              height: '100%',
+            }}
+          >
+            <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 4 }}>Formula: Spot × Lot Size × Lots</div>
+            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#3b82f6', fontFamily: 'monospace', marginBottom: 16 }}>
+              {spotPrice
+                ? `₹${fmtINR(spotPrice * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 1))}`
+                : '—'
+              }
+            </div>
+            
+            <Divider style={{ margin: '16px 0' }} />
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-faint)' }}>Lot Size</span>
+                <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{form.lotSize || '—'}</strong>
               </div>
-              <Row align="bottom" justify="space-between" gutter={[12, 12]}>
-                <Col>
-                  <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 2 }}>Spot × Lot Size × Lots</div>
-                  <div style={{ fontSize: 20, fontWeight: 'bold', color: '#3b82f6', fontFamily: 'monospace' }}>
-                    {spotPrice
-                      ? `₹${fmtINR(spotPrice * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 1))}`
-                      : '—'
-                    }
-                  </div>
-                </Col>
-                <Col style={{ textAlign: 'right', fontSize: 11, color: 'var(--text-faint)', lineHeight: '1.5' }}>
-                  <div>Lot Size: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{form.lotSize || '—'}</strong></div>
-                  <div>Lots: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{form.quantity || 1}</strong></div>
-                  <div>Units: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 1)}</strong></div>
-                </Col>
-              </Row>
-              {spotPrice && (
-                <div style={{ fontSize: 9, color: 'var(--text-faint)', opacity: 0.6, marginTop: 10 }}>
-                  * Calculated using live spot value of ₹{spotPrice.toFixed(2)}
-                </div>
-              )}
-            </Card>
-          )}
-        </div>
-      </Card>
-    </Col>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-faint)' }}>Lots</span>
+                <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{form.quantity || 1}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-faint)' }}>Total Units</span>
+                <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{(parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 1)}</strong>
+              </div>
+            </div>
+
+            {spotPrice && (
+              <div style={{ fontSize: 9, color: 'var(--text-faint)', opacity: 0.6, marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                * Calculated using live spot value of ₹{spotPrice.toFixed(2)}
+              </div>
+            )}
+          </Card>
+        ) : (
+          <Card
+            title={
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
+                Position Exposure
+              </span>
+            }
+            styles={{ body: { padding: 20 } }}
+            style={{
+              borderRadius: 16,
+              border: '1px solid var(--border)',
+              backgroundColor: 'var(--bg-card)',
+              opacity: 0.6,
+              height: '100%',
+            }}
+          >
+            <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: 12, padding: '24px 0' }}>
+              Select a stock or underlying asset to calculate estimated position exposure.
+            </div>
+          </Card>
+        )}
+      </Col>
+    </>
   );
 }
-
 // ─── Step 2: Execution + Sizing + Settlement ─────────────────────────────────
 
 function Step2Execution({ form, setForm, nseSymbols, charges, pnlPreview }) {
@@ -1458,13 +1497,17 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
             const p = new Date(d); return isNaN(p.getTime()) ? d : p.toISOString().split('T')[0];
           });
           setAvailableExpiries(normalized);
-          if (!form.expiryDate) setForm((p) => ({ ...p, expiryDate: normalized[0] }));
+          if (!form.expiryDate || !normalized.includes(form.expiryDate)) {
+            setForm((p) => ({ ...p, expiryDate: normalized[0] }));
+          }
           return;
         }
       } catch { /* fallback */ }
       const dates = getAllAvailableExpiries(form.underlying);
       setAvailableExpiries(dates);
-      if (!form.expiryDate && dates.length > 0) setForm((p) => ({ ...p, expiryDate: dates[0] }));
+      if (dates.length > 0 && (!form.expiryDate || !dates.includes(form.expiryDate))) {
+        setForm((p) => ({ ...p, expiryDate: dates[0] }));
+      }
     }, 600);
     return () => clearTimeout(timeout);
   }, [form.underlying, currentStep]);
@@ -1478,10 +1521,22 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
 
   const safeSetUnderlying = (symbol, lotSize, exchange) => {
     const hasData = form.strikePrice || form.entryPrice || form.exitPrice;
-    const isDifferent = form.underlying !== symbol || (lotSize && parseInt(form.lotSize) !== parseInt(lotSize));
+    const targetLotSize = form.instrumentType === 'EQUITY' ? '1' : (lotSize || form.lotSize);
+    const isDifferent = form.underlying !== symbol || parseInt(form.lotSize) !== parseInt(targetLotSize);
     const proceed = () => {
       const autoExchange = exchange || (['SENSEX', 'BANKEX'].includes(symbol) ? 'BSE' : 'NSE');
-      setForm((p) => ({ ...p, underlying: symbol, lotSize: lotSize || p.lotSize, exchange: autoExchange, strikePrice: '', entryPrice: '', stopLoss: '', target: '', exitPrice: '', expiryDate: '' }));
+      setForm((p) => ({
+        ...p,
+        underlying: symbol,
+        lotSize: p.instrumentType === 'EQUITY' ? '1' : (lotSize || p.lotSize),
+        exchange: autoExchange,
+        strikePrice: '',
+        entryPrice: '',
+        stopLoss: '',
+        target: '',
+        exitPrice: '',
+        expiryDate: ''
+      }));
       setSearch(symbol);
       setShowDropdown(false);
       fetchSpotPrice(symbol);
@@ -1805,12 +1860,12 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
       {/* Navigation Buttons */}
       <div style={{ display: 'flex', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
         {currentStep > 1 && (
-          <Button size="large" onClick={() => setCurrentStep((p) => p - 1)} style={{ flex: 1, borderRadius: 10 }}>
+          <Button size="large" htmlType="button" onClick={() => setCurrentStep((p) => p - 1)} style={{ flex: 1, borderRadius: 10 }}>
             ← Back
           </Button>
         )}
         {currentStep < 3 ? (
-          <Button size="large" type="primary" onClick={handleNext} style={{ flex: 2, borderRadius: 10 }}>
+          <Button size="large" type="primary" htmlType="button" onClick={handleNext} style={{ flex: 2, borderRadius: 10 }}>
             Continue →
           </Button>
         ) : (
@@ -2234,7 +2289,7 @@ export default function AddTrade() {
 
   const initialForm = {
     underlying: '', instrumentType: 'OPTIONS', optionType: 'CE',
-    tradeType: 'BUY', strikePrice: '', expiryDate: '',
+    tradeType: 'BUY', strikePrice: '', expiryDate: '2026-06-25',
     lotSize: '', quantity: '1', exchange: 'NSE', status: 'OPEN',
     entryPrice: '', entryDate: new Date().toISOString().split('T')[0],
     entryTime: '09:15', exitPrice: '', exitDate: '', exitTime: '15:30',

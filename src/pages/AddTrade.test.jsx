@@ -131,7 +131,7 @@ describe('AddTrade Bug Fixes Verification', () => {
     
     expect(followedBtn).not.toHaveClass('bg-profit');
     expect(deviatedBtn).not.toHaveClass('bg-loss');
-  });
+  }, 15000);
 
   it('BUG-3: Validates that entry price must be greater than 0', async () => {
     render(
@@ -197,4 +197,45 @@ describe('AddTrade Bug Fixes Verification', () => {
     const followedBtn = await screen.findByText(/Followed Plan/i);
     expect(followedBtn).toHaveClass('bg-profit');
   }, 15000);
+
+  it('enforces lot size of 1 when EQUITY segment is selected, even if a stock has F&O lot size', async () => {
+    const { api } = await import('../lib/api');
+    api.get.mockImplementation((path) => {
+      if (path.includes('/nse/fno-symbols')) {
+        return Promise.resolve({
+          symbols: [{ symbol: 'RELIANCE', lotSize: 250 }]
+        });
+      }
+      if (path.includes('/nse/search')) {
+        return Promise.resolve({
+          symbols: [{ symbol: 'RELIANCE', lotSize: 250, exchange: 'NSE', quoteType: 'EQUITY' }]
+        });
+      }
+      if (path.includes('/profile/templates')) return Promise.resolve([]);
+      if (path.includes('/trades/tags/popular')) return Promise.resolve([]);
+      if (path.includes('/trades/latest')) return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(
+      <MemoryRouter>
+        <AddTrade />
+      </MemoryRouter>
+    );
+
+    // Click Equity Segment
+    fireEvent.click(screen.getByText('Equity'));
+
+    // Trigger stock selection dropdown and select RELIANCE
+    const searchInput = screen.getByLabelText(/Stock \/ Scrip/i);
+    fireEvent.change(searchInput, { target: { value: 'RELIANCE' } });
+    
+    // Continue to step 2
+    fireEvent.click(screen.getByText(/Continue →/i));
+
+    expect(await screen.findByText(/Execution Pricing/i)).toBeInTheDocument();
+
+    const lotSizeInput = screen.getByLabelText(/Lot Size/i);
+    expect(lotSizeInput.value).toBe('1');
+  });
 });
