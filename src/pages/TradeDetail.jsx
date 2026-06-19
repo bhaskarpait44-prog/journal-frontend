@@ -333,7 +333,7 @@ function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
     emotionBefore: '',
     emotionAfter: '',
     disciplineRating: 5,
-    followedPlan: true,
+    followedPlan: null,
     mistakeTags: [],
     notes: ''
   });
@@ -344,7 +344,7 @@ function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
         emotionBefore: trade.psychology.emotionBefore || '',
         emotionAfter: trade.psychology.emotionAfter || '',
         disciplineRating: trade.psychology.disciplineRating || 5,
-        followedPlan: trade.psychology.followedPlan ?? true,
+        followedPlan: trade.psychology.followedPlan ?? null,
         mistakeTags: trade.psychology.mistakeTags || [],
         notes: trade.psychology.notes || ''
       });
@@ -403,14 +403,14 @@ function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
             <button 
               type="button" 
               onClick={() => setFormData({...formData, followedPlan: true})}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${formData.followedPlan ? 'bg-profit text-white shadow-lg shadow-profit/20' : 'text-text-faint'}`}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${formData.followedPlan === true ? 'bg-profit text-white shadow-lg shadow-profit/20' : 'text-text-faint'}`}
             >
               Followed
             </button>
             <button 
               type="button" 
               onClick={() => setFormData({...formData, followedPlan: false})}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${!formData.followedPlan ? 'bg-loss text-white shadow-lg shadow-loss/20' : 'text-text-faint'}`}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${formData.followedPlan === false ? 'bg-loss text-white shadow-lg shadow-loss/20' : 'text-text-faint'}`}
             >
               Violated
             </button>

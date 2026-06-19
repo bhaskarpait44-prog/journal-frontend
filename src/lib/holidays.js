@@ -108,6 +108,7 @@ export function getAllAvailableExpiries(symbol, fromDate = new Date()) {
     'BANKNIFTY': 3,
     'FINNIFTY': 2,
     'MIDCPNIFTY': 1,
+    'NIFTYNXT50': 5,
     'SENSEX': 5,
     'BANKEX': 1
   };

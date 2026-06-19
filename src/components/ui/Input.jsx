@@ -14,6 +14,7 @@ export const Input = ({
 }) => {
   const Component = as;
   const isTextArea = as === 'textarea';
+  const inputId = React.useId();
   
   const baseInputStyles = "w-full bg-card-alt border border-border rounded-xl px-4 text-[16px] text-text-primary placeholder:text-text-faint focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent focus:bg-card transition-all duration-150 disabled:opacity-50";
   
@@ -23,7 +24,10 @@ export const Input = ({
   return (
     <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
       {label && !noLabel && (
-        <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider ml-1">
+        <label 
+          htmlFor={inputId}
+          className="text-[11px] font-semibold text-text-muted uppercase tracking-wider ml-1"
+        >
           {label}
         </label>
       )}
@@ -36,6 +40,7 @@ export const Input = ({
         )}
         
         <Component 
+          id={inputId}
           type={as === 'input' ? type : undefined}
           className={`${baseInputStyles} ${heightStyle} ${errorStyles} ${prefix ? 'pl-10' : ''} ${suffix ? 'pr-10' : ''} ${className}`}
           {...props}
