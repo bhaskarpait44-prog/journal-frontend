@@ -32,7 +32,10 @@ import {
   Divider,
   DatePicker,
   TimePicker,
+  Switch,
 } from 'antd';
+
+import { IconPsychology } from '../components/ui/Icons';
 
 // Ant Design Icons
 import {
@@ -72,33 +75,92 @@ const SETUPS = [
   'News Based', 'Post-Earnings', 'Other',
 ];
 
+const BATCH_PSYCHOLOGY_PRESETS = [
+  {
+    id: 'disciplined',
+    name: 'Disciplined Win',
+    icon: '🎯',
+    color: '#10b981',
+    desc: 'Calm execution, followed system',
+    data: {
+      emotionBefore: 'calm',
+      emotionAfter: 'satisfied',
+      disciplineRating: 9,
+      followedPlan: true,
+      mistakeTags: [],
+    },
+  },
+  {
+    id: 'process',
+    name: 'Process Focused',
+    icon: '🧘',
+    color: '#06b6d4',
+    desc: 'Emotion-free, stuck to edge',
+    data: {
+      emotionBefore: 'calm',
+      emotionAfter: 'neutral',
+      disciplineRating: 8,
+      followedPlan: true,
+      mistakeTags: [],
+    },
+  },
+  {
+    id: 'fomo',
+    name: 'FOMO / Impulsive',
+    icon: '⚡',
+    color: '#f59e0b',
+    desc: 'Chased entry, overtraded',
+    data: {
+      emotionBefore: 'overconfident',
+      emotionAfter: 'regret',
+      disciplineRating: 3,
+      followedPlan: false,
+      mistakeTags: ['fomo_entry', 'overtrading'],
+    },
+  },
+  {
+    id: 'tilt',
+    name: 'Revenge / Tilt',
+    icon: '🛑',
+    color: '#ef4444',
+    desc: 'Fighting market, moved stop',
+    data: {
+      emotionBefore: 'revenge',
+      emotionAfter: 'angry',
+      disciplineRating: 2,
+      followedPlan: false,
+      mistakeTags: ['revenge_trade', 'moved_sl'],
+    },
+  },
+];
+
 const EMOTIONS_BEFORE = [
-  { value: 'calm', label: '😌', name: 'Calm' },
-  { value: 'confident', label: '💪', name: 'Confident' },
-  { value: 'overconfident', label: '🤩', name: 'Hyped' },
-  { value: 'fearful', label: '😨', name: 'Fearful' },
-  { value: 'frustrated', label: '😤', name: 'Frustrated' },
-  { value: 'revenge', label: '😡', name: 'Revenge' },
+  { value: 'calm', label: '😌', name: 'Calm', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
+  { value: 'confident', label: '💪', name: 'Confident', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
+  { value: 'overconfident', label: '🤩', name: 'Hyped', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
+  { value: 'fearful', label: '😨', name: 'Fearful', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
+  { value: 'frustrated', label: '😤', name: 'Frustrated', color: '#f97316', bg: 'rgba(249, 115, 22, 0.12)' },
+  { value: 'revenge', label: '😡', name: 'Revenge', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' },
 ];
 
 const EMOTIONS_AFTER = [
-  { value: 'satisfied', label: '😊', name: 'Satisfied' },
-  { value: 'neutral', label: '😐', name: 'Neutral' },
-  { value: 'disappointed', label: '😞', name: 'Disappointed' },
-  { value: 'regret', label: '😔', name: 'Regret' },
-  { value: 'angry', label: '😠', name: 'Angry' },
+  { value: 'satisfied', label: '😊', name: 'Satisfied', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
+  { value: 'neutral', label: '😐', name: 'Neutral', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' },
+  { value: 'disappointed', label: '😞', name: 'Disappointed', color: '#d97706', bg: 'rgba(217, 119, 6, 0.12)' },
+  { value: 'regret', label: '😔', name: 'Regret', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
+  { value: 'angry', label: '😠', name: 'Angry', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' },
 ];
 
 const MISTAKE_TAGS = [
-  { value: 'no_stoploss', label: 'No Stop Loss' },
-  { value: 'revenge_trade', label: 'Revenge Trade' },
-  { value: 'fomo_entry', label: 'FOMO Entry' },
-  { value: 'overtrading', label: 'Overtrading' },
-  { value: 'oversized_position', label: 'Oversized' },
-  { value: 'late_entry', label: 'Late Entry' },
-  { value: 'early_exit', label: 'Early Exit' },
-  { value: 'moved_sl', label: 'Moved SL' },
-  { value: 'no_plan', label: 'No Plan' },
+  { value: 'no_stoploss', label: 'No Stop Loss', icon: '🛑' },
+  { value: 'revenge_trade', label: 'Revenge Trade', icon: '😡' },
+  { value: 'fomo_entry', label: 'FOMO Entry', icon: '⚡' },
+  { value: 'overtrading', label: 'Overtrading', icon: '🔄' },
+  { value: 'oversized_position', label: 'Oversized', icon: '⚖️' },
+  { value: 'late_entry', label: 'Late Entry', icon: '⏳' },
+  { value: 'early_exit', label: 'Early Exit', icon: '🚪' },
+  { value: 'moved_sl', label: 'Moved SL', icon: '↔️' },
+  { value: 'no_plan', label: 'No Plan', icon: '📋' },
 ];
 
 const EXIT_REASONS = [
@@ -191,42 +253,68 @@ const safeParseTime = (timeStr) => {
 
 function EmojiPicker({ label, value, options, onChange }) {
   return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-        {label}
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {label}
+        </span>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            style={{ fontSize: 10, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+          >
+            Clear
+          </button>
+        )}
       </div>
-      <Row gutter={[8, 8]}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(78px, 1fr))',
+        gap: 8,
+      }}>
         {options.map((opt) => {
           const isSelected = value === opt.value;
           return (
-            <Col xs={4} sm={4} md={2} key={opt.value}>
-              <motion.div
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.94 }}
-              >
-                <Card
-                  hoverable
-                  onClick={() => onChange(opt.value)}
-                  style={{
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    borderRadius: 12,
-                    border: isSelected ? '2px solid #3b82f6' : '1px solid var(--border)',
-                    backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-card-alt)',
-                    transition: 'all 0.2s',
-                  }}
-                  styles={{ body: { padding: '12px 4px' } }}
-                >
-                  <div style={{ fontSize: 24, marginBottom: 2 }}>{opt.label}</div>
-                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? '#3b82f6' : 'var(--text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {opt.name}
-                  </div>
-                </Card>
-              </motion.div>
-            </Col>
+            <motion.button
+              type="button"
+              key={opt.value}
+              whileHover={{ scale: 1.04, y: -2 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => onChange(isSelected ? '' : opt.value)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '10px 4px',
+                borderRadius: 12,
+                cursor: 'pointer',
+                border: isSelected ? `2px solid ${opt.color}` : '1px solid var(--border)',
+                backgroundColor: isSelected ? opt.bg : 'var(--bg-card-alt)',
+                boxShadow: isSelected ? `0 4px 14px ${opt.color}28` : 'none',
+                transition: 'all 0.18s ease',
+                outline: 'none',
+              }}
+            >
+              <span style={{ fontSize: 24, lineHeight: 1, marginBottom: 4 }}>{opt.label}</span>
+              <span style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.03em',
+                textTransform: 'uppercase',
+                color: isSelected ? opt.color : 'var(--text-faint)',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {opt.name}
+              </span>
+            </motion.button>
           );
         })}
-      </Row>
+      </div>
     </div>
   );
 }
@@ -234,65 +322,159 @@ function EmojiPicker({ label, value, options, onChange }) {
 // ─── Custom Discipline Slider ───────────────────────────────────────────────
 
 function DisciplineSlider({ value, onChange }) {
-  const pct = ((value - 1) / 9) * 100;
-  const thumbColor = pct < 33 ? '#ef4444' : pct < 67 ? '#facc15' : '#22c55e';
+  const numVal = typeof value === 'number' && !isNaN(value) ? Math.min(10, Math.max(1, value)) : 5;
+
+  const getRatingInfo = (v) => {
+    if (v >= 9) return { label: 'Flawless Discipline', color: '#10b981', icon: '🏆' };
+    if (v >= 7) return { label: 'Solid Execution', color: '#06b6d4', icon: '✅' };
+    if (v >= 5) return { label: 'Moderate / Hesitant', color: '#f59e0b', icon: '⚠️' };
+    if (v >= 3) return { label: 'Impulsive / Off-Plan', color: '#f97316', icon: '⚡' };
+    return { label: 'Complete Tilt / Chaos', color: '#ef4444', icon: '🛑' };
+  };
+
+  const info = getRatingInfo(numVal);
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Discipline Score
         </span>
-        <span style={{ fontSize: 13, fontWeight: 'bold', color: thumbColor, fontFamily: 'monospace' }}>
-          {value}/10
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{
+            fontSize: 10,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            padding: '2px 8px',
+            borderRadius: 6,
+            backgroundColor: `${info.color}18`,
+            color: info.color,
+            border: `1px solid ${info.color}35`,
+          }}>
+            {info.icon} {info.label}
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: info.color, fontFamily: 'monospace' }}>
+            {numVal}/10
+          </span>
+        </div>
       </div>
-      <div className="relative h-3 rounded-full" style={{
-        background: 'linear-gradient(to right, #ef4444 0%, #facc15 50%, #22c55e 100%)',
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(10, 1fr)',
+        gap: 4,
         marginBottom: 8,
       }}>
-        <div
-          className="absolute top-0 right-0 h-full rounded-r-full bg-card-alt/70 transition-all duration-200"
-          style={{ width: `${100 - pct}%` }}
-        />
-        <input
-          type="range"
-          min="1"
-          max="10"
-          value={value}
-          onChange={(e) => onChange(parseInt(e.target.value))}
-          className="absolute inset-0 w-full opacity-0 cursor-pointer h-full"
-          style={{ zIndex: 10 }}
-        />
-        <div
-          className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white shadow-lg transition-all duration-200 pointer-events-none"
-          style={{ left: `calc(${pct}% - 10px)`, background: thumbColor, zIndex: 5 }}
-        />
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => {
+          const isActive = score <= numVal;
+          const isSelected = score === numVal;
+          return (
+            <button
+              type="button"
+              key={score}
+              onClick={() => onChange(score)}
+              style={{
+                height: 30,
+                borderRadius: 8,
+                border: isSelected ? `2px solid ${info.color}` : '1px solid var(--border)',
+                backgroundColor: isActive ? `${info.color}${isSelected ? '35' : '18'}` : 'var(--bg-card-alt)',
+                color: isActive ? info.color : 'var(--text-faint)',
+                fontWeight: isSelected ? 800 : 600,
+                fontSize: 11,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title={`Discipline Rating: ${score}/10`}
+            >
+              {score}
+            </button>
+          );
+        })}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 500, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        <span>Impulsive</span>
-        <span>Mixed</span>
-        <span>Robotic</span>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <span style={{ color: '#ef4444' }}>🛑 1 Impulsive</span>
+        <span style={{ color: '#f59e0b' }}>5 Moderate</span>
+        <span style={{ color: '#10b981' }}>10 Robotic 🏆</span>
       </div>
     </div>
   );
 }
 
-// ─── Psychology Collapse Section ───────────────────────────────────────────
+// ─── Execution Mistakes Tag Cloud ──────────────────────────────────────────
+
+function MistakesTagCloud({ selectedTags = [], onChange }) {
+  const toggleMistake = (tag) => {
+    const next = selectedTags.includes(tag)
+      ? selectedTags.filter((t) => t !== tag)
+      : [...selectedTags, tag];
+    onChange(next);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Execution Mistakes {selectedTags.length > 0 && `(${selectedTags.length} selected)`}
+        </span>
+        {selectedTags.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            style={{ fontSize: 10, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {MISTAKE_TAGS.map((m) => {
+          const active = selectedTags.includes(m.value);
+          return (
+            <motion.button
+              type="button"
+              key={m.value}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => toggleMistake(m.value)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '6px 11px',
+                borderRadius: 8,
+                fontSize: 11,
+                fontWeight: active ? 700 : 500,
+                border: active ? '1px solid #ef4444' : '1px solid var(--border)',
+                backgroundColor: active ? 'rgba(239, 68, 68, 0.12)' : 'var(--bg-card-alt)',
+                color: active ? '#ef4444' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>{m.icon || '⚠️'}</span>
+              <span>{m.label}</span>
+              {active && <span style={{ fontSize: 9, opacity: 0.8 }}>✕</span>}
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Psychology Collapse Section (For Manual Entry) ─────────────────────────
 
 function PsychologySection({ data, onChange }) {
-  const isFilled = data.emotionBefore || data.emotionAfter || data.mistakeTags.length > 0;
-
-  const toggleMistake = (tag) => {
-    const next = data.mistakeTags.includes(tag)
-      ? data.mistakeTags.filter((t) => t !== tag)
-      : [...data.mistakeTags, tag];
-    onChange({ mistakeTags: next });
-  };
+  const isFilled = Boolean(data.emotionBefore || data.emotionAfter || (data.mistakeTags && data.mistakeTags.length > 0) || data.followedPlan !== null);
 
   const collapseHeader = (
     <Space>
-      <span>Trade Psychology &amp; Performance</span>
+      <span style={{ fontWeight: 600 }}>Trade Psychology &amp; Performance</span>
       {isFilled && (
         <Badge status="processing" color="#22c55e" text="Filled" style={{ fontSize: 10, fontWeight: 700 }} />
       )}
@@ -306,7 +488,7 @@ function PsychologySection({ data, onChange }) {
       defaultActiveKey={['psychology']}
       style={{
         border: '1px solid var(--border)',
-        borderRadius: 12,
+        borderRadius: 14,
         backgroundColor: 'var(--bg-card)',
         overflow: 'hidden',
         marginTop: 16,
@@ -315,7 +497,7 @@ function PsychologySection({ data, onChange }) {
         key: 'psychology',
         label: collapseHeader,
         children: (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <EmojiPicker
               label="Entry Mindset"
               value={data.emotionBefore}
@@ -329,9 +511,9 @@ function PsychologySection({ data, onChange }) {
               onChange={(val) => onChange({ emotionAfter: val })}
             />
 
-            <Divider style={{ margin: '8px 0' }} />
+            <Divider style={{ margin: '4px 0' }} />
 
-            <Row gutter={[24, 24]}>
+            <Row gutter={[20, 20]}>
               <Col xs={24} md={12}>
                 <DisciplineSlider
                   value={data.disciplineRating}
@@ -339,8 +521,17 @@ function PsychologySection({ data, onChange }) {
                 />
               </Col>
               <Col xs={24} md={12}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                  Plan Adherence
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Plan Adherence</span>
+                  {data.followedPlan !== null && (
+                    <button
+                      type="button"
+                      onClick={() => onChange({ followedPlan: null })}
+                      style={{ fontSize: 10, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                    >
+                      Reset
+                    </button>
+                  )}
                 </div>
                 <Segmented
                   block
@@ -355,37 +546,19 @@ function PsychologySection({ data, onChange }) {
               </Col>
             </Row>
 
-            <Divider style={{ margin: '8px 0' }} />
+            <Divider style={{ margin: '4px 0' }} />
+
+            <MistakesTagCloud
+              selectedTags={data.mistakeTags || []}
+              onChange={(next) => onChange({ mistakeTags: next })}
+            />
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                Execution Mistakes
-              </div>
-              <Space wrap size={[4, 8]}>
-                {MISTAKE_TAGS.map((m) => {
-                  const active = data.mistakeTags.includes(m.value);
-                  return (
-                    <Button
-                      key={m.value}
-                      size="small"
-                      type={active ? 'primary' : 'default'}
-                      danger={active}
-                      onClick={() => toggleMistake(m.value)}
-                      style={{ borderRadius: 8, fontSize: 10, fontWeight: 600 }}
-                    >
-                      {m.label}
-                    </Button>
-                  );
-                })}
-              </Space>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                 Psychological Debrief
               </div>
               <Input.TextArea
-                rows={4}
+                rows={3}
                 placeholder="How did emotions affect decisions? What will you do differently next time from a mental standpoint?"
                 value={data.notes}
                 onChange={(e) => onChange({ notes: e.target.value })}
@@ -396,6 +569,376 @@ function PsychologySection({ data, onChange }) {
         )
       }]}
     />
+  );
+}
+
+// ─── Batch Psychology Card (For CSV & Broker Batch Sync) ───────────────────
+
+function BatchPsychologyCard({
+  enabled,
+  setEnabled,
+  data,
+  onChange,
+  tradeCountNotice = 'all imported trades in this batch',
+}) {
+  const isFilled = Boolean(data.emotionBefore || data.emotionAfter || (data.mistakeTags && data.mistakeTags.length > 0) || data.followedPlan !== null);
+
+  const resetAll = () => {
+    onChange({
+      emotionBefore: '',
+      emotionAfter: '',
+      disciplineRating: 5,
+      followedPlan: null,
+      mistakeTags: [],
+      notes: '',
+    });
+  };
+
+  const applyPreset = (preset) => {
+    onChange({
+      ...preset.data,
+      notes: data.notes || '',
+    });
+  };
+
+  return (
+    <Card
+      style={{
+        borderRadius: 16,
+        border: enabled ? '1px solid rgba(139, 92, 246, 0.4)' : '1px solid var(--border)',
+        backgroundColor: 'var(--bg-card)',
+        boxShadow: enabled ? '0 8px 30px rgba(139, 92, 246, 0.08)' : 'var(--shadow-card)',
+        transition: 'all 0.25s ease',
+        overflow: 'hidden',
+      }}
+      styles={{ body: { padding: '18px' } }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            background: enabled ? 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)' : 'var(--bg-card-alt)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: enabled ? '#ffffff' : 'var(--text-faint)',
+            fontSize: 20,
+            boxShadow: enabled ? '0 4px 14px rgba(139, 92, 246, 0.35)' : 'none',
+            border: enabled ? 'none' : '1px solid var(--border)',
+            transition: 'all 0.25s ease',
+          }}>
+            🧠
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <strong style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Batch Psychology
+              </strong>
+              {enabled ? (
+                <span style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                  color: '#a855f7',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                }}>
+                  Active
+                </span>
+              ) : (
+                <span style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  backgroundColor: 'var(--bg-card-alt)',
+                  color: 'var(--text-faint)',
+                  border: '1px solid var(--border)',
+                }}>
+                  Off
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
+              Stamp uniform mental state &amp; discipline tags to {tradeCountNotice}
+            </div>
+          </div>
+        </div>
+
+        <Segmented
+          value={enabled ? 'on' : 'off'}
+          onChange={(val) => setEnabled(val === 'on')}
+          options={[
+            { label: 'On', value: 'on' },
+            { label: 'Off', value: 'off' },
+          ]}
+          size="middle"
+        />
+      </div>
+
+      {/* Inactive Banner */}
+      {!enabled && (
+        <div style={{
+          marginTop: 14,
+          padding: '12px 14px',
+          borderRadius: 12,
+          backgroundColor: 'var(--bg-card-alt)',
+          border: '1px dashed var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            Batch psychology is currently <strong style={{ color: 'var(--text-primary)' }}>off</strong>. Trades will be recorded without mindset tags.
+          </div>
+          <Button
+            size="small"
+            type="link"
+            onClick={() => setEnabled(true)}
+            style={{ fontSize: 11, fontWeight: 700, padding: 0 }}
+          >
+            Enable Mindset →
+          </Button>
+        </div>
+      )}
+
+      {/* Active Form */}
+      <AnimatePresence>
+        {enabled && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              
+              {/* Summary Strip & Reset */}
+              <div style={{
+                padding: '9px 12px',
+                borderRadius: 10,
+                backgroundColor: 'rgba(139, 92, 246, 0.06)',
+                border: '1px solid rgba(139, 92, 246, 0.18)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 8,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
+                  <span style={{ fontWeight: 700, color: '#a855f7' }}>Tagging:</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {data.emotionBefore ? data.emotionBefore : 'No entry emotion'}
+                    {' ➔ '}
+                    {data.emotionAfter ? data.emotionAfter : 'No exit emotion'}
+                  </span>
+                  <span style={{ color: 'var(--text-faint)' }}>•</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {data.disciplineRating || 5}/10 Discipline
+                  </span>
+                  <span style={{ color: 'var(--text-faint)' }}>•</span>
+                  <span style={{
+                    color: data.followedPlan === true ? '#10b981' : data.followedPlan === false ? '#ef4444' : 'var(--text-faint)',
+                    fontWeight: 600,
+                  }}>
+                    {data.followedPlan === true ? 'Plan Followed ✓' : data.followedPlan === false ? 'Deviated ✕' : 'Plan: Neutral'}
+                  </span>
+                  {data.mistakeTags?.length > 0 && (
+                    <>
+                      <span style={{ color: 'var(--text-faint)' }}>•</span>
+                      <span style={{ color: '#ef4444', fontWeight: 600 }}>
+                        {data.mistakeTags.length} mistake{data.mistakeTags.length > 1 ? 's' : ''}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {isFilled && (
+                  <button
+                    type="button"
+                    onClick={resetAll}
+                    style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    Reset Batch
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Session Presets */}
+              <div>
+                <div style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  color: 'var(--text-faint)',
+                  letterSpacing: '0.08em',
+                  marginBottom: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}>
+                  <span>⚡ 1-Click Session Presets</span>
+                  <span style={{ fontWeight: 400, textTransform: 'none', fontSize: 10 }}>Auto-fill mindset parameters</span>
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                  gap: 8,
+                }}>
+                  {BATCH_PSYCHOLOGY_PRESETS.map((preset) => (
+                    <motion.button
+                      type="button"
+                      key={preset.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => applyPreset(preset)}
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: 10,
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--bg-card-alt)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        <span>{preset.icon}</span>
+                        <span>{preset.name}</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: 'var(--text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {preset.desc}
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              <Divider style={{ margin: '4px 0' }} />
+
+              {/* Mindset Pickers */}
+              <EmojiPicker
+                label="Batch Entry Mindset"
+                value={data.emotionBefore}
+                options={EMOTIONS_BEFORE}
+                onChange={(val) => onChange({ emotionBefore: val })}
+              />
+
+              <EmojiPicker
+                label="Batch Exit Mindset"
+                value={data.emotionAfter}
+                options={EMOTIONS_AFTER}
+                onChange={(val) => onChange({ emotionAfter: val })}
+              />
+
+              <Divider style={{ margin: '4px 0' }} />
+
+              {/* Discipline & Plan Adherence */}
+              <Row gutter={[20, 20]}>
+                <Col xs={24} sm={12}>
+                  <DisciplineSlider
+                    value={data.disciplineRating}
+                    onChange={(val) => onChange({ disciplineRating: val })}
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Plan Adherence</span>
+                    {data.followedPlan !== null && (
+                      <button
+                        type="button"
+                        onClick={() => onChange({ followedPlan: null })}
+                        style={{ fontSize: 10, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  <Segmented
+                    block
+                    value={data.followedPlan === null ? undefined : data.followedPlan ? 'yes' : 'no'}
+                    onChange={(val) => onChange({ followedPlan: val === 'yes' })}
+                    options={[
+                      { label: 'Followed Plan', value: 'yes' },
+                      { label: 'Deviated', value: 'no' },
+                    ]}
+                    size="large"
+                  />
+                  <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 6 }}>
+                    {data.followedPlan === true
+                      ? '✓ All trades adhered strictly to setup rules & risk limits.'
+                      : data.followedPlan === false
+                      ? '✕ Trades deviated from planned sizing, entry rules, or stop loss.'
+                      : 'Indicate whether this session adhered to strategy rules.'}
+                  </div>
+                </Col>
+              </Row>
+
+              <Divider style={{ margin: '4px 0' }} />
+
+              {/* Execution Mistakes */}
+              <MistakesTagCloud
+                selectedTags={data.mistakeTags || []}
+                onChange={(next) => onChange({ mistakeTags: next })}
+              />
+
+              {/* Notes with Quick Prompts */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  Batch Psychological Debrief
+                </div>
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Log overall mental debrief for this batch (e.g. mental clarity, market conditions, discipline lessons)..."
+                  value={data.notes}
+                  onChange={(e) => onChange({ notes: e.target.value })}
+                  style={{ borderRadius: 10, backgroundColor: 'var(--bg-card-alt)' }}
+                />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  {[
+                    'Patiently waited for high-probability setups',
+                    'Maintained calm discipline throughout session',
+                    'Chased entries due to market volatility',
+                    'Overtraded after initial morning loss',
+                  ].map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      onClick={() => {
+                        const nextNotes = data.notes ? `${data.notes}. ${prompt}` : prompt;
+                        onChange({ notes: nextNotes });
+                      }}
+                      style={{
+                        fontSize: 9,
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        border: '1px dashed var(--border)',
+                        backgroundColor: 'var(--bg-card-alt)',
+                        color: 'var(--text-faint)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      + {prompt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Card>
   );
 }
 
@@ -1925,6 +2468,7 @@ function CSVImportTab({ form, setForm, psychology, setPsychology }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [psychEnabled, setPsychEnabled] = useState(false);
+  const [tradeDate, setTradeDate] = useState(() => dayjs().format('YYYY-MM-DD'));
   const [csvPreview, setCsvPreview] = useState(null);
 
   const beforeUpload = (f) => {
@@ -1941,6 +2485,7 @@ function CSVImportTab({ form, setForm, psychology, setPsychology }) {
     setLoading(true);
     const formData = new FormData();
     formData.append('file', file);
+    if (tradeDate) formData.append('tradeDate', tradeDate);
     if (form.strategy) formData.append('strategy', form.strategy);
     if (form.setupType) formData.append('setupType', form.setupType);
     if (form.notes) formData.append('notes', form.notes);
@@ -1969,10 +2514,10 @@ function CSVImportTab({ form, setForm, psychology, setPsychology }) {
       >
         <p style={{ fontSize: 36, color: '#3b82f6', marginBottom: 8 }}><InboxOutlined /></p>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-          {file ? file.name : 'Click or Drag Broker CSV here'}
+          {file ? file.name : 'Click or Drag Dhan CSV here'}
         </p>
         <p style={{ fontSize: 10, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>
-          Zerodha • Fyers • Upstox
+          Dhan CSV Format Supported
         </p>
       </Upload.Dragger>
 
@@ -2021,7 +2566,19 @@ function CSVImportTab({ form, setForm, psychology, setPsychology }) {
             style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
-              <Row gutter={16}>
+              <Row gutter={[12, 12]}>
+                <Col xs={24}>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Trade Execution Date <span style={{ fontSize: 8, opacity: 0.65, textTransform: 'none' }}>(applied if CSV lacks date column)</span>
+                  </div>
+                  <DatePicker
+                    value={tradeDate ? dayjs(tradeDate) : null}
+                    onChange={(date, dateStr) => setTradeDate(dateStr || dayjs().format('YYYY-MM-DD'))}
+                    format="YYYY-MM-DD"
+                    style={{ width: '100%', borderRadius: 8 }}
+                    allowClear={false}
+                  />
+                </Col>
                 <Col xs={12}>
                   <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: 4 }}>Strategy</div>
                   <Select
@@ -2060,27 +2617,14 @@ function CSVImportTab({ form, setForm, psychology, setPsychology }) {
           </Card>
         </Col>
 
-        <Col xs={24} md={12} className="space-y-4">
-          <Card style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Batch Psychology</strong>
-                <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>Apply mindset metrics to all entries</div>
-              </div>
-              <Segmented
-                value={psychEnabled ? 'on' : 'off'}
-                onChange={(val) => setPsychEnabled(val === 'on')}
-                options={[
-                  { label: 'On', value: 'on' },
-                  { label: 'Off', value: 'off' },
-                ]}
-              />
-            </div>
-          </Card>
-
-          {psychEnabled && (
-            <PsychologySection data={psychology} onChange={(val) => setPsychology((p) => ({ ...p, ...val }))} />
-          )}
+        <Col xs={24} md={12}>
+          <BatchPsychologyCard
+            enabled={psychEnabled}
+            setEnabled={setPsychEnabled}
+            data={psychology}
+            onChange={(val) => setPsychology((p) => ({ ...p, ...val }))}
+            tradeCountNotice="all CSV entries in this batch"
+          />
         </Col>
       </Row>
 
@@ -2103,26 +2647,6 @@ const BROKERS = [
       { key: 'accessToken', label: 'Access Token', placeholder: 'Session Token', type: 'password' },
     ],
     note: 'Tokens expire daily. Refresh in the Dhan portal before running sync.',
-  },
-  {
-    id: 'zerodha',
-    name: 'Zerodha',
-    url: 'kite.zerodha.com',
-    fields: [
-      { key: 'clientId', label: 'Client ID', placeholder: 'ZXXXXX', type: 'text' },
-      { key: 'accessToken', label: 'Access Token', placeholder: 'Kite Connect Session Token', type: 'password' },
-    ],
-    note: 'Generate session token via Kite Connect API dashboard daily.',
-  },
-  {
-    id: 'upstox',
-    name: 'Upstox',
-    url: 'api.upstox.com',
-    fields: [
-      { key: 'clientId', label: 'API Key', placeholder: 'API Key', type: 'text' },
-      { key: 'accessToken', label: 'Access Token', placeholder: 'OAuth Access Token', type: 'password' },
-    ],
-    note: 'Use the Upstox developer console to configure redirect URI and fetch tokens.',
   },
 ];
 
@@ -2292,26 +2816,14 @@ function BrokerAPITab() {
           </Card>
         </Col>
 
-        <Col xs={24} md={12} className="space-y-4">
-          <Card style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>Apply Psychology</strong>
-                <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>Apply mindset metrics to sync results</div>
-              </div>
-              <Segmented
-                value={psychEnabled ? 'on' : 'off'}
-                onChange={(val) => setPsychEnabled(val === 'on')}
-                options={[
-                  { label: 'On', value: 'on' },
-                  { label: 'Off', value: 'off' },
-                ]}
-              />
-            </div>
-          </Card>
-          {psychEnabled && (
-            <PsychologySection data={psychology} onChange={(val) => setPsychology((p) => ({ ...p, ...val }))} />
-          )}
+        <Col xs={24} md={12}>
+          <BatchPsychologyCard
+            enabled={psychEnabled}
+            setEnabled={setPsychEnabled}
+            data={psychology}
+            onChange={(val) => setPsychology((p) => ({ ...p, ...val }))}
+            tradeCountNotice={`all records synchronized from ${broker.name}`}
+          />
         </Col>
       </Row>
 

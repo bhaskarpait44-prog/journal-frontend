@@ -6,12 +6,12 @@
 
 @layer base {
   :root {
-    --bg-base:       #f0f4f8;
+    --bg-base:       #eef2f6;   /* Soft slate canvas background for clear card contrast */
     --bg-card:       #ffffff;
-    --bg-card-alt:   #f8fafc;
+    --bg-card-alt:   #f1f5f9;   /* Slate 100 for nested boxes and chips */
     --bg-sidebar:    #ffffff;
-    --border:        #e2e8f0;
-    --border-strong: #cbd5e1;
+    --border:        #cbd5e1;   /* Slate 300 - clear, crisp, perfectly defined borders in light mode */
+    --border-strong: #94a3b8;   /* Slate 400 */
     --text-primary:  #0f172a;   /* Slate 900 */
     --text-secondary:#334155;   /* Slate 700 */
     --text-muted:    #475569;   /* Slate 600 */
@@ -19,10 +19,10 @@
 
     --mobile-nav-height: 58px;
 
-    /* Light mode card shadows */
-    --shadow-card:   0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-card-md:0 4px 12px rgba(0,0,0,0.09), 0 2px 4px rgba(0,0,0,0.05);
-    --shadow-card-lg:0 8px 30px rgba(0,0,0,0.11), 0 4px 8px rgba(0,0,0,0.06);
+    /* Light mode card shadows: rich ambient elevation and crisp edges */
+    --shadow-card:   0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.06);
+    --shadow-card-md:0 4px 14px -1px rgba(15, 23, 42, 0.10), 0 2px 6px -2px rgba(15, 23, 42, 0.06);
+    --shadow-card-lg:0 10px 25px -3px rgba(15, 23, 42, 0.12), 0 4px 10px -4px rgba(15, 23, 42, 0.08);
   }
 
   .dark {
@@ -98,6 +98,11 @@
 }
 
 @layer components {
+  /* In light mode, ensure any standalone card container has proper subtle depth and visible crisp boundary */
+  :root:not(.dark) .bg-card {
+    box-shadow: var(--shadow-card);
+  }
+
   /* Glass card effect */
   .glass {
     backdrop-filter: blur(12px) saturate(1.5);
@@ -158,4 +163,7 @@
 
   /* Tap highlight removal for mobile */
   .tap-none { -webkit-tap-highlight-color: transparent; }
+
+  /* Base background */
+  .bg-base { background-color: var(--bg-base); }
 }

@@ -19,6 +19,7 @@ import {
   IconEdit, IconPsychology, IconChevronRight, IconChevronDown, 
   IconCalendar, IconArrowUp, IconArrowDown, IconMore
 } from '../components/ui/Icons';
+import { StrategyModal, PsychologyModal } from '../components/trade/TradeIntelligenceModals';
 
 const LIMIT = 20;
 const IST_OFFSET = '+05:30';
@@ -628,213 +629,6 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
   );
 }
 
-function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    strategy: '',
-    setupType: '',
-    notes: '',
-    rating: 3,
-    tags: []
-  });
-
-  useEffect(() => {
-    if (trade) {
-      setFormData({
-        strategy: trade.strategy || '',
-        setupType: trade.setupType || '',
-        notes: trade.notes || '',
-        rating: trade.rating || 3,
-        tags: trade.tags || []
-      });
-    }
-  }, [trade]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await api.put(`/trades/${trade.id}`, formData);
-      toast.success('Trade journal updated');
-      onSuccess();
-      onClose();
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Trade Journal">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Input 
-          label="Trading Strategy" 
-          value={formData.strategy}
-          onChange={e => setFormData({...formData, strategy: e.target.value})}
-          placeholder="e.g. Mean Reversion, Breakout"
-        />
-        <Input 
-          label="Market Setup" 
-          value={formData.setupType}
-          onChange={e => setFormData({...formData, setupType: e.target.value})}
-          placeholder="e.g. Double Bottom, Gap Up"
-        />
-        
-        <div>
-          <label className="text-[11px] font-black text-text-faint uppercase tracking-widest mb-3 block">Confidence Rating</label>
-          <div className="flex gap-2.5">
-            {[1, 2, 3, 4, 5].map(s => (
-              <button 
-                key={s} 
-                type="button"
-                onClick={() => setFormData({...formData, rating: s})}
-                className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg transition-all active:scale-90 ${formData.rating >= s ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : 'bg-card-alt border border-border text-text-faint grayscale opacity-40'}`}
-              >
-                ⭐
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Input 
-          as="textarea"
-          label="Trade Observations"
-          value={formData.notes}
-          onChange={e => setFormData({...formData, notes: e.target.value})}
-          placeholder="What did you learn from this trade?"
-        />
-        
-        <Button variant="primary" className="w-full h-12 shadow-glow-blue" type="submit" loading={loading}>Save Entry</Button>
-      </form>
-    </Modal>
-  );
-}
-
-function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    emotionBefore: '',
-    emotionAfter: '',
-    disciplineRating: 5,
-    followedPlan: null,
-    mistakeTags: [],
-    notes: ''
-  });
-
-  useEffect(() => {
-    if (trade?.psychology) {
-      setFormData({
-        emotionBefore: trade.psychology.emotionBefore || '',
-        emotionAfter: trade.psychology.emotionAfter || '',
-        disciplineRating: trade.psychology.disciplineRating || 5,
-        followedPlan: trade.psychology.followedPlan ?? null,
-        mistakeTags: trade.psychology.mistakeTags || [],
-        notes: trade.psychology.notes || ''
-      });
-    }
-  }, [trade]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await api.put(`/trades/${trade.id}`, { psychology: formData });
-      toast.success('Mindset log saved');
-      onSuccess();
-      onClose();
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const emotions = ['Neutral', 'Calm', 'Fearful', 'Greedy', 'Anxious', 'Confident', 'Bored'];
-  const mistakes = ['FOMO Entry', 'Over-trading', 'Early Exit', 'Late Exit', 'Averaging Down', 'Ignored SL', 'Chasing Price'];
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Mindset Analysis">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Pre-Trade</label>
-            <select 
-              className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
-              value={formData.emotionBefore}
-              onChange={e => setFormData({...formData, emotionBefore: e.target.value})}
-            >
-              <option value="">Feeling...</option>
-              {emotions.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[11px] font-black text-text-faint uppercase tracking-widest">Post-Trade</label>
-            <select 
-              className="w-full h-11 px-4 rounded-xl bg-card-alt border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 outline-none"
-              value={formData.emotionAfter}
-              onChange={e => setFormData({...formData, emotionAfter: e.target.value})}
-            >
-              <option value="">Feeling...</option>
-              {emotions.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between p-4 bg-card-alt rounded-2xl border border-border">
-          <span className="text-sm font-black uppercase tracking-tight text-text-secondary">Execution Discipline</span>
-          <div className="flex bg-card p-1 rounded-xl border border-border">
-            <button 
-              type="button" 
-              onClick={() => setFormData({...formData, followedPlan: true})}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${formData.followedPlan === true ? 'bg-profit text-white shadow-lg shadow-profit/20' : 'text-text-faint'}`}
-            >
-              Followed
-            </button>
-            <button 
-              type="button" 
-              onClick={() => setFormData({...formData, followedPlan: false})}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${formData.followedPlan === false ? 'bg-loss text-white shadow-lg shadow-loss/20' : 'text-text-faint'}`}
-            >
-              Violated
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label className="text-[11px] font-black text-text-faint uppercase tracking-widest mb-3 block">Common Mistakes</label>
-          <div className="flex flex-wrap gap-2">
-            {mistakes.map(m => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => {
-                  const next = formData.mistakeTags.includes(m) 
-                    ? formData.mistakeTags.filter(t => t !== m) 
-                    : [...formData.mistakeTags, m];
-                  setFormData({...formData, mistakeTags: next});
-                }}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase border transition-all ${formData.mistakeTags.includes(m) ? 'bg-loss/10 border-loss/30 text-loss' : 'bg-card-alt border-border text-text-faint'}`}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Input 
-          as="textarea"
-          label="Psychology Notes"
-          value={formData.notes}
-          onChange={e => setFormData({...formData, notes: e.target.value})}
-          placeholder="Describe your mental state during the trade..."
-        />
-        <Button variant="primary" className="w-full h-12 shadow-glow-blue" type="submit" loading={loading}>Save Log</Button>
-      </form>
-    </Modal>
-  );
-}
-
 function ImportCSVModal({ isOpen, onClose, onSuccess }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -858,7 +652,7 @@ function ImportCSVModal({ isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Import Broker CSV">
+    <Modal isOpen={isOpen} onClose={onClose} title="Import Dhan CSV">
       <form onSubmit={handleUpload} className="space-y-6">
         <div className="group border-2 border-dashed border-border rounded-3xl p-10 text-center hover:border-accent hover:bg-accent/5 transition-all cursor-pointer relative">
           <input 
@@ -871,9 +665,9 @@ function ImportCSVModal({ isOpen, onClose, onSuccess }) {
              <IconImport className="w-8 h-8 text-text-faint group-hover:text-accent" />
           </div>
           <p className="text-sm font-black text-text-primary uppercase tracking-tight">
-            {file ? file.name : 'Choose broker file'}
+            {file ? file.name : 'Choose Dhan CSV file'}
           </p>
-          <p className="text-xs text-text-faint mt-1">Zerodha, Fyers, AngelOne supported</p>
+          <p className="text-xs text-text-faint mt-1">Dhan CSV format (Name, Product, Qty, Buy Avg, Sell Avg, LTP, P&L)</p>
         </div>
         <Button variant="primary" className="w-full h-12 shadow-glow-blue" type="submit" disabled={!file} loading={loading}>Process Data</Button>
       </form>

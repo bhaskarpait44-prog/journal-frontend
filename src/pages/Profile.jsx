@@ -95,9 +95,8 @@ export default function Profile() {
     if (!window.confirm('Terminate all active sessions across devices?')) return;
     try {
       await api.delete('/profile/sessions/all');
-      toast.success('Global logout executed');
-      logout();
-      navigate('/login');
+      toast.success('Active sessions cleared');
+      refetchSessions?.();
     } catch (err) {
       toast.error(err.message);
     }
@@ -108,8 +107,8 @@ export default function Profile() {
     try {
       await api.delete('/profile/account', { password: deletePw });
       toast.success('Account infrastructure purged');
-      logout();
-      navigate('/login');
+      setDeleteModal(false);
+      window.location.reload();
     } catch (err) {
       toast.error(err.message);
     }

@@ -26,10 +26,7 @@ async function request(method, path, data, isForm = false) {
   const json = await res.json().catch(() => ({}));
 
   if (res.status === 401) {
-    useAuthStore.getState().logout();
-    if (navigate) navigate('/login');
-    else window.location.href = '/login';
-    throw new Error(json.message || 'Session expired. Please sign in again.');
+    throw new Error(json.message || 'Unauthorized request.');
   }
 
   if (!res.ok) throw new Error(json.message || `Request failed (${res.status})`);

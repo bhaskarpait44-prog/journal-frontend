@@ -8,7 +8,7 @@ import {
 } from '../ui/Icons';
 
 const Sidebar = ({ className = '' }) => {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
 
   const mainItems = [
@@ -24,11 +24,6 @@ const Sidebar = ({ className = '' }) => {
     { name: 'Psychology', path: '/psychology', icon: IconPsychology },
     { name: 'Export', path: '/export', icon: IconExport },
   ];
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const getAvatarColor = (name) => {
     const colors = [
@@ -48,15 +43,15 @@ const Sidebar = ({ className = '' }) => {
       className={({ isActive }) =>
         `group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 ${
           isActive
-            ? 'bg-accent/8 text-accent font-semibold border-l-2 border-accent rounded-l-none'
-            : 'text-text-muted hover:bg-card-alt hover:text-text-primary'
+            ? 'bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold border-l-2 border-blue-600 dark:border-blue-400 rounded-l-none'
+            : 'text-text-primary hover:bg-card-alt hover:text-blue-600 dark:hover:text-blue-400 font-medium'
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <item.icon className={`w-4 h-4 transition-colors ${isActive ? 'text-accent' : 'text-text-faint group-hover:text-text-muted'}`} />
-          <span className="text-sm">{item.name}</span>
+          <item.icon className={`w-4 h-4 transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-text-secondary group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />
+          <span className={`text-sm font-semibold transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-text-primary group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}>{item.name}</span>
         </>
       )}
     </NavLink>
@@ -84,14 +79,14 @@ const Sidebar = ({ className = '' }) => {
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 space-y-6 no-scrollbar">
         <div>
-          <p className="px-3 mb-2 text-[9px] font-bold text-text-faint uppercase tracking-widest">Main</p>
+          <p className="px-3 mb-2 text-[10px] font-bold text-text-muted uppercase tracking-wider">Main</p>
           <nav className="space-y-0.5">
             {mainItems.map((item) => <NavItem key={item.path} item={item} />)}
           </nav>
         </div>
 
         <div>
-          <p className="px-3 mb-2 text-[9px] font-bold text-text-faint uppercase tracking-widest">Tools</p>
+          <p className="px-3 mb-2 text-[10px] font-bold text-text-muted uppercase tracking-wider">Tools</p>
           <nav className="space-y-0.5">
             {toolItems.map((item) => <NavItem key={item.path} item={item} />)}
           </nav>
@@ -103,7 +98,7 @@ const Sidebar = ({ className = '' }) => {
         <div className="bg-card-alt rounded-2xl p-3 border border-border/50">
           <NavLink
             to="/profile"
-            className="flex items-center gap-3 group mb-3"
+            className="flex items-center gap-3 group"
           >
             <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarColor(user?.name)} flex items-center justify-center text-white text-sm font-bold shadow-sm group-hover:scale-105 transition-transform`}>
               {user?.name?.charAt(0).toUpperCase() || 'U'}
@@ -111,22 +106,12 @@ const Sidebar = ({ className = '' }) => {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-text-primary truncate">{user?.name || 'User'}</p>
               <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-black bg-accent/10 text-accent px-1.5 py-0.5 rounded uppercase tracking-tighter">
-                  PRO PLAN
+                <span className="text-[9px] font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                  LOCAL USER
                 </span>
               </div>
             </div>
           </NavLink>
-          
-          <div className="space-y-1">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-text-muted hover:bg-loss/10 hover:text-loss transition-all duration-150 group"
-            >
-              <IconLogout className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              <span className="text-xs font-semibold">Sign Out</span>
-            </button>
-          </div>
         </div>
       </div>
     </aside>

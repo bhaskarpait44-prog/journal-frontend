@@ -5,15 +5,10 @@ import { useAuthStore } from '../../store/authStore';
 import { IconMenu, IconArrowUp, IconBell, IconProfile, IconLogout, IconChevronDown } from '../ui/Icons';
 
 const Navbar = ({ onMenuClick, className = '' }) => {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -38,7 +33,7 @@ const Navbar = ({ onMenuClick, className = '' }) => {
   };
 
   return (
-    <header className={`sticky top-0 z-40 bg-sidebar/80 backdrop-blur-xl border-b border-border px-4 md:px-6 h-14 md:h-[52px] flex items-center justify-between transition-all ${className}`}>
+    <header className={`sticky top-0 z-40 bg-sidebar/80 backdrop-blur-xl border-b border-border shadow-sm px-4 md:px-6 h-14 md:h-[52px] flex items-center justify-between transition-all ${className}`}>
       <div className="flex items-center gap-4">
         {/* Mobile Menu Toggle */}
         <button
@@ -59,10 +54,10 @@ const Navbar = ({ onMenuClick, className = '' }) => {
         </Link>
       </div>
 
-      <div className="flex items-center gap-3 md:gap-4">
-        <ThemeToggle className="hidden sm:flex" />
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+        <ThemeToggle />
         
-        <button className="w-11 h-11 flex items-center justify-center rounded-xl text-text-muted hover:bg-card-alt hover:text-text-primary transition-all relative min-w-[44px] min-h-[44px]">
+        <button className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl text-text-muted hover:bg-card-alt hover:text-text-primary transition-all relative min-w-[40px] min-h-[40px]">
           <IconBell className="w-5 h-5" />
           <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-accent rounded-full border-2 border-sidebar" />
         </button>
@@ -96,16 +91,6 @@ const Navbar = ({ onMenuClick, className = '' }) => {
                 <IconProfile className="w-4 h-4 text-text-faint" />
                 Profile
               </Link>
-              
-              <div className="h-px bg-border/50 my-1" />
-              
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-loss hover:bg-loss/10 transition-all"
-              >
-                <IconLogout className="w-4 h-4" />
-                Sign Out
-              </button>
             </div>
           )}
         </div>

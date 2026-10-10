@@ -9,10 +9,7 @@ import { setNavigate } from './lib/api';
 // Layouts
 import AppShell from './components/layout/AppShell';
 
-// Pages
-import Login from './pages/Login.jsx';
-import Signup from './pages/Signup.jsx';
-import ResetPassword from './pages/ResetPassword.jsx';
+
 import Dashboard from './pages/Dashboard.jsx';
 import Trades from './pages/Trades.jsx';
 import AddTrade from './pages/AddTrade.jsx';
@@ -24,20 +21,7 @@ import Profile from './pages/Profile.jsx';
 import Risk from './pages/Risk.jsx';
 import TradeDetail from './pages/TradeDetail.jsx';
 
-// Route Guards
-const PublicRoute = ({ children }) => {
-  const token = useAuthStore(s => s.token);
-  const isLoggedIn = !!token;
-  if (isLoggedIn) return <Navigate to="/dashboard" replace />;
-  return children;
-};
 
-const ProtectedRoute = ({ children }) => {
-  const token = useAuthStore(s => s.token);
-  const isLoggedIn = !!token;
-  if (!isLoggedIn) return <Navigate to="/login" replace />;
-  return children;
-};
 
 export default function App() {
   const currentTheme = useThemeStore((s) => s.theme);
@@ -64,7 +48,7 @@ export default function App() {
         }
       }}
     >
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppRoutes />
         <Toaster 
           position="top-center" 
@@ -91,23 +75,23 @@ function AppRoutes() {
   return (
     <>
       <Routes>
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/signup" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/reset-password" element={<Navigate to="/dashboard" replace />} />
 
-      <Route path="/" element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="trades" element={<Trades />} />
-        <Route path="trades/:id" element={<TradeDetail />} />
-        <Route path="add-trade" element={<AddTrade />} />
-        <Route path="analytics" element={<Analytics />} />
-        <Route path="psychology" element={<Psychology />} />
-        <Route path="calendar" element={<Calendar />} />
-        <Route path="export" element={<Export />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="risk" element={<Risk />} />
-      </Route>
+        <Route path="/" element={<AppShell />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="trades" element={<Trades />} />
+          <Route path="trades/:id" element={<TradeDetail />} />
+          <Route path="add-trade" element={<AddTrade />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="psychology" element={<Psychology />} />
+          <Route path="calendar" element={<Calendar />} />
+          <Route path="export" element={<Export />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="risk" element={<Risk />} />
+        </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

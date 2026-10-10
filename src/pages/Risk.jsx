@@ -5,7 +5,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { fmtINR } from '../lib/utils';
+import { fmtINR, fmtPct, fmtNum } from '../lib/utils';
 import { toast } from 'sonner';
 import { 
   IconRisk, IconDollar, IconRefresh, IconArrowUp, 
@@ -232,8 +232,8 @@ export default function Risk() {
                 <h4 className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em]">Efficiency Summary</h4>
              </header>
              <div className="grid grid-cols-2 gap-8">
-                <StatItem label="Win Rate" value={`${summary?.winRate || 0}%`} />
-                <StatItem label="Profit Factor" value={summary?.profitFactor || '0.00'} />
+                <StatItem label="Win Rate" value={fmtPct(summary?.winRate, 1)} />
+                <StatItem label="Profit Factor" value={fmtNum(summary?.profitFactor, 2, '0.00')} />
                 <StatItem label="W/L Ratio" value={`${summary?.wins || 0}W : ${summary?.losses || 0}L`} />
                 <StatItem label="Expectancy" value={fmtINR(summary?.expectancy || 0, true)} />
              </div>

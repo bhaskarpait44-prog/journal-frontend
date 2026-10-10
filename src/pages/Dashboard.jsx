@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { fmtINR, fmtDate } from '../lib/utils';
+import { fmtINR, fmtDate, fmtPct, fmtNum } from '../lib/utils';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { PnlSpan } from '../components/ui/PnlSpan';
@@ -55,10 +55,10 @@ export default function Dashboard() {
   }, [chartData]);
 
   const chartTheme = useMemo(() => ({
-    grid:          isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.04)',
-    text:          isDark ? '#7a90b0' : '#64748b',
+    grid:          isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.06)',
+    text:          isDark ? '#7a90b0' : '#475569',
     tooltipBg:     isDark ? '#0d1525' : '#ffffff',
-    tooltipBorder: isDark ? '#1a2a40' : '#e2e8f0',
+    tooltipBorder: isDark ? '#1a2a40' : '#cbd5e1',
   }), [isDark]);
 
   const isLoading   = summaryLoading || chartLoading || tradesLoading;
@@ -115,8 +115,8 @@ export default function Dashboard() {
       {/* ── Hero row: P&L + Win Rate donut ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
-        {/* Big P&L statement — no card border, lets number dominate */}
-        <div className="sm:col-span-2 bg-card border border-border rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+        {/* Big P&L statement */}
+        <div className="sm:col-span-2 bg-card border border-border rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-card">
           {/* Ambient glow */}
           <div className={`absolute -top-20 -right-20 w-56 h-56 rounded-full blur-[80px] opacity-[0.12] pointer-events-none ${isProfitable ? 'bg-profit' : 'bg-loss'}`} />
 
@@ -131,9 +131,9 @@ export default function Dashboard() {
 
           {/* Inline secondary stats */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-5">
-            <InlineStat label="Win Rate"      value={`${summary?.winRate ?? 0}%`}          />
+            <InlineStat label="Win Rate"      value={fmtPct(summary?.winRate, 1)}          />
             <div className="w-px h-4 bg-border" />
-            <InlineStat label="Profit Factor" value={summary?.profitFactor ?? '—'}         />
+            <InlineStat label="Profit Factor" value={fmtNum(summary?.profitFactor, 2)}         />
             <div className="w-px h-4 bg-border" />
             <InlineStat label="Expectancy"    value={fmtINR(summary?.expectancy ?? 0, true)} pnl={summary?.expectancy} />
             <div className="w-px h-4 bg-border" />
@@ -158,7 +158,7 @@ export default function Dashboard() {
         </div>
 
         {/* Win rate donut */}
-        <div className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-between shadow-card">
           <p className="text-[9px] font-black text-text-faint uppercase tracking-[0.2em]">Win Rate</p>
 
           <div className="flex items-center justify-center py-4">
@@ -176,15 +176,17 @@ export default function Dashboard() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black font-mono tabular-nums">{summary?.winRate ?? 0}%</span>
-                <span className="text-[8px] font-bold text-text-faint uppercase tracking-wider mt-0.5">Win Rate</span>
+                <span className="text-xl sm:text-2xl font-black font-mono tabular-nums leading-none">
+                  {fmtPct(summary?.winRate, 1)}
+                </span>
+                <span className="text-[8px] font-bold text-text-faint uppercase tracking-wider mt-1">Win Rate</span>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 mt-auto">
-            <MiniStat label="Best"  value={fmtINR(summary?.bestTrade  ?? 0, true)} pos />
-            <MiniStat label="Worst" value={fmtINR(summary?.worstTrade ?? 0, true)} neg />
+            <MiniStat label="Best"  value={fmtINR(summary?.bestTrade ?? summary?.maxWin ?? 0, true)} pos />
+            <MiniStat label="Worst" value={fmtINR(summary?.worstTrade ?? summary?.maxLoss ?? 0, true)} neg />
           </div>
         </div>
       </div>
@@ -201,7 +203,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Equity curve — takes 3/5 width on large */}
-        <div className="lg:col-span-3 bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="lg:col-span-3 bg-card border border-border rounded-2xl overflow-hidden shadow-card">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div>
               <p className="text-xs font-black text-text-primary tracking-tight">30D Equity Curve</p>
@@ -255,7 +257,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent trades — 2/5 width */}
-        <div className="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
+        <div className="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden flex flex-col shadow-card">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between shrink-0">
             <p className="text-xs font-black text-text-primary tracking-tight">Recent Trades</p>
             <button
@@ -344,7 +346,7 @@ function StatTile({ icon: Icon, label, value, iconColor, iconBg, pnl }) {
   const isPos = pnl != null && pnl >= 0;
   const isNeg = pnl != null && pnl < 0;
   return (
-    <div className="bg-card border border-border rounded-2xl px-4 py-4 flex items-center gap-3 hover:border-border-strong transition-colors">
+    <div className="bg-card border border-border rounded-2xl px-4 py-4 flex items-center gap-3 hover:border-border-strong hover:shadow-card-md transition-all shadow-card">
       <div className={`w-9 h-9 rounded-xl ${iconBg} ${iconColor} flex items-center justify-center shrink-0`}>
         <Icon className="w-4 h-4" />
       </div>
@@ -364,7 +366,7 @@ function QuickAction({ icon: Icon, label, sub, color, bg, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="group flex items-center gap-3 p-4 bg-card border border-border rounded-2xl hover:border-border-strong hover:shadow-[var(--shadow-card-md)] active:scale-[0.98] transition-all duration-200 text-left"
+      className="group flex items-center gap-3 p-4 bg-card border border-border rounded-2xl hover:border-border-strong hover:shadow-card-md active:scale-[0.98] transition-all duration-200 text-left shadow-card"
     >
       <div className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-200`}>
         <Icon className="w-5 h-5" strokeWidth={2.5} />

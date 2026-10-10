@@ -31,8 +31,8 @@ const MobileNav = ({ onMoreClick, className = '' }) => {
 
         const TabContent = ({ isActive }) => (
           <div className="flex flex-col items-center justify-center h-full min-w-[44px]">
-            <tab.icon className={`w-5 h-5 transition-all duration-200 ${isActive ? 'text-accent scale-110' : 'text-text-muted'}`} strokeWidth={isActive ? 2.5 : 2} />
-            <span className={`text-[10px] font-semibold mt-0.5 tracking-wide transition-colors ${isActive ? 'text-accent' : 'text-text-faint'}`}>
+            <tab.icon className={`w-5 h-5 transition-all duration-200 ${isActive ? 'text-accent scale-110' : 'text-text-secondary'}`} strokeWidth={isActive ? 2.5 : 2} />
+            <span className={`text-[10px] font-semibold mt-0.5 tracking-wide transition-colors ${isActive ? 'text-accent font-bold' : 'text-text-secondary'}`}>
               {tab.name}
             </span>
             {isActive && <div className="absolute bottom-1 w-1 h-1 bg-accent rounded-full animate-fade-in" />}

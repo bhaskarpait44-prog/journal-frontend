@@ -4,6 +4,16 @@ export function fmtINR(n, sign = false) {
   return n >= 0 ? `+₹${abs}` : `-₹${abs}`;
 }
 
+export function fmtPct(val, decimals = 1) {
+  if (val == null || isNaN(val)) return '0%';
+  return `${Number(val).toFixed(decimals)}%`;
+}
+
+export function fmtNum(val, decimals = 2, fallback = '—') {
+  if (val == null || isNaN(val)) return fallback;
+  return Number(val).toFixed(decimals);
+}
+
 export function fmtDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });

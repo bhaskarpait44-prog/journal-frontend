@@ -14,7 +14,6 @@ export default {
         warning: '#eab308',
         purple: '#a855f7',
         // Semantic tokens from CSS variables
-        base: 'var(--bg-base)',
         card: 'var(--bg-card)',
         'card-alt': 'var(--bg-card-alt)',
         sidebar: 'var(--bg-sidebar)',
@@ -25,10 +24,13 @@ export default {
         'text-muted': 'var(--text-muted)',
         'text-faint': 'var(--text-faint)',
       },
+      backgroundColor: {
+        base: 'var(--bg-base)',
+      },
       boxShadow: {
-        'card':    '0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.06)',
-        'card-md': '0 4px 12px 0 rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.08)',
-        'card-lg': '0 8px 30px 0 rgba(0,0,0,0.16), 0 4px 8px -2px rgba(0,0,0,0.10)',
+        'card':    'var(--shadow-card)',
+        'card-md': 'var(--shadow-card-md)',
+        'card-lg': 'var(--shadow-card-lg)',
         'glow-blue':  '0 0 24px rgba(59,130,246,0.25)',
         'glow-green': '0 0 24px rgba(34,197,94,0.25)',
         'glow-red':   '0 0 24px rgba(239,68,68,0.20)',
