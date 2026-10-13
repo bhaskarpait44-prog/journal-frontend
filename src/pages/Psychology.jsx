@@ -80,6 +80,42 @@ export default function Psychology() {
     refetchStats();
   };
 
+  const calmTrades = useMemo(() => {
+    if (!stats?.emotionWinRate) return 0;
+    return stats.emotionWinRate
+      .filter(e => e.emotion === 'calm' || e.emotion === 'confident')
+      .reduce((acc, curr) => acc + (curr.trades || 0), 0);
+  }, [stats]);
+
+  const totalEmotionTrades = useMemo(() => {
+    if (!stats?.emotionWinRate) return 0;
+    return stats.emotionWinRate.reduce((acc, curr) => acc + (curr.trades || 0), 0);
+  }, [stats]);
+
+  const calmRate = totalEmotionTrades > 0 ? Math.round((calmTrades / totalEmotionTrades) * 100) : 0;
+
+  const totalMistakeLoss = useMemo(() => {
+    if (!stats?.mistakeFrequency) return 0;
+    return stats.mistakeFrequency.reduce((acc, curr) => {
+      const loss = curr.totalLoss != null ? Number(curr.totalLoss) : Math.abs(Math.min(0, Number(curr.totalPnl || 0)));
+      return acc + loss;
+    }, 0);
+  }, [stats]);
+
+  const totalMistakesCount = useMemo(() => {
+    if (!stats?.mistakeFrequency) return 0;
+    return stats.mistakeFrequency.reduce((acc, curr) => acc + (curr.count || 0), 0);
+  }, [stats]);
+
+  const topMistakeItem = useMemo(() => {
+    if (!stats?.mistakeFrequency || stats.mistakeFrequency.length === 0) return null;
+    return [...stats.mistakeFrequency].sort((a, b) => (b.count || 0) - (a.count || 0))[0];
+  }, [stats]);
+
+  const insights = useMemo(() => {
+    return generateInsights(stats);
+  }, [stats]);
+
   const isLoading = statsLoading;
 
   if (isLoading) return <PsychologySkeleton />;
@@ -159,40 +195,6 @@ export default function Psychology() {
       </div>
     );
   }
-
-  const calmTrades = useMemo(() => {
-    if (!stats?.emotionWinRate) return 0;
-    return stats.emotionWinRate
-      .filter(e => e.emotion === 'calm' || e.emotion === 'confident')
-      .reduce((acc, curr) => acc + (curr.trades || 0), 0);
-  }, [stats]);
-
-  const totalEmotionTrades = useMemo(() => {
-    if (!stats?.emotionWinRate) return 0;
-    return stats.emotionWinRate.reduce((acc, curr) => acc + (curr.trades || 0), 0);
-  }, [stats]);
-
-  const calmRate = totalEmotionTrades > 0 ? Math.round((calmTrades / totalEmotionTrades) * 100) : 0;
-
-  const totalMistakeLoss = useMemo(() => {
-    if (!stats?.mistakeFrequency) return 0;
-    return stats.mistakeFrequency.reduce((acc, curr) => {
-      const loss = curr.totalLoss != null ? Number(curr.totalLoss) : Math.abs(Math.min(0, Number(curr.totalPnl || 0)));
-      return acc + loss;
-    }, 0);
-  }, [stats]);
-
-  const totalMistakesCount = useMemo(() => {
-    if (!stats?.mistakeFrequency) return 0;
-    return stats.mistakeFrequency.reduce((acc, curr) => acc + (curr.count || 0), 0);
-  }, [stats]);
-
-  const topMistakeItem = useMemo(() => {
-    if (!stats?.mistakeFrequency || stats.mistakeFrequency.length === 0) return null;
-    return [...stats.mistakeFrequency].sort((a, b) => (b.count || 0) - (a.count || 0))[0];
-  }, [stats]);
-
-  const insights = generateInsights(stats);
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-6 sm:space-y-8 animate-fade-up px-3 sm:px-6 pb-16 sm:pb-12">
@@ -903,6 +905,7 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function generateInsights(d) {
+  if (!d) return [];
   const insights = [];
 
   if (d.revengeTrades > 0) {
