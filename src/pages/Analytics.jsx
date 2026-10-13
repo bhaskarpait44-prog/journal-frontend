@@ -241,33 +241,37 @@ const Analytics = () => {
         />
       </div>
 
-      {/* Sizing & Capital Allocation Card */}
+      {/* How Much to Risk Per Trade */}
       {summary?.kellyPct > 0 && (
         <Card variant="flat" className="bg-card-alt border border-accent/20">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-1">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-accent/10 flex items-center justify-center text-blue-700 dark:text-blue-400 shrink-0 shadow-inner">
-                 <IconRefresh className="w-5 h-5" strokeWidth={2.5} />
+          <div className="flex flex-col gap-3 p-1">
+            {/* Title */}
+            <div>
+              <h4 className="text-xs sm:text-sm font-black uppercase tracking-tight text-text-primary">How Much to Risk Per Trade</h4>
+              <p className="text-[11px] text-text-muted mt-0.5">Based on your win rate of <span className="font-bold text-text-secondary">{Number(summary?.winRate || 0).toFixed(1)}%</span></p>
+            </div>
+            {/* Three tiles */}
+            <div className="flex flex-wrap gap-3">
+              {/* Safe */}
+              <div className="flex-1 min-w-[130px] rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-4 py-3">
+                <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">&#x2705; Safe Bet</p>
+                <p className="text-xl font-black text-emerald-700 dark:text-emerald-300 mt-1">{(summary.kellyPct / 2).toFixed(1)}%</p>
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-0.5">of your capital per trade</p>
               </div>
-              <div>
-                <h4 className="text-xs sm:text-sm font-black uppercase tracking-tight text-text-primary">Capital Allocation Intelligence</h4>
-                <p className="text-[11px] font-bold text-text-muted uppercase tracking-wider mt-0.5">Based on your historical win rate & risk/reward dynamics</p>
+              {/* Aggressive */}
+              <div className="flex-1 min-w-[130px] rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-4 py-3">
+                <p className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wide">&#x26A1; Aggressive</p>
+                <p className="text-xl font-black text-blue-700 dark:text-blue-300 mt-1">{Number(summary.kellyPct).toFixed(1)}%</p>
+                <p className="text-[11px] text-blue-600 dark:text-blue-500 mt-0.5">of your capital per trade</p>
+              </div>
+              {/* Hard limit */}
+              <div className="flex-1 min-w-[130px] rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-4 py-3">
+                <p className="text-[10px] font-bold text-red-700 dark:text-red-400 uppercase tracking-wide">&#x1F6AB; Never Exceed</p>
+                <p className="text-xl font-black text-red-700 dark:text-red-300 mt-1">&le; {Math.min(5, summary.kellyPct / 2).toFixed(1)}%</p>
+                <p className="text-[11px] text-red-600 dark:text-red-500 mt-0.5">hard limit per trade</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-               <div className="px-3.5 py-1.5 rounded-xl bg-card border border-border flex flex-col">
-                  <span className="text-[10px] font-black text-text-muted uppercase">Kelly Full</span>
-                  <span className="text-sm font-black text-blue-700 dark:text-blue-400">{Number(summary.kellyPct).toFixed(1)}%</span>
-               </div>
-               <div className="px-3.5 py-1.5 rounded-xl bg-card border border-border flex flex-col">
-                  <span className="text-[10px] font-black text-text-muted uppercase">Half Kelly</span>
-                  <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">{(summary.kellyPct / 2).toFixed(1)}%</span>
-               </div>
-               <div className="px-3.5 py-2 rounded-xl bg-accent text-white flex items-center gap-2 shadow-sm">
-                  <span className="text-[10px] font-black uppercase">Max Risk:</span>
-                  <span className="text-xs font-black">≤ {Math.min(5, summary.kellyPct / 2).toFixed(1)}% / trade</span>
-               </div>
-            </div>
+            <p className="text-[11px] text-text-muted">&#x1F4A1; These numbers are auto-calculated from your actual trade history. The safer you play, the longer you stay in the game.</p>
           </div>
         </Card>
       )}
