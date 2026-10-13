@@ -5,7 +5,6 @@ import { useApi } from '../hooks/useApi';
 import { api } from '../lib/api';
 import { fmtINR, fmtDate } from '../lib/utils';
 
-// UI Components
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -14,10 +13,9 @@ import { Modal } from '../components/ui/Modal';
 import { PnlSpan } from '../components/ui/PnlSpan';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
-import { 
-  IconFilter, IconPlus, IconImport, IconSearch, IconTrash, 
-  IconEdit, IconPsychology, IconChevronRight, IconChevronDown, 
-  IconCalendar, IconArrowUp, IconArrowDown, IconMore
+import {
+  IconFilter, IconPlus, IconImport, IconSearch, IconTrash,
+  IconEdit, IconPsychology, IconChevronDown, IconCalendar
 } from '../components/ui/Icons';
 import { StrategyModal, PsychologyModal } from '../components/trade/TradeIntelligenceModals';
 
@@ -32,12 +30,10 @@ function combineIstDateTime(date, time = '15:30') {
 export default function Trades() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  
-  // State
+
   const [filters, setFilters] = useState({
     status: searchParams.get('status') || '',
     instrumentType: searchParams.get('instrumentType') || '',
-    optionType: searchParams.get('optionType') || '',
     symbol: searchParams.get('symbol') || '',
     from: searchParams.get('from') || '',
     to: searchParams.get('to') || '',
@@ -45,23 +41,16 @@ export default function Trades() {
   const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showFilters, setShowFilters] = useState(false);
-  
-  // Modals state
+
   const [activeTrade, setActiveTrade] = useState(null);
   const [modals, setModals] = useState({
-    close: false,
-    strategy: false,
-    psychology: false,
-    import: false,
-    bulkStrategy: false
+    close: false, strategy: false, psychology: false, import: false, bulkStrategy: false
   });
 
-  // Query Params
   const query = useMemo(() => {
     const params = new URLSearchParams();
     if (filters.status) params.append('status', filters.status);
     if (filters.instrumentType) params.append('instrumentType', filters.instrumentType);
-    if (filters.optionType) params.append('optionType', filters.optionType);
     if (filters.symbol) params.append('symbol', filters.symbol);
     if (filters.from) params.append('from', filters.from);
     if (filters.to) params.append('to', filters.to);
@@ -70,18 +59,13 @@ export default function Trades() {
     return params.toString();
   }, [filters, page]);
 
-  // Data Fetching
   const { data, loading, refetch } = useApi(`/trades?${query}`);
   const trades = data?.trades || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / LIMIT);
 
-  // Sync URL
-  useEffect(() => {
-    setSearchParams(query);
-  }, [query, setSearchParams]);
+  useEffect(() => { setSearchParams(query); }, [query, setSearchParams]);
 
-  // Handlers
   const updateFilters = (newFilters) => {
     setFilters(newFilters);
     setPage(1);
@@ -96,9 +80,7 @@ export default function Trades() {
     updateFilters({ ...filters, [name]: value });
   };
 
-  const clearFilters = () => {
-    updateFilters({ status: '', optionType: '', symbol: '', from: '', to: '' });
-  };
+  const clearFilters = () => updateFilters({ status: '', instrumentType: '', symbol: '', from: '', to: '' });
 
   const handlePageChange = (newPage) => {
     setPage(newPage);
@@ -110,15 +92,13 @@ export default function Trades() {
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === trades.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(trades.map(t => t.id)));
+    setSelectedIds(selectedIds.size === trades.length ? new Set() : new Set(trades.map(t => t.id)));
   };
 
   const openModal = (type, trade = null) => {
@@ -132,14 +112,12 @@ export default function Trades() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this trade?')) return;
+    if (!window.confirm('Delete this trade?')) return;
     try {
       await api.delete(`/trades/${id}`);
       toast.success('Trade deleted');
       refetch();
-    } catch (err) {
-      toast.error(err.message);
-    }
+    } catch (err) { toast.error(err.message); }
   };
 
   const handleBulkDelete = async () => {
@@ -149,133 +127,130 @@ export default function Trades() {
       toast.success('Trades deleted');
       setSelectedIds(new Set());
       refetch();
-    } catch (err) {
-      toast.error(err.message);
-    }
+    } catch (err) { toast.error(err.message); }
   };
 
-  const activeFiltersCount = Object.values(filters).filter(v => !!v).length;
+  const activeFiltersCount = Object.values(filters).filter(Boolean).length;
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fade-up">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4 animate-fade-up">
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black font-heading tracking-tight text-text-primary">Trade Book</h1>
-          <p className="text-sm font-medium text-text-faint mt-1">{total} records found</p>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Trades</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{total} records</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="secondary" 
-            onClick={() => openModal('import')}
-            className="flex-1 sm:flex-none min-h-[44px]"
-          >
+          <Button variant="secondary" onClick={() => openModal('import')} className="text-xs font-semibold">
             <IconImport className="w-4 h-4 mr-1.5" />
-            <span className="text-xs font-bold sm:hidden">Import</span>
-            <span className="text-xs font-bold hidden sm:inline">Import CSV</span>
+            Import
           </Button>
-          <Button 
-            variant="primary"
-            onClick={() => navigate('/add-trade')}
-            className="flex-1 sm:flex-none shadow-glow-blue min-h-[44px]"
-          >
+          <Button variant="primary" onClick={() => navigate('/add-trade')} className="text-xs font-semibold">
             <IconPlus className="w-4 h-4 mr-1.5" strokeWidth={2.5} />
-            <span className="text-xs font-bold">Add Trade</span>
+            Add Trade
           </Button>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <Card variant="flat" className="p-3">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-          <div className="flex-1 flex items-center gap-3">
-            <div className="relative flex-1">
-              <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
-              <input 
-                type="text"
-                placeholder="Search symbol..."
-                name="symbol"
-                value={filters.symbol}
-                onChange={handleFilterChange}
-                className="w-full h-11 pl-10 pr-4 rounded-xl bg-card border border-border focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all text-sm font-medium"
-              />
-            </div>
-            <Button 
-              variant={showFilters ? 'primary' : 'secondary'} 
-              className="lg:hidden h-11 px-3 sm:px-4 rounded-xl min-w-[44px]"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <IconFilter className="w-4 h-4 mr-1.5" />
-              <span className="text-xs uppercase tracking-wider font-bold">Filters</span>
-              {activeFiltersCount > 0 && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-black">{activeFiltersCount}</span>}
-            </Button>
+      {/* ── Search + Filter Bar ─────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          {/* Search */}
+          <div className="relative flex-1">
+            <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search symbol..."
+              name="symbol"
+              value={filters.symbol}
+              onChange={handleFilterChange}
+              className="w-full h-10 pl-10 pr-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-blue-400 transition-colors"
+            />
           </div>
+          {/* Filter toggle */}
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            className={`flex items-center gap-1.5 px-3 h-10 rounded-xl border text-sm font-medium transition-colors ${
+              showFilters || activeFiltersCount > 0
+                ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400'
+            }`}
+          >
+            <IconFilter className="w-4 h-4" />
+            Filters
+            {activeFiltersCount > 0 && (
+              <span className="bg-blue-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+        </div>
 
-          <div className={`${showFilters ? 'grid' : 'hidden'} lg:flex grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 lg:items-center gap-3 animate-fade-in`}>
-            <select 
+        {/* Expanded filters */}
+        {showFilters && (
+          <div className="flex flex-wrap gap-2 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
+            <select
               name="status"
               value={filters.status}
               onChange={handleFilterChange}
-              className="h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none"
+              className="h-9 px-3 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-blue-400"
             >
               <option value="">Status: All</option>
               <option value="OPEN">Open</option>
               <option value="CLOSED">Closed</option>
             </select>
-            <select 
+
+            <select
               name="instrumentType"
               value={filters.instrumentType}
               onChange={handleFilterChange}
-              className="h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none"
+              className="h-9 px-3 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-blue-400"
             >
               <option value="">Segment: All</option>
               <option value="EQUITY">Equity</option>
               <option value="FUTURES">Futures</option>
               <option value="OPTIONS">Options</option>
             </select>
-            <select 
-              name="optionType"
-              value={filters.optionType}
-              onChange={handleFilterChange}
-              className="h-11 px-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none"
-            >
-              <option value="">Type: All</option>
-              <option value="CE">Call (CE)</option>
-              <option value="PE">Put (PE)</option>
-            </select>
-            <div className="relative group">
-              <IconCalendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-accent" />
-              <input 
+
+            <div className="relative">
+              <IconCalendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+              <input
                 type="date"
                 name="from"
                 value={filters.from}
                 onChange={handleFilterChange}
-                className="h-11 pl-10 pr-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none w-full"
+                className="h-9 pl-8 pr-3 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-blue-400"
               />
             </div>
-            <div className="relative group">
-              <IconCalendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-accent" />
-              <input 
+
+            <div className="relative">
+              <IconCalendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+              <input
                 type="date"
                 name="to"
                 value={filters.to}
                 onChange={handleFilterChange}
-                className="h-11 pl-10 pr-4 rounded-xl bg-card border border-border text-sm font-bold focus:ring-2 focus:ring-accent/20 transition-all outline-none w-full"
+                className="h-9 pl-8 pr-3 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-blue-400"
               />
             </div>
+
             {activeFiltersCount > 0 && (
-              <Button variant="ghost" onClick={clearFilters} className="text-loss h-11 px-4 rounded-xl hover:bg-loss/10">
-                Clear
-              </Button>
+              <button
+                onClick={clearFilters}
+                className="h-9 px-3 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+              >
+                Clear all
+              </button>
             )}
           </div>
-        </div>
-      </Card>
+        )}
+      </div>
 
-      {/* Bulk Actions */}
+      {/* ── Bulk Actions ────────────────────────────────────────────────── */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 p-4 bg-accent/8 border border-accent/20 rounded-2xl animate-scale-in">
-          <span className="text-sm font-black text-accent tracking-tight">{selectedIds.size} selected</span>
+        <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+          <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{selectedIds.size} selected</span>
           <div className="flex items-center gap-2 ml-auto">
             <Button size="sm" variant="secondary" onClick={() => openModal('bulkStrategy')}>Tag Strategy</Button>
             <Button size="sm" variant="danger" onClick={handleBulkDelete}>Delete</Button>
@@ -283,246 +258,195 @@ export default function Trades() {
         </div>
       )}
 
-      {/* Trades Display */}
-      <div className="relative">
-        {loading && !trades.length ? (
-          <div className="space-y-4">
-            {[...Array(6)].map((_, i) => <Skeleton key={i} height="84px" className="rounded-2xl" />)}
-          </div>
-        ) : trades.length > 0 ? (
-          <>
-            {/* Desktop Table */}
-            <div className="hidden min-[900px]:block overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-card-alt/50 border-b border-border">
-                  <tr>
-                    <th className="p-4 w-12 text-center">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedIds.size === trades.length} 
-                        onChange={toggleSelectAll}
-                        className="rounded-md border-border text-accent focus:ring-accent/30 w-4 h-4"
-                      />
-                    </th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint">Symbol / Strategy</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint">Type</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint text-center">Qty</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint">Entry Details</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint">Exit Details</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint text-right">Realized P&L</th>
-                    <th className="p-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-faint text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {trades.map(trade => (
-                    <tr 
-                      key={trade.id} 
-                      className={`group hover:bg-card-alt/30 transition-all duration-150 border-l-4 ${trade.status === 'OPEN' ? 'border-blue-500/0 hover:border-blue-500' : (trade.pnl >= 0 ? 'border-profit/0 hover:border-profit' : 'border-loss/0 hover:border-loss')}`}
-                    >
-                      <td className="p-4 text-center">
-                        <input 
-                          type="checkbox" 
-                          checked={selectedIds.has(trade.id)} 
-                          onChange={() => toggleSelect(trade.id)}
-                          className="rounded-md border-border text-accent focus:ring-accent/30 w-4 h-4"
-                        />
-                      </td>
-                      <td className="p-4" onClick={() => navigate(`/trades/${trade.id}`)}>
-                        <div className="cursor-pointer">
-                          <div className="flex items-center gap-2">
-                            <p className="font-black text-sm text-text-primary group-hover:text-accent transition-colors">{trade.symbol}</p>
-                            {trade.instrumentType !== 'OPTIONS' && trade.instrumentType && (
-                              <Badge className="bg-card-alt text-text-faint text-[8px] border-border py-0 h-4 px-1">{trade.instrumentType}</Badge>
-                            )}
-                          </div>
-                          <p className="text-[10px] font-bold text-text-faint uppercase tracking-tighter mt-0.5">
-                            {trade.strategy || 'Uncategorized'}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="p-4"><Badge type={trade.tradeType} /></td>
-                      <td className="p-4 text-center font-mono font-bold text-sm text-text-secondary">{trade.quantity}</td>
-                      <td className="p-4">
-                        <div className="text-sm font-black text-text-primary">₹{trade.entryPrice}</div>
-                        <div className="text-[10px] font-medium text-text-faint uppercase tracking-tighter">{fmtDate(trade.entryDate)}</div>
-                      </td>
-                      <td className="p-4">
-                        {trade.status === 'OPEN' ? (
-                          <Badge type="OPEN">OPEN</Badge>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-black text-text-primary">₹{trade.exitPrice}</span>
-                              {trade.exitReason && (
-                                <Badge className={
-                                  trade.exitReason === 'TARGET_HIT'   ? 'bg-profit/10 text-profit border-profit/20' :
-                                  trade.exitReason === 'STOPLOSS_HIT' ? 'bg-loss/10 text-loss border-loss/20' :
-                                                                        'bg-card-alt text-text-faint border-border'
-                                }>
-                                  {trade.exitReason === 'TARGET_HIT'   ? '🎯 Target' :
-                                   trade.exitReason === 'STOPLOSS_HIT' ? '🛑 SL Hit' : 'Manual'}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-[10px] font-medium text-text-faint uppercase tracking-tighter">{fmtDate(trade.exitDate)}</div>
-                          </>
-                        )}
-                      </td>
-                      <td className="p-4 text-right">
-                        <PnlSpan value={trade.pnl} className="text-sm font-black" />
-                        <div className="text-[9px] font-bold text-text-faint mt-0.5">
-                          {trade.charges > 0 ? `NET OF ${fmtINR(trade.charges)} CHG` : ''}
-                        </div>
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                          {trade.status === 'OPEN' && (
-                            <button
-                              onClick={() => openModal('close', trade)}
-                              className="px-3 py-1.5 rounded-lg bg-profit/10 text-profit text-[10px] font-black uppercase tracking-widest hover:bg-profit hover:text-white transition-all"
-                            >
-                              Close
-                            </button>
-                          )}
-                          <button onClick={() => openModal('strategy', trade)} className="p-2 rounded-lg hover:bg-accent/10 text-accent transition-colors" title="Journal"><IconEdit className="w-4 h-4" /></button>
-                          <button onClick={() => openModal('psychology', trade)} className="p-2 rounded-lg hover:bg-violet-500/10 text-violet-500 transition-colors" title="Psychology"><IconPsychology className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete(trade.id)} className="p-2 rounded-lg hover:bg-loss/10 text-loss transition-colors" title="Delete"><IconTrash className="w-4 h-4" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Cards */}
-            <div className="min-[900px]:hidden space-y-4">
-              {trades.map(trade => (
-                <Card 
-                  key={trade.id} 
-                  padding="p-0" 
-                  className={`overflow-hidden border-l-4 ${trade.status === 'OPEN' ? 'border-blue-500' : (trade.pnl >= 0 ? 'border-profit' : 'border-loss')}`}
-                  onClick={() => navigate(`/trades/${trade.id}`)}
-                >
-                  <div className="p-4 flex items-center justify-between border-b border-border bg-card-alt/20">
-                    <div className="flex items-center gap-2">
-                      <label 
-                        className="flex items-center justify-center min-w-[44px] min-h-[44px] -m-2 p-2 cursor-pointer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input 
-                          type="checkbox" 
-                          checked={selectedIds.has(trade.id)} 
-                          onChange={() => toggleSelect(trade.id)}
-                          className="rounded-md border-border text-accent w-4 h-4 cursor-pointer"
-                        />
-                      </label>
-                      <div className="flex flex-wrap items-center gap-1.5 ml-1">
-                        <div className="font-black text-sm">{trade.symbol}</div>
-                        <Badge type={trade.tradeType} className="scale-75 origin-left" />
-                      </div>
-                    </div>
-                    <div className="text-[10px] font-bold text-text-faint uppercase tracking-tighter">{fmtDate(trade.entryDate)}</div>
-                  </div>
-                  <div className="p-4 grid grid-cols-3 gap-2 text-center text-xs">
-                    <div>
-                      <p className="text-[9px] text-text-faint font-black uppercase tracking-widest mb-1">Entry</p>
-                      <p className="text-sm font-black">₹{trade.entryPrice}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-text-faint font-black uppercase tracking-widest mb-1">Exit</p>
-                      <p className="text-sm font-black">{trade.status === 'OPEN' ? '—' : `₹${trade.exitPrice}`}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] text-text-faint font-black uppercase tracking-widest mb-1">P&L</p>
-                      <PnlSpan value={trade.pnl} className="text-base font-black" />
-                    </div>
-                  </div>
-                  <div className="px-4 pb-4 flex items-center justify-between gap-2 border-t border-border/40 pt-3">
-                    <div>
-                      {trade.status === 'OPEN' && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openModal('close', trade); }}
-                          className="min-h-[44px] px-3.5 rounded-xl bg-profit/10 text-profit text-xs font-black uppercase tracking-wider hover:bg-profit hover:text-white transition-all flex items-center"
-                        >
-                          Close Trade
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 ml-auto">
-                      <button onClick={(e) => { e.stopPropagation(); openModal('strategy', trade); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-card-alt border border-border text-accent transition-colors" title="Journal"><IconEdit className="w-4 h-4" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); openModal('psychology', trade); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-card-alt border border-border text-violet-500 transition-colors" title="Psychology"><IconPsychology className="w-4 h-4" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-card-alt border border-border text-loss transition-colors" title="Delete"><IconTrash className="w-4 h-4" /></button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </>
-        ) : (
-          <EmptyState 
-            title="Empty Trade Book" 
-            message="No trades match your current filters. Clear filters or add your first trade."
-          />
-        )}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 border-t border-border mt-4">
-          <p className="text-xs font-bold text-text-faint uppercase tracking-widest text-center sm:text-left">
-            Showing <span className="text-text-primary">{(page - 1) * LIMIT + 1}</span> to <span className="text-text-primary">{Math.min(page * LIMIT, total)}</span> of {total} trades
-          </p>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              disabled={page === 1}
-              onClick={() => handlePageChange(page - 1)}
-              className="rounded-xl h-11 px-4 min-h-[44px]"
-            >
-              <IconChevronDown className="w-4 h-4 rotate-90 mr-1.5" />
-              Prev
-            </Button>
-            
-            <div className="hidden sm:flex items-center gap-1">
-              {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                let p = page - 2 + i;
-                if (page <= 2) p = i + 1;
-                if (page >= totalPages - 1) p = totalPages - 4 + i;
-                if (p <= 0 || p > totalPages) return null;
-                
-                return (
-                  <button
-                    key={p}
-                    onClick={() => handlePageChange(p)}
-                    className={`w-10 h-10 rounded-full text-xs font-black transition-all ${page === p ? 'bg-accent text-white shadow-glow-blue scale-110' : 'text-text-muted hover:bg-card-alt hover:text-text-primary'}`}
+      {/* ── Trades List ─────────────────────────────────────────────────── */}
+      {loading && !trades.length ? (
+        <div className="space-y-2">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} height="68px" className="rounded-xl" />)}
+        </div>
+      ) : trades.length > 0 ? (
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                  <th className="p-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === trades.length && trades.length > 0}
+                      onChange={toggleSelectAll}
+                      className="rounded border-zinc-300 text-blue-600 w-4 h-4 cursor-pointer"
+                    />
+                  </th>
+                  <th className="p-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Symbol</th>
+                  <th className="p-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Type</th>
+                  <th className="p-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400 text-center">Qty</th>
+                  <th className="p-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Entry</th>
+                  <th className="p-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Exit</th>
+                  <th className="p-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400 text-right">P&L</th>
+                  <th className="p-3 w-28"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {trades.map(trade => (
+                  <tr
+                    key={trade.id}
+                    className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
                   >
-                    {p}
-                  </button>
-                );
-              })}
-            </div>
+                    <td className="p-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(trade.id)}
+                        onChange={() => toggleSelect(trade.id)}
+                        className="rounded border-zinc-300 text-blue-600 w-4 h-4 cursor-pointer"
+                      />
+                    </td>
+                    <td
+                      className="p-3 cursor-pointer"
+                      onClick={() => navigate(`/trades/${trade.id}`)}
+                    >
+                      <p className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {trade.symbol}
+                      </p>
+                      <p className="text-xs text-zinc-400 mt-0.5">{trade.strategy || '—'}</p>
+                    </td>
+                    <td className="p-3"><Badge type={trade.tradeType} /></td>
+                    <td className="p-3 text-center text-sm font-medium text-zinc-700 dark:text-zinc-300">{trade.quantity}</td>
+                    <td className="p-3">
+                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">₹{trade.entryPrice}</p>
+                      <p className="text-xs text-zinc-400">{fmtDate(trade.entryDate)}</p>
+                    </td>
+                    <td className="p-3">
+                      {trade.status === 'OPEN' ? (
+                        <Badge type="OPEN">Open</Badge>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">₹{trade.exitPrice}</p>
+                          <p className="text-xs text-zinc-400">{fmtDate(trade.exitDate)}</p>
+                        </>
+                      )}
+                    </td>
+                    <td className="p-3 text-right">
+                      <PnlSpan value={trade.pnl} className="text-sm font-semibold" />
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {trade.status === 'OPEN' && (
+                          <button
+                            onClick={() => openModal('close', trade)}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                          >
+                            Close
+                          </button>
+                        )}
+                        <button onClick={() => openModal('strategy', trade)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 hover:text-blue-600 transition-colors" title="Journal">
+                          <IconEdit className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => openModal('psychology', trade)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 hover:text-violet-600 transition-colors" title="Mindset">
+                          <IconPsychology className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDelete(trade.id)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 hover:text-red-500 transition-colors" title="Delete">
+                          <IconTrash className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-            <span className="sm:hidden text-xs font-black text-text-muted px-2">
-              {page} / {totalPages}
-            </span>
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-2">
+            {trades.map(trade => (
+              <div
+                key={trade.id}
+                className={`bg-white dark:bg-zinc-900 rounded-xl border overflow-hidden ${
+                  trade.status === 'OPEN'
+                    ? 'border-l-4 border-l-blue-500 border-zinc-200 dark:border-zinc-700'
+                    : trade.pnl >= 0
+                      ? 'border-l-4 border-l-emerald-500 border-zinc-200 dark:border-zinc-700'
+                      : 'border-l-4 border-l-red-500 border-zinc-200 dark:border-zinc-700'
+                }`}
+                onClick={() => navigate(`/trades/${trade.id}`)}
+              >
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <label onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(trade.id)}
+                        onChange={() => toggleSelect(trade.id)}
+                        className="rounded border-zinc-300 text-blue-600 w-4 h-4 cursor-pointer"
+                      />
+                    </label>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">{trade.symbol}</span>
+                        <Badge type={trade.tradeType} className="scale-90 origin-left" />
+                      </div>
+                      <span className="text-xs text-zinc-400">{fmtDate(trade.entryDate)}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <PnlSpan value={trade.pnl} className="text-sm font-semibold" />
+                    {trade.status === 'OPEN' && <p className="text-xs text-blue-500 mt-0.5">Open</p>}
+                  </div>
+                </div>
 
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              disabled={page === totalPages}
-              onClick={() => handlePageChange(page + 1)}
-              className="rounded-xl h-11 px-4 min-h-[44px]"
-            >
-              Next
-              <IconChevronDown className="w-4 h-4 -rotate-90 ml-1.5" />
+                <div className="flex items-center justify-between px-4 py-2 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40">
+                  <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span>Entry: <span className="font-medium text-zinc-700 dark:text-zinc-300">₹{trade.entryPrice}</span></span>
+                    {trade.exitPrice && <span>Exit: <span className="font-medium text-zinc-700 dark:text-zinc-300">₹{trade.exitPrice}</span></span>}
+                    <span>Qty: <span className="font-medium text-zinc-700 dark:text-zinc-300">{trade.quantity}</span></span>
+                  </div>
+                  <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                    {trade.status === 'OPEN' && (
+                      <button
+                        onClick={() => openModal('close', trade)}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold"
+                      >
+                        Close
+                      </button>
+                    )}
+                    <button onClick={() => openModal('strategy', trade)} className="p-2 rounded-lg text-zinc-400 hover:text-blue-600">
+                      <IconEdit className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => openModal('psychology', trade)} className="p-2 rounded-lg text-zinc-400 hover:text-violet-600">
+                      <IconPsychology className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(trade.id)} className="p-2 rounded-lg text-zinc-400 hover:text-red-500">
+                      <IconTrash className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <EmptyState title="No Trades" message="No trades match your filters. Add a trade or clear the filters." />
+      )}
+
+      {/* ── Pagination ──────────────────────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Button variant="secondary" size="sm" disabled={page === 1} onClick={() => handlePageChange(page - 1)}>
+              <IconChevronDown className="w-4 h-4 rotate-90 mr-1" /> Prev
+            </Button>
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 px-2">{page} / {totalPages}</span>
+            <Button variant="secondary" size="sm" disabled={page === totalPages} onClick={() => handlePageChange(page + 1)}>
+              Next <IconChevronDown className="w-4 h-4 -rotate-90 ml-1" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* Modals */}
+      {/* ── Modals ──────────────────────────────────────────────────────── */}
       <CloseTradeModal isOpen={modals.close} onClose={() => closeModal('close')} trade={activeTrade} onSuccess={refetch} />
       <StrategyModal isOpen={modals.strategy} onClose={() => closeModal('strategy')} trade={activeTrade} onSuccess={refetch} />
       <PsychologyModal isOpen={modals.psychology} onClose={() => closeModal('psychology')} trade={activeTrade} onSuccess={refetch} />
@@ -532,21 +456,18 @@ export default function Trades() {
   );
 }
 
-// --- Modal Components ---
-
+// ─── Close Trade Modal ────────────────────────────────────────────────────────
 function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    exitPrice: '',
-    exitDate: new Date().toISOString().split('T')[0],
-    charges: '25',
-  });
+  const [formData, setFormData] = useState({ exitPrice: '', exitDate: new Date().toISOString().split('T')[0], charges: '25' });
 
   useEffect(() => {
-    if (trade) {
-      setFormData(prev => ({ ...prev, exitPrice: trade.entryPrice }));
-    }
+    if (trade) setFormData(prev => ({ ...prev, exitPrice: trade.entryPrice }));
   }, [trade]);
+
+  const estPnl = trade
+    ? (trade.tradeType === 'BUY' ? 1 : -1) * (parseFloat(formData.exitPrice || 0) - trade.entryPrice) * trade.quantity * (trade.lotSize || 1) - parseFloat(formData.charges || 0)
+    : 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -558,7 +479,7 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
         exitDate: combineIstDateTime(formData.exitDate, '15:30'),
         charges: parseFloat(formData.charges),
       });
-      toast.success('Position closed successfully');
+      toast.success('Position closed');
       onSuccess();
       onClose();
     } catch (err) {
@@ -568,58 +489,33 @@ function CloseTradeModal({ isOpen, onClose, trade, onSuccess }) {
     }
   };
 
-  const estPnl = trade ? (
-    (trade.tradeType === 'BUY' ? 1 : -1) * 
-    (parseFloat(formData.exitPrice || 0) - trade.entryPrice) * 
-    trade.quantity * (trade.lotSize || 1) - 
-    parseFloat(formData.charges || 0)
-  ) : 0;
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Settle Position">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card variant="flat" padding="p-5" className="border-none bg-accent/5">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-[10px] font-black text-accent uppercase tracking-widest">Est. Net P&L</span>
-            <PnlSpan value={estPnl} className="text-xl font-black" />
-          </div>
-          <div className="h-1 bg-border/50 rounded-full overflow-hidden">
-             <div className={`h-full transition-all duration-500 ${estPnl >= 0 ? 'bg-profit w-full' : 'bg-loss w-1/2'}`} />
-          </div>
-        </Card>
-
-        <div className="space-y-4">
-          <Input 
-            label="Exit Price" 
-            type="number" 
-            step="0.05"
-            prefix="₹"
-            value={formData.exitPrice}
-            onChange={e => setFormData({...formData, exitPrice: e.target.value})}
-            required
-          />
-          <Input 
-            label="Exit Date" 
-            type="date" 
-            value={formData.exitDate}
-            onChange={e => setFormData({...formData, exitDate: e.target.value})}
-            required
-          />
-          <Input 
-            label="Total Charges" 
-            type="number" 
-            prefix="₹"
-            value={formData.charges}
-            onChange={e => setFormData({...formData, charges: e.target.value})}
-            required
-          />
+    <Modal isOpen={isOpen} onClose={onClose} title={`Close ${trade?.symbol || 'Trade'}`}>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Est P&L preview */}
+        <div className={`rounded-xl p-4 text-center ${estPnl >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-red-50 dark:bg-red-950/30'}`}>
+          <p className="text-xs text-zinc-500 mb-1">Estimated P&L</p>
+          <PnlSpan value={estPnl} className="text-2xl font-bold" />
         </div>
-        <Button variant="primary" className="w-full h-12 shadow-glow-blue" type="submit" loading={loading}>Close Position</Button>
+
+        <div className="space-y-3">
+          <Input label="Exit Price" type="number" step="0.05" prefix="₹" value={formData.exitPrice}
+            onChange={e => setFormData({ ...formData, exitPrice: e.target.value })} required />
+          <Input label="Exit Date" type="date" value={formData.exitDate}
+            onChange={e => setFormData({ ...formData, exitDate: e.target.value })} required />
+          <Input label="Charges" type="number" prefix="₹" value={formData.charges}
+            onChange={e => setFormData({ ...formData, charges: e.target.value })} required />
+        </div>
+
+        <Button variant="primary" className="w-full" type="submit" loading={loading}>
+          Close Position
+        </Button>
       </form>
     </Modal>
   );
 }
 
+// ─── Import CSV Modal ─────────────────────────────────────────────────────────
 function ImportCSVModal({ isOpen, onClose, onSuccess }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -628,11 +524,11 @@ function ImportCSVModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     if (!file) return;
     setLoading(true);
-    const formData = new FormData();
-    formData.append('file', file);
+    const fd = new FormData();
+    fd.append('file', file);
     try {
-      await api.upload('/trades/import/csv', formData);
-      toast.success('Batch import complete');
+      await api.upload('/trades/import/csv', fd);
+      toast.success('Import complete');
       onSuccess();
       onClose();
     } catch (err) {
@@ -644,28 +540,22 @@ function ImportCSVModal({ isOpen, onClose, onSuccess }) {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Import Dhan CSV">
-      <form onSubmit={handleUpload} className="space-y-6">
-        <div className="group border-2 border-dashed border-border rounded-3xl p-10 text-center hover:border-accent hover:bg-accent/5 transition-all cursor-pointer relative">
-          <input 
-            type="file" 
-            accept=".csv"
-            onChange={e => setFile(e.target.files[0])}
-            className="absolute inset-0 opacity-0 cursor-pointer"
-          />
-          <div className="w-16 h-16 rounded-2xl bg-card-alt border border-border flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-             <IconImport className="w-8 h-8 text-text-faint group-hover:text-accent" />
-          </div>
-          <p className="text-sm font-black text-text-primary uppercase tracking-tight">
-            {file ? file.name : 'Choose Dhan CSV file'}
-          </p>
-          <p className="text-xs text-text-faint mt-1">Dhan CSV format (Name, Product, Qty, Buy Avg, Sell Avg, LTP, P&L)</p>
+      <form onSubmit={handleUpload} className="space-y-5">
+        <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer relative">
+          <input type="file" accept=".csv" onChange={e => setFile(e.target.files[0])} className="absolute inset-0 opacity-0 cursor-pointer" />
+          <IconImport className="w-8 h-8 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{file ? file.name : 'Choose Dhan CSV file'}</p>
+          <p className="text-xs text-zinc-400 mt-1">Dhan format: Name, Product, Qty, Buy Avg, Sell Avg, LTP, P&L</p>
         </div>
-        <Button variant="primary" className="w-full h-12 shadow-glow-blue" type="submit" disabled={!file} loading={loading}>Process Data</Button>
+        <Button variant="primary" className="w-full" type="submit" disabled={!file} loading={loading}>
+          Import Trades
+        </Button>
       </form>
     </Modal>
   );
 }
 
+// ─── Bulk Strategy Modal ──────────────────────────────────────────────────────
 function BulkStrategyModal({ isOpen, onClose, selectedIds, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [strategy, setStrategy] = useState('');
@@ -674,10 +564,8 @@ function BulkStrategyModal({ isOpen, onClose, selectedIds, onSuccess }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await Promise.all(Array.from(selectedIds).map(id => 
-        api.put(`/trades/${id}`, { strategy })
-      ));
-      toast.success(`Updated ${selectedIds.size} records`);
+      await Promise.all(Array.from(selectedIds).map(id => api.put(`/trades/${id}`, { strategy })));
+      toast.success(`Updated ${selectedIds.size} trades`);
       onSuccess();
       onClose();
     } catch (err) {
@@ -688,16 +576,10 @@ function BulkStrategyModal({ isOpen, onClose, selectedIds, onSuccess }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Tag Records">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Input 
-          label="Apply Strategy" 
-          value={strategy}
-          onChange={e => setStrategy(e.target.value)}
-          placeholder="e.g. Mean Reversion"
-          required
-        />
-        <Button variant="primary" className="w-full h-12" type="submit" loading={loading}>Bulk Update</Button>
+    <Modal isOpen={isOpen} onClose={onClose} title={`Tag ${selectedIds.size} Trades`}>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Input label="Strategy Name" value={strategy} onChange={e => setStrategy(e.target.value)} placeholder="e.g. Mean Reversion" required />
+        <Button variant="primary" className="w-full" type="submit" loading={loading}>Apply Strategy</Button>
       </form>
     </Modal>
   );
