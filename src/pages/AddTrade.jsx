@@ -65,15 +65,25 @@ import {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STRATEGIES = [
-  'Long Call', 'Long Put', 'Short Call', 'Short Put',
-  'Bull Call Spread', 'Bear Put Spread', 'Iron Condor',
-  'Straddle', 'Strangle', 'Butterfly', 'Scalp', 'Other',
+  'Option Buying (Scalp)',
+  'Option Buying (Momentum)',
+  'Option Selling (Intraday)',
+  'Spread / Hedged (Bull/Bear)',
+  'Equity Intraday',
+  'Futures Intraday',
+  'Positional / Swing',
+  'Other',
 ];
 
 const SETUPS = [
-  'Breakout', 'Mean Reversion', 'Trend Following',
-  'Gap Fill', 'Reversal', 'Support/Resistance',
-  'News Based', 'Post-Earnings', 'Other',
+  'Breakout',
+  'Pullback / Trend Following',
+  'CPR / Pivot Reversal',
+  'Support / Resistance',
+  'Mean Reversion',
+  'Gap Fill / Opening Move',
+  'Range Bound / Scalp',
+  'Other',
 ];
 
 const BATCH_PSYCHOLOGY_PRESETS = [
@@ -85,7 +95,6 @@ const BATCH_PSYCHOLOGY_PRESETS = [
     desc: 'Calm execution, followed system',
     data: {
       emotionBefore: 'calm',
-      emotionAfter: 'satisfied',
       disciplineRating: 9,
       followedPlan: true,
       trailingSl: 'trailed_disciplined',
@@ -100,7 +109,6 @@ const BATCH_PSYCHOLOGY_PRESETS = [
     desc: 'Locked gains per trailing stop rules',
     data: {
       emotionBefore: 'calm',
-      emotionAfter: 'satisfied',
       disciplineRating: 9,
       followedPlan: true,
       trailingSl: 'trailed_disciplined',
@@ -115,7 +123,6 @@ const BATCH_PSYCHOLOGY_PRESETS = [
     desc: 'Emotion-free, stuck to edge',
     data: {
       emotionBefore: 'calm',
-      emotionAfter: 'neutral',
       disciplineRating: 8,
       followedPlan: true,
       trailingSl: 'trailed_to_cost',
@@ -130,11 +137,10 @@ const BATCH_PSYCHOLOGY_PRESETS = [
     desc: 'Greed: winning trade turned red',
     data: {
       emotionBefore: 'overconfident',
-      emotionAfter: 'regret',
       disciplineRating: 3,
       followedPlan: false,
       trailingSl: 'failed_to_trail',
-      mistakeTags: ['failed_to_trail_sl'],
+      mistakeTags: [],
     },
   },
   {
@@ -145,11 +151,10 @@ const BATCH_PSYCHOLOGY_PRESETS = [
     desc: 'Fear: suffocated trade early',
     data: {
       emotionBefore: 'fearful',
-      emotionAfter: 'frustrated',
       disciplineRating: 5,
       followedPlan: false,
       trailingSl: 'trailed_too_tight',
-      mistakeTags: ['trailed_too_tight'],
+      mistakeTags: [],
     },
   },
   {
@@ -157,14 +162,13 @@ const BATCH_PSYCHOLOGY_PRESETS = [
     name: 'FOMO / Impulsive',
     icon: '⚡',
     color: '#f59e0b',
-    desc: 'Chased entry, overtraded',
+    desc: 'Chased entry, poor location',
     data: {
-      emotionBefore: 'overconfident',
-      emotionAfter: 'regret',
+      emotionBefore: 'fomo',
       disciplineRating: 3,
       followedPlan: false,
       trailingSl: 'not_applicable',
-      mistakeTags: ['fomo_entry', 'overtrading'],
+      mistakeTags: ['fomo_entry'],
     },
   },
   {
@@ -175,7 +179,6 @@ const BATCH_PSYCHOLOGY_PRESETS = [
     desc: 'Fighting market, moved stop',
     data: {
       emotionBefore: 'revenge',
-      emotionAfter: 'angry',
       disciplineRating: 2,
       followedPlan: false,
       trailingSl: 'not_applicable',
@@ -187,24 +190,21 @@ const BATCH_PSYCHOLOGY_PRESETS = [
 const EMOTIONS_BEFORE = [
   { value: 'calm', label: '😌', name: 'Calm', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
   { value: 'confident', label: '💪', name: 'Confident', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
-  { value: 'overconfident', label: '🤩', name: 'Hyped', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
-  { value: 'fearful', label: '😨', name: 'Fearful', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
-  { value: 'frustrated', label: '😤', name: 'Frustrated', color: '#f97316', bg: 'rgba(249, 115, 22, 0.12)' },
+  { value: 'fomo', label: '⚡', name: 'FOMO', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
   { value: 'revenge', label: '😡', name: 'Revenge', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' },
+  { value: 'fearful', label: '😨', name: 'Fearful', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
+  { value: 'overconfident', label: '🤩', name: 'Greedy', color: '#d97706', bg: 'rgba(217, 119, 6, 0.12)' },
 ];
 
 const EMOTIONS_AFTER = [
   { value: 'satisfied', label: '😊', name: 'Satisfied', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
   { value: 'neutral', label: '😐', name: 'Neutral', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' },
-  { value: 'disappointed', label: '😞', name: 'Disappointed', color: '#d97706', bg: 'rgba(217, 119, 6, 0.12)' },
   { value: 'regret', label: '😔', name: 'Regret', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
   { value: 'angry', label: '😠', name: 'Angry', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' },
 ];
 
 const MISTAKE_TAGS = [
   { value: 'no_stoploss', label: 'No Stop Loss', icon: '🛑' },
-  { value: 'failed_to_trail_sl', label: 'Failed to Trail SL', icon: '❌' },
-  { value: 'trailed_too_tight', label: 'Trailed Too Tight', icon: '🤏' },
   { value: 'revenge_trade', label: 'Revenge Trade', icon: '😡' },
   { value: 'fomo_entry', label: 'FOMO Entry', icon: '⚡' },
   { value: 'overtrading', label: 'Overtrading', icon: '🔄' },
@@ -212,6 +212,8 @@ const MISTAKE_TAGS = [
   { value: 'late_entry', label: 'Late Entry', icon: '⏳' },
   { value: 'early_exit', label: 'Early Exit', icon: '🚪' },
   { value: 'moved_sl', label: 'Moved SL', icon: '↔️' },
+  { value: 'averaging_down', label: 'Averaging Down', icon: '📉' },
+  { value: 'chasing_price', label: 'Chasing Market', icon: '🏃' },
   { value: 'no_plan', label: 'No Plan', icon: '📋' },
 ];
 
@@ -551,16 +553,10 @@ function PsychologySection({ data, onChange }) {
         children: (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <EmojiPicker
-              label="Entry Mindset"
+              label="Pre-Trade Mindset"
               value={data.emotionBefore}
               options={EMOTIONS_BEFORE}
               onChange={(val) => onChange({ emotionBefore: val })}
-            />
-            <EmojiPicker
-              label="Exit Mindset"
-              value={data.emotionAfter}
-              options={EMOTIONS_AFTER}
-              onChange={(val) => onChange({ emotionAfter: val })}
             />
 
             <Divider style={{ margin: '4px 0' }} />
@@ -848,9 +844,7 @@ function BatchPsychologyCard({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
                   <span style={{ fontWeight: 700, color: '#a855f7' }}>Tagging:</span>
                   <span style={{ color: 'var(--text-secondary)' }}>
-                    {data.emotionBefore ? data.emotionBefore : 'No entry emotion'}
-                    {' ➔ '}
-                    {data.emotionAfter ? data.emotionAfter : 'No exit emotion'}
+                    {data.emotionBefore ? `Mindset: ${data.emotionBefore}` : 'No entry mindset'}
                   </span>
                   <span style={{ color: 'var(--text-faint)' }}>•</span>
                   <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -950,19 +944,12 @@ function BatchPsychologyCard({
 
               <Divider style={{ margin: '4px 0' }} />
 
-              {/* Mindset Pickers */}
+              {/* Mindset Picker */}
               <EmojiPicker
-                label="Batch Entry Mindset"
+                label="Pre-Trade Mindset"
                 value={data.emotionBefore}
                 options={EMOTIONS_BEFORE}
                 onChange={(val) => onChange({ emotionBefore: val })}
-              />
-
-              <EmojiPicker
-                label="Batch Exit Mindset"
-                value={data.emotionAfter}
-                options={EMOTIONS_AFTER}
-                onChange={(val) => onChange({ emotionAfter: val })}
               />
 
               <Divider style={{ margin: '4px 0' }} />

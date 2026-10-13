@@ -8,25 +8,19 @@ import { Input } from '../ui/Input';
 // ─── Mindset & Psychology Constants ──────────────────────────────────────────
 
 export const EMOTIONS_BEFORE_LIST = [
-  { value: 'calm', label: 'Calm', emoji: '😌', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
-  { value: 'confident', label: 'Confident', emoji: '💪', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
-  { value: 'overconfident', label: 'Hyped / Greedy', emoji: '🤩', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
-  { value: 'fearful', label: 'Fearful', emoji: '😨', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
-  { value: 'frustrated', label: 'Frustrated', emoji: '😤', color: '#f97316', bg: 'rgba(249, 115, 22, 0.12)' },
-  { value: 'revenge', label: 'Revenge / Tilt', emoji: '😡', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' },
-  { value: 'neutral', label: 'Neutral', emoji: '😐', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' },
-  { value: 'anxious', label: 'Anxious', emoji: '😰', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)' },
-  { value: 'bored', label: 'Bored', emoji: '🥱', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' },
+  { value: 'calm', label: 'Calm & Focused', emoji: '😌', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
+  { value: 'confident', label: 'Confident Setup', emoji: '💪', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
+  { value: 'fomo', label: 'FOMO / Chased', emoji: '⚡', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
+  { value: 'revenge', label: 'Revenge / Tilted', emoji: '😡', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' },
+  { value: 'fearful', label: 'Fearful / Hesitant', emoji: '😨', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
+  { value: 'overconfident', label: 'Overconfident / Greedy', emoji: '🤩', color: '#d97706', bg: 'rgba(217, 119, 6, 0.12)' },
 ];
 
 export const EMOTIONS_AFTER_LIST = [
   { value: 'satisfied', label: 'Satisfied', emoji: '😊', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
   { value: 'neutral', label: 'Neutral', emoji: '😐', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' },
-  { value: 'disappointed', label: 'Disappointed', emoji: '😞', color: '#d97706', bg: 'rgba(217, 119, 6, 0.12)' },
   { value: 'regret', label: 'Regret', emoji: '😔', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
   { value: 'angry', label: 'Angry / Tilted', emoji: '😠', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' },
-  { value: 'calm', label: 'Calm', emoji: '😌', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
-  { value: 'confident', label: 'Confident', emoji: '💪', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
 ];
 
 export const TRAILING_SL_OPTIONS = [
@@ -39,30 +33,38 @@ export const TRAILING_SL_OPTIONS = [
 
 export const MISTAKES_LIST = [
   { value: 'no_stoploss', label: 'No Stop Loss', emoji: '🛑' },
-  { value: 'failed_to_trail_sl', label: 'Failed to Trail SL', emoji: '📉' },
-  { value: 'trailed_too_tight', label: 'Trailed Too Tight', emoji: '🤏' },
   { value: 'revenge_trade', label: 'Revenge Trade', emoji: '😡' },
   { value: 'fomo_entry', label: 'FOMO Entry', emoji: '⚡' },
   { value: 'overtrading', label: 'Over-trading', emoji: '🔄' },
   { value: 'oversized_position', label: 'Oversized Size', emoji: '⚖️' },
   { value: 'late_entry', label: 'Late Entry', emoji: '⏳' },
   { value: 'early_exit', label: 'Early Exit', emoji: '🚪' },
-  { value: 'moved_sl', label: 'Moved SL / Ignored SL', emoji: '↔️' },
+  { value: 'moved_sl', label: 'Moved SL / Widened Risk', emoji: '↔️' },
   { value: 'no_plan', label: 'No Plan / Deviated', emoji: '📋' },
   { value: 'averaging_down', label: 'Averaging Down', emoji: '📉' },
-  { value: 'chasing_price', label: 'Chasing Price', emoji: '🏃' },
+  { value: 'chasing_price', label: 'Chasing Market', emoji: '🏃' },
 ];
 
 export const DEFAULT_STRATEGIES = [
-  'Long Call', 'Long Put', 'Short Call', 'Short Put',
-  'Bull Call Spread', 'Bear Put Spread', 'Iron Condor',
-  'Straddle', 'Strangle', 'Butterfly', 'Scalp', 'Mean Reversion', 'Breakout'
+  'Option Buying (Scalp)',
+  'Option Buying (Momentum)',
+  'Option Selling (Intraday)',
+  'Spread / Hedged (Bull/Bear)',
+  'Equity Intraday',
+  'Futures Intraday',
+  'Positional / Swing',
+  'Other'
 ];
 
 export const DEFAULT_SETUPS = [
-  'Breakout', 'Mean Reversion', 'Trend Following',
-  'Gap Fill', 'Reversal', 'Support/Resistance',
-  'News Based', 'Post-Earnings', 'Double Bottom', 'Double Top'
+  'Breakout',
+  'Pullback / Trend Following',
+  'CPR / Pivot Reversal',
+  'Support / Resistance',
+  'Mean Reversion',
+  'Gap Fill / Opening Move',
+  'Range Bound / Scalp',
+  'Other'
 ];
 
 export function getEmotionInfo(val, type = 'before') {
@@ -440,45 +442,6 @@ export function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
                   key={e.value}
                   type="button"
                   onClick={() => setFormData({ ...formData, emotionBefore: isSelected ? '' : e.value })}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'border-2 shadow-sm scale-102 font-bold' 
-                      : 'bg-card-alt border-border text-text-secondary hover:border-blue-500/40 hover:bg-card'
-                  }`}
-                  style={isSelected ? { borderColor: e.color, backgroundColor: e.bg, color: e.color } : {}}
-                >
-                  <span className="text-xl mb-1">{e.emoji}</span>
-                  <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{e.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Post-Trade Mindset */}
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="text-[11px] font-black text-text-faint uppercase tracking-wider">
-              Post-Trade Exit Mindset
-            </label>
-            {formData.emotionAfter && (
-              <button 
-                type="button" 
-                onClick={() => setFormData({ ...formData, emotionAfter: '' })}
-                className="text-[10px] text-text-faint hover:text-text-primary underline cursor-pointer"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            {EMOTIONS_AFTER_LIST.map(e => {
-              const isSelected = formData.emotionAfter === e.value || String(formData.emotionAfter).toLowerCase() === e.value;
-              return (
-                <button
-                  key={e.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, emotionAfter: isSelected ? '' : e.value })}
                   className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
                     isSelected 
                       ? 'border-2 shadow-sm scale-102 font-bold' 

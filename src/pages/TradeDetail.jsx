@@ -316,10 +316,10 @@ export default function TradeDetail() {
 
           {hasPsychologyData ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                {/* Pre-trade */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                {/* Pre-trade Mindset */}
                 <div className="p-4 rounded-2xl bg-card-alt border border-border">
-                  <p className="text-[10px] font-black text-text-muted uppercase tracking-wider mb-2">Pre-Trade Entry</p>
+                  <p className="text-[10px] font-black text-text-muted uppercase tracking-wider mb-2">Entry Mindset</p>
                   {beforeInfo ? (
                     <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl text-xs font-bold border" style={{ backgroundColor: beforeInfo.bg, borderColor: `${beforeInfo.color}40`, color: beforeInfo.color }}>
                       <span className="text-base">{beforeInfo.emoji}</span>
@@ -330,17 +330,22 @@ export default function TradeDetail() {
                   )}
                 </div>
 
-                {/* Post-trade */}
+                {/* Discipline Rating */}
                 <div className="p-4 rounded-2xl bg-card-alt border border-border">
-                  <p className="text-[10px] font-black text-text-muted uppercase tracking-wider mb-2">Post-Trade Exit</p>
-                  {afterInfo ? (
-                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl text-xs font-bold border" style={{ backgroundColor: afterInfo.bg, borderColor: `${afterInfo.color}40`, color: afterInfo.color }}>
-                      <span className="text-base">{afterInfo.emoji}</span>
-                      <span>{afterInfo.label}</span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-text-faint font-medium">Unlogged</span>
-                  )}
+                  <div className="flex justify-between items-center mb-1.5">
+                    <p className="text-[10px] font-black text-text-muted uppercase tracking-wider">Discipline</p>
+                    <span className="text-xs font-black font-mono text-blue-600 dark:text-blue-400">
+                      {psych.disciplineRating != null ? `${psych.disciplineRating}/10` : '—'}
+                    </span>
+                  </div>
+                  <div className="w-full bg-border rounded-full h-2 overflow-hidden mt-2">
+                    <div 
+                      className={`h-full rounded-full transition-all ${
+                        (psych.disciplineRating || 0) >= 7 ? 'bg-emerald-500' : (psych.disciplineRating || 0) >= 4 ? 'bg-amber-500' : 'bg-rose-500'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(0, (psych.disciplineRating || 0) * 10))}%` }}
+                    />
+                  </div>
                 </div>
 
                 {/* Plan Adherence */}
@@ -370,24 +375,6 @@ export default function TradeDetail() {
                   ) : (
                     <span className="text-xs text-text-faint font-medium">Not Specified</span>
                   )}
-                </div>
-
-                {/* Discipline Rating */}
-                <div className="p-4 rounded-2xl bg-card-alt border border-border sm:col-span-2 lg:col-span-1">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <p className="text-[10px] font-black text-text-muted uppercase tracking-wider">Discipline</p>
-                    <span className="text-xs font-black font-mono text-blue-600 dark:text-blue-400">
-                      {psych.disciplineRating != null ? `${psych.disciplineRating}/10` : '—'}
-                    </span>
-                  </div>
-                  <div className="w-full bg-border rounded-full h-2 overflow-hidden mt-2">
-                    <div 
-                      className={`h-full rounded-full transition-all ${
-                        (psych.disciplineRating || 0) >= 7 ? 'bg-emerald-500' : (psych.disciplineRating || 0) >= 4 ? 'bg-amber-500' : 'bg-rose-500'
-                      }`}
-                      style={{ width: `${Math.min(100, Math.max(0, (psych.disciplineRating || 0) * 10))}%` }}
-                    />
-                  </div>
                 </div>
               </div>
 

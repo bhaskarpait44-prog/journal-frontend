@@ -19,7 +19,7 @@ import {
 } from '../components/ui/Icons';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area
+  Cell, AreaChart, Area
 } from 'recharts';
 
 // Date Helpers
@@ -73,7 +73,6 @@ const BATCH_PRESETS = [
     name: '🧘 Disciplined Win',
     desc: 'Calm execution, followed trade plan',
     emotionBefore: 'calm',
-    emotionAfter: 'satisfied',
     disciplineRating: 9,
     followedPlan: true,
     trailingSl: 'trailed_disciplined',
@@ -84,7 +83,6 @@ const BATCH_PRESETS = [
     name: '🛡️ Trailed to Profit',
     desc: 'Locked gains per trailing stop rules',
     emotionBefore: 'calm',
-    emotionAfter: 'satisfied',
     disciplineRating: 9,
     followedPlan: true,
     trailingSl: 'trailed_disciplined',
@@ -95,7 +93,6 @@ const BATCH_PRESETS = [
     name: '🛡️ Controlled Stop-Out',
     desc: 'Took defined risk without hesitation',
     emotionBefore: 'calm',
-    emotionAfter: 'relieved',
     disciplineRating: 8,
     followedPlan: true,
     trailingSl: 'not_applicable',
@@ -106,29 +103,26 @@ const BATCH_PRESETS = [
     name: '📉 Failed to Trail SL',
     desc: 'Greed: let a winning trade turn red',
     emotionBefore: 'overconfident',
-    emotionAfter: 'regretful',
     disciplineRating: 3,
     followedPlan: false,
     trailingSl: 'failed_to_trail',
-    mistakeTags: ['failed_to_trail_sl']
+    mistakeTags: []
   },
   {
     id: 'trailed_tight',
     name: '🤏 Trailed Too Tight',
     desc: 'Fear: suffocated trade early before target',
     emotionBefore: 'fearful',
-    emotionAfter: 'frustrated',
     disciplineRating: 5,
     followedPlan: false,
     trailingSl: 'trailed_too_tight',
-    mistakeTags: ['trailed_too_tight']
+    mistakeTags: []
   },
   {
     id: 'fomo',
     name: '⚡ FOMO Entry',
     desc: 'Chased a fast move, poor entry',
     emotionBefore: 'overconfident',
-    emotionAfter: 'regretful',
     disciplineRating: 4,
     followedPlan: false,
     trailingSl: 'not_applicable',
@@ -139,7 +133,6 @@ const BATCH_PRESETS = [
     name: '😡 Revenge Trade',
     desc: 'Frustrated after a loss, oversized position',
     emotionBefore: 'revenge',
-    emotionAfter: 'frustrated',
     disciplineRating: 2,
     followedPlan: false,
     trailingSl: 'not_applicable',
@@ -779,127 +772,68 @@ export default function Psychology() {
         </Card>
       </div>
 
-      {/* Systematic Errors & Exit Mindset Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-        {/* Mistake Frequency & Realized Loss Breakdown */}
-        <Card variant="default" className="lg:col-span-2 border-border/80 shadow-lg overflow-hidden p-0 bg-card">
-          <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex items-center justify-between">
-            <div>
+      {/* Systematic Errors & Leaks */}
+      <Card variant="default" className="border-border/80 shadow-lg overflow-hidden p-0 bg-card">
+        <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
               <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">Systematic Errors & Leaks</h3>
-              <p className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider mt-0.5">
-                Financial impact and frequency of behavioral biases
-              </p>
             </div>
-            <div className="w-8 h-8 rounded-xl bg-rose-500/10 dark:bg-rose-500/20 flex items-center justify-center text-rose-700 dark:text-rose-400 shadow-inner">
-              <IconArrowDown className="w-4 h-4" strokeWidth={2.5} />
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-6 space-y-5">
-            {stats.mistakeFrequency?.length > 0 ? (
-              (() => {
-                const maxCount = Math.max(...stats.mistakeFrequency.map(m => m.count), 1);
-                return stats.mistakeFrequency.map((m) => {
-                  const label = MISTAKE_LABELS[m.tag] || m.tag.replace(/_/g, ' ');
-                  return (
-                    <div key={m.tag} className="space-y-1.5">
-                      <div className="flex justify-between items-center text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-black uppercase tracking-wider text-text-primary">{label}</span>
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-card-alt text-text-muted border border-border">
-                            {m.count} {m.count === 1 ? 'trade' : 'trades'}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className={`font-black ${m.totalPnl >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                            {fmtINR(m.totalPnl)}
-                          </span>
-                          <span className="text-[10px] text-text-muted font-bold ml-1.5 hidden xs:inline">
-                            (Avg {fmtINR(m.avgPnl)})
-                          </span>
-                        </div>
-                      </div>
-                      <div className="w-full h-2.5 bg-card-alt border border-border rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-loss/70 to-loss rounded-full transition-all duration-700" 
-                          style={{ width: `${Math.min(100, (m.count / maxCount) * 100)}%` }} 
-                        />
-                      </div>
-                    </div>
-                  );
-                });
-              })()
-            ) : (
-              <div className="text-center py-8 text-xs font-bold text-text-muted">
-                No mistake tags recorded in this period. Clean execution! 🎯
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Exit Mindset Impact (Fixed Pie Chart & Table) */}
-        <Card variant="default" className="border-border/80 shadow-lg overflow-hidden p-0 bg-card">
-          <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt">
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary text-center">Exit Mindset Impact</h3>
-            <p className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider text-center mt-0.5">
-              Net P&L distribution by mental state upon closing
+            <p className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider mt-0.5">
+              Financial impact and frequency of behavioral execution leaks
             </p>
           </div>
-
-          <div className="p-4 sm:p-6">
-            {stats.lossByEmotion?.length > 0 ? (
-              <>
-                <div className="h-[200px] sm:h-[220px] w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={stats.lossByEmotion}
-                        dataKey="absPnl"
-                        nameKey="emotion"
-                        innerRadius={50}
-                        outerRadius={75}
-                        paddingAngle={4}
-                        stroke="none"
-                      >
-                        {stats.lossByEmotion.map((entry, i) => {
-                          const color = entry.totalPnl >= 0 ? '#10b981' : '#ef4444';
-                          return <Cell key={i} fill={color} fillOpacity={0.85} />;
-                        })}
-                      </Pie>
-                      <Tooltip content={<CustomPieTooltip isDark={isDark} />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Total</span>
-                    <span className="text-sm sm:text-base font-black text-text-primary mt-0.5">Exit State</span>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 mt-3 max-h-[160px] overflow-y-auto no-scrollbar">
-                  {stats.lossByEmotion.map((entry, i) => (
-                    <div key={i} className="flex justify-between items-center text-xs p-2 rounded-xl bg-card-alt border border-border">
-                      <div className="flex items-center gap-2">
-                        <span>{EMOTION_EMOJIS[entry.emotion] || '🎯'}</span>
-                        <span className="font-bold uppercase tracking-wider text-text-secondary">{entry.emotion}</span>
-                        <span className="text-[10px] text-text-muted">({entry.trades})</span>
-                      </div>
-                      <div className="text-right">
-                        <span className={`font-black ${entry.totalPnl >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                          {fmtINR(entry.totalPnl)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-12 text-xs font-bold text-text-muted">
-                No exit mindset data logged
-              </div>
-            )}
+          <div className="w-8 h-8 rounded-xl bg-rose-500/10 dark:bg-rose-500/20 flex items-center justify-center text-rose-700 dark:text-rose-400 shadow-inner">
+            <IconArrowDown className="w-4 h-4" strokeWidth={2.5} />
           </div>
-        </Card>
-      </div>
+        </div>
+
+        <div className="p-4 sm:p-6">
+          {stats.mistakeFrequency?.length > 0 ? (
+            (() => {
+              const maxCount = Math.max(...stats.mistakeFrequency.map(m => m.count), 1);
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  {stats.mistakeFrequency.map((m) => {
+                    const label = MISTAKE_LABELS[m.tag] || m.tag.replace(/_/g, ' ');
+                    return (
+                      <div key={m.tag} className="p-3 sm:p-3.5 rounded-xl bg-card-alt border border-border/80 space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black uppercase tracking-wider text-text-primary">{label}</span>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-card text-text-muted border border-border">
+                              {m.count} {m.count === 1 ? 'trade' : 'trades'}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className={`font-black ${m.totalPnl >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                              {fmtINR(m.totalPnl)}
+                            </span>
+                            <span className="text-[10px] text-text-muted font-bold ml-1.5 hidden xs:inline">
+                              (Avg {fmtINR(m.avgPnl)})
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full h-2 bg-card border border-border/60 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-loss/70 to-loss rounded-full transition-all duration-700" 
+                            style={{ width: `${Math.min(100, (m.count / maxCount) * 100)}%` }} 
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()
+          ) : (
+            <div className="text-center py-8 text-xs font-bold text-text-muted">
+              No mistake tags recorded in this period. Clean execution! 🎯
+            </div>
+          )}
+        </div>
+      </Card>
 
       {/* Trailing Stop-Loss Discipline & Profit Protection Section */}
       <Card variant="default" className="border-border/80 shadow-lg overflow-hidden p-0 bg-card">
@@ -1134,28 +1068,6 @@ const CustomBarTooltip = ({ active, payload }) => {
   return null;
 };
 
-const CustomPieTooltip = ({ active, payload }) => {
-  if (active && payload && payload.length) {
-    const d = payload[0].payload;
-    return (
-      <Card variant="elevated" padding="p-3" className="border-border shadow-xl min-w-[140px] bg-card text-text-primary">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span>{EMOTION_EMOJIS[d.emotion] || '🎯'}</span>
-          <p className="text-xs font-black text-text-primary uppercase tracking-wider">{d.emotion}</p>
-        </div>
-        <div className="flex justify-between items-center gap-4 text-xs">
-          <span className="font-bold text-text-muted">Realized P&L</span>
-          <PnlSpan value={d.totalPnl} className="font-black" />
-        </div>
-        <p className="text-[10px] font-bold text-text-muted mt-1.5 pt-1.5 border-t border-border">
-          {d.trades} {d.trades === 1 ? 'trade' : 'trades'} in this state
-        </p>
-      </Card>
-    );
-  }
-  return null;
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Batch Tag Modal (Responsive on Mobile & High Contrast in Dark/Light Modes)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1168,7 +1080,6 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
 
   // Form State
   const [emotionBefore, setEmotionBefore] = useState('calm');
-  const [emotionAfter, setEmotionAfter] = useState('satisfied');
   const [disciplineRating, setDisciplineRating] = useState(8);
   const [followedPlan, setFollowedPlan] = useState(true);
   const [trailingSl, setTrailingSl] = useState('trailed_disciplined');
@@ -1198,7 +1109,6 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
 
   const handleApplyPreset = (preset) => {
     setEmotionBefore(preset.emotionBefore);
-    setEmotionAfter(preset.emotionAfter);
     setDisciplineRating(preset.disciplineRating);
     setFollowedPlan(preset.followedPlan);
     if (preset.trailingSl !== undefined) setTrailingSl(preset.trailingSl);
@@ -1235,7 +1145,6 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
       await api.post('/trades/batch-psychology', {
         tradeIds: selectedIds,
         emotionBefore,
-        emotionAfter,
         disciplineRating: Number(disciplineRating),
         followedPlan: Boolean(followedPlan),
         trailingSl,
@@ -1300,8 +1209,8 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
           </div>
         </div>
 
-        {/* Form Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-card-alt border border-border">
+        {/* Form Controls: Entry Mindset, Discipline Rating, Followed Plan */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-card-alt border border-border">
           {/* Entry Mindset */}
           <div>
             <label className="text-xs font-black uppercase tracking-wider text-text-secondary block mb-1.5">
@@ -1321,25 +1230,6 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
             </select>
           </div>
 
-          {/* Exit Mindset */}
-          <div>
-            <label className="text-xs font-black uppercase tracking-wider text-text-secondary block mb-1.5">
-              Exit Mindset
-            </label>
-            <select
-              value={emotionAfter}
-              onChange={(e) => setEmotionAfter(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl bg-card border border-border text-xs font-bold text-text-primary focus:outline-none focus:border-accent"
-            >
-              <option value="satisfied">🎯 Satisfied / Target Hit</option>
-              <option value="relieved">😮‍💨 Relieved Stopout</option>
-              <option value="neutral">😐 Neutral Execution</option>
-              <option value="regretful">😞 Regretful Mistake</option>
-              <option value="frustrated">😤 Frustrated Loss</option>
-              <option value="anxious">😰 Anxious / Panic</option>
-            </select>
-          </div>
-
           {/* Discipline Rating */}
           <div>
             <div className="flex justify-between items-center mb-1.5">
@@ -1354,7 +1244,7 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
               max="10"
               value={disciplineRating}
               onChange={(e) => setDisciplineRating(Number(e.target.value))}
-              className="w-full accent-accent cursor-pointer"
+              className="w-full accent-accent cursor-pointer mt-2"
             />
           </div>
 
@@ -1413,14 +1303,7 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => {
-                    setTrailingSl(opt.value);
-                    if (opt.value === 'failed_to_trail' && !mistakeTags.includes('failed_to_trail_sl')) {
-                      setMistakeTags(prev => [...prev, 'failed_to_trail_sl']);
-                    } else if (opt.value === 'trailed_too_tight' && !mistakeTags.includes('trailed_too_tight')) {
-                      setMistakeTags(prev => [...prev, 'trailed_too_tight']);
-                    }
-                  }}
+                  onClick={() => setTrailingSl(opt.value)}
                   className={`p-2 rounded-xl text-left transition-all border ${
                     isSelected
                       ? 'border-accent bg-accent/10 shadow-sm'
@@ -1448,23 +1331,25 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
             Behavioral Mistakes (Select all that apply)
           </label>
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
-            {Object.entries(MISTAKE_LABELS).map(([tag, label]) => {
-              const active = mistakeTags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleMistakeTag(tag)}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    active 
-                      ? 'bg-rose-600 dark:bg-rose-500 text-white shadow-sm' 
-                      : 'bg-card-alt border border-border text-text-secondary hover:text-text-primary hover:border-border-strong'
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
+            {Object.entries(MISTAKE_LABELS)
+              .filter(([tag]) => tag !== 'failed_to_trail_sl' && tag !== 'trailed_too_tight')
+              .map(([tag, label]) => {
+                const active = mistakeTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleMistakeTag(tag)}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      active 
+                        ? 'bg-rose-600 dark:bg-rose-500 text-white shadow-sm' 
+                        : 'bg-card-alt border border-border text-text-secondary hover:text-text-primary hover:border-border-strong'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
           </div>
         </div>
 
