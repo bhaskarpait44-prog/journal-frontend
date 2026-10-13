@@ -36,6 +36,7 @@ import {
 } from 'antd';
 
 import { IconPsychology } from '../components/ui/Icons';
+import { TRAILING_SL_OPTIONS } from '../components/trade/TradeIntelligenceModals';
 
 // Ant Design Icons
 import {
@@ -87,6 +88,22 @@ const BATCH_PSYCHOLOGY_PRESETS = [
       emotionAfter: 'satisfied',
       disciplineRating: 9,
       followedPlan: true,
+      trailingSl: 'trailed_disciplined',
+      mistakeTags: [],
+    },
+  },
+  {
+    id: 'trailed_profit',
+    name: 'Trailed Profit',
+    icon: '🛡️',
+    color: '#10b981',
+    desc: 'Locked gains per trailing stop rules',
+    data: {
+      emotionBefore: 'calm',
+      emotionAfter: 'satisfied',
+      disciplineRating: 9,
+      followedPlan: true,
+      trailingSl: 'trailed_disciplined',
       mistakeTags: [],
     },
   },
@@ -101,7 +118,38 @@ const BATCH_PSYCHOLOGY_PRESETS = [
       emotionAfter: 'neutral',
       disciplineRating: 8,
       followedPlan: true,
+      trailingSl: 'trailed_to_cost',
       mistakeTags: [],
+    },
+  },
+  {
+    id: 'failed_trail',
+    name: 'Failed to Trail',
+    icon: '📉',
+    color: '#ef4444',
+    desc: 'Greed: winning trade turned red',
+    data: {
+      emotionBefore: 'overconfident',
+      emotionAfter: 'regret',
+      disciplineRating: 3,
+      followedPlan: false,
+      trailingSl: 'failed_to_trail',
+      mistakeTags: ['failed_to_trail_sl'],
+    },
+  },
+  {
+    id: 'trailed_tight',
+    name: 'Trailed Too Tight',
+    icon: '🤏',
+    color: '#f59e0b',
+    desc: 'Fear: suffocated trade early',
+    data: {
+      emotionBefore: 'fearful',
+      emotionAfter: 'frustrated',
+      disciplineRating: 5,
+      followedPlan: false,
+      trailingSl: 'trailed_too_tight',
+      mistakeTags: ['trailed_too_tight'],
     },
   },
   {
@@ -115,6 +163,7 @@ const BATCH_PSYCHOLOGY_PRESETS = [
       emotionAfter: 'regret',
       disciplineRating: 3,
       followedPlan: false,
+      trailingSl: 'not_applicable',
       mistakeTags: ['fomo_entry', 'overtrading'],
     },
   },
@@ -129,6 +178,7 @@ const BATCH_PSYCHOLOGY_PRESETS = [
       emotionAfter: 'angry',
       disciplineRating: 2,
       followedPlan: false,
+      trailingSl: 'not_applicable',
       mistakeTags: ['revenge_trade', 'moved_sl'],
     },
   },
@@ -153,6 +203,8 @@ const EMOTIONS_AFTER = [
 
 const MISTAKE_TAGS = [
   { value: 'no_stoploss', label: 'No Stop Loss', icon: '🛑' },
+  { value: 'failed_to_trail_sl', label: 'Failed to Trail SL', icon: '❌' },
+  { value: 'trailed_too_tight', label: 'Trailed Too Tight', icon: '🤏' },
   { value: 'revenge_trade', label: 'Revenge Trade', icon: '😡' },
   { value: 'fomo_entry', label: 'FOMO Entry', icon: '⚡' },
   { value: 'overtrading', label: 'Overtrading', icon: '🔄' },
@@ -470,7 +522,7 @@ function MistakesTagCloud({ selectedTags = [], onChange }) {
 // ─── Psychology Collapse Section (For Manual Entry) ─────────────────────────
 
 function PsychologySection({ data, onChange }) {
-  const isFilled = Boolean(data.emotionBefore || data.emotionAfter || (data.mistakeTags && data.mistakeTags.length > 0) || data.followedPlan !== null);
+  const isFilled = Boolean(data.emotionBefore || data.emotionAfter || (data.mistakeTags && data.mistakeTags.length > 0) || data.followedPlan !== null || data.trailingSl);
 
   const collapseHeader = (
     <Space>
@@ -548,6 +600,67 @@ function PsychologySection({ data, onChange }) {
 
             <Divider style={{ margin: '4px 0' }} />
 
+            {/* Trailing Stop-Loss Execution */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+                <span>Trailing Stop-Loss Execution</span>
+                {data.trailingSl && (
+                  <button
+                    type="button"
+                    onClick={() => onChange({ trailingSl: null })}
+                    style={{ fontSize: 10, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 6 }}>
+                {TRAILING_SL_OPTIONS.map((opt) => {
+                  const isSelected = data.trailingSl === opt.value;
+                  return (
+                    <motion.button
+                      type="button"
+                      key={opt.value}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        const nextVal = isSelected ? null : opt.value;
+                        const updates = { trailingSl: nextVal };
+                        if (nextVal === 'failed_to_trail') {
+                          updates.mistakeTags = Array.from(new Set([...(data.mistakeTags || []), 'failed_to_trail_sl']));
+                        } else if (nextVal === 'trailed_too_tight') {
+                          updates.mistakeTags = Array.from(new Set([...(data.mistakeTags || []), 'trailed_too_tight']));
+                        }
+                        onChange(updates);
+                      }}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        padding: '8px 10px',
+                        borderRadius: 10,
+                        border: isSelected ? '2px solid #8b5cf6' : '1px solid var(--border)',
+                        backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.12)' : 'var(--bg-card-alt)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: isSelected ? '#8b5cf6' : 'var(--text-primary)' }}>
+                        <span>{opt.emoji}</span>
+                        <span>{opt.label}</span>
+                      </div>
+                      <span style={{ fontSize: 9, color: 'var(--text-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                        {opt.desc}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Divider style={{ margin: '4px 0' }} />
+
             <MistakesTagCloud
               selectedTags={data.mistakeTags || []}
               onChange={(next) => onChange({ mistakeTags: next })}
@@ -581,7 +694,7 @@ function BatchPsychologyCard({
   onChange,
   tradeCountNotice = 'all imported trades in this batch',
 }) {
-  const isFilled = Boolean(data.emotionBefore || data.emotionAfter || (data.mistakeTags && data.mistakeTags.length > 0) || data.followedPlan !== null);
+  const isFilled = Boolean(data.emotionBefore || data.emotionAfter || (data.mistakeTags && data.mistakeTags.length > 0) || data.followedPlan !== null || data.trailingSl);
 
   const resetAll = () => {
     onChange({
@@ -589,6 +702,7 @@ function BatchPsychologyCard({
       emotionAfter: '',
       disciplineRating: 5,
       followedPlan: null,
+      trailingSl: null,
       mistakeTags: [],
       notes: '',
     });
@@ -749,6 +863,17 @@ function BatchPsychologyCard({
                   }}>
                     {data.followedPlan === true ? 'Plan Followed ✓' : data.followedPlan === false ? 'Deviated ✕' : 'Plan: Neutral'}
                   </span>
+                  {data.trailingSl && (
+                    <>
+                      <span style={{ color: 'var(--text-faint)' }}>•</span>
+                      <span style={{
+                        color: data.trailingSl === 'trailed_disciplined' ? '#10b981' : data.trailingSl === 'failed_to_trail' ? '#ef4444' : '#8b5cf6',
+                        fontWeight: 700,
+                      }}>
+                        {data.trailingSl === 'trailed_disciplined' ? '🛡️ Trailed Plan' : data.trailingSl === 'trailed_to_cost' ? '🔒 Trailed to Cost' : data.trailingSl === 'failed_to_trail' ? '❌ Failed Trail' : data.trailingSl === 'trailed_too_tight' ? '⚠️ Trailed Tight' : '🎯 Fixed Stop'}
+                      </span>
+                    </>
+                  )}
                   {data.mistakeTags?.length > 0 && (
                     <>
                       <span style={{ color: 'var(--text-faint)' }}>•</span>
@@ -882,6 +1007,67 @@ function BatchPsychologyCard({
                   </div>
                 </Col>
               </Row>
+
+              <Divider style={{ margin: '4px 0' }} />
+
+              {/* Trailing Stop-Loss Execution */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Batch Trailing Stop-Loss Policy</span>
+                  {data.trailingSl && (
+                    <button
+                      type="button"
+                      onClick={() => onChange({ trailingSl: null })}
+                      style={{ fontSize: 10, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 6 }}>
+                  {TRAILING_SL_OPTIONS.map((opt) => {
+                    const isSelected = data.trailingSl === opt.value;
+                    return (
+                      <motion.button
+                        type="button"
+                        key={opt.value}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          const nextVal = isSelected ? null : opt.value;
+                          const updates = { trailingSl: nextVal };
+                          if (nextVal === 'failed_to_trail') {
+                            updates.mistakeTags = Array.from(new Set([...(data.mistakeTags || []), 'failed_to_trail_sl']));
+                          } else if (nextVal === 'trailed_too_tight') {
+                            updates.mistakeTags = Array.from(new Set([...(data.mistakeTags || []), 'trailed_too_tight']));
+                          }
+                          onChange(updates);
+                        }}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          padding: '8px 10px',
+                          borderRadius: 10,
+                          border: isSelected ? '2px solid #8b5cf6' : '1px solid var(--border)',
+                          backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.12)' : 'var(--bg-card-alt)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: isSelected ? '#8b5cf6' : 'var(--text-primary)' }}>
+                          <span>{opt.emoji}</span>
+                          <span>{opt.label}</span>
+                        </div>
+                        <span style={{ fontSize: 9, color: 'var(--text-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                          {opt.desc}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <Divider style={{ margin: '4px 0' }} />
 
@@ -2662,7 +2848,7 @@ function BrokerAPITab() {
     strategy: '', notes: '',
   });
   const [psychEnabled, setPsychEnabled] = useState(false);
-  const [psychology, setPsychology] = useState({ emotionBefore: '', emotionAfter: '', disciplineRating: 5, followedPlan: null, mistakeTags: [], notes: '' });
+  const [psychology, setPsychology] = useState({ emotionBefore: '', emotionAfter: '', disciplineRating: 5, followedPlan: null, trailingSl: null, mistakeTags: [], notes: '' });
 
   const broker = BROKERS.find((b) => b.id === selectedBroker) || BROKERS[0];
 
@@ -2853,7 +3039,7 @@ export default function AddTrade() {
 
   const initialPsychology = {
     emotionBefore: '', emotionAfter: '',
-    disciplineRating: 5, followedPlan: null, mistakeTags: [], notes: '',
+    disciplineRating: 5, followedPlan: null, trailingSl: null, mistakeTags: [], notes: '',
   };
 
   const [psychology, setPsychology] = useState(initialPsychology);

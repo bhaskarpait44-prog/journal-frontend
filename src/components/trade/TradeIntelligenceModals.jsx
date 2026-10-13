@@ -29,8 +29,18 @@ export const EMOTIONS_AFTER_LIST = [
   { value: 'confident', label: 'Confident', emoji: '💪', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
 ];
 
+export const TRAILING_SL_OPTIONS = [
+  { value: 'trailed_disciplined', label: 'Trailed per Plan', desc: 'Locked profit at key levels', emoji: '🛡️', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
+  { value: 'trailed_to_cost', label: 'Trailed to Cost / BE', desc: 'Protected capital at breakeven', emoji: '🔒', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
+  { value: 'failed_to_trail', label: 'Failed to Trail SL', desc: 'Let winning trade turn into a loss', emoji: '❌', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' },
+  { value: 'trailed_too_tight', label: 'Trailed Too Tight', desc: 'Suffocated trade early out of fear', emoji: '⚠️', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
+  { value: 'not_applicable', label: 'Fixed Target / Fixed SL', desc: 'No trailing required for setup', emoji: '🎯', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' }
+];
+
 export const MISTAKES_LIST = [
   { value: 'no_stoploss', label: 'No Stop Loss', emoji: '🛑' },
+  { value: 'failed_to_trail_sl', label: 'Failed to Trail SL', emoji: '📉' },
+  { value: 'trailed_too_tight', label: 'Trailed Too Tight', emoji: '🤏' },
   { value: 'revenge_trade', label: 'Revenge Trade', emoji: '😡' },
   { value: 'fomo_entry', label: 'FOMO Entry', emoji: '⚡' },
   { value: 'overtrading', label: 'Over-trading', emoji: '🔄' },
@@ -70,6 +80,14 @@ export function getMistakeInfo(tag) {
   const found = MISTAKES_LIST.find(m => m.value === clean || m.label.toLowerCase() === String(tag).toLowerCase().trim());
   if (found) return found;
   return { value: tag, label: tag, emoji: '⚠️' };
+}
+
+export function getTrailingSlInfo(val) {
+  if (!val) return null;
+  const clean = String(val).toLowerCase().trim().replace(/[-\s]/g, '_');
+  const found = TRAILING_SL_OPTIONS.find(o => o.value === clean || o.label.toLowerCase() === clean);
+  if (found) return found;
+  return { value: val, label: val, emoji: '🛡️', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' };
 }
 
 // ─── Strategy & Setup Modal ──────────────────────────────────────────────────
@@ -321,6 +339,7 @@ export function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
     emotionAfter: '',
     disciplineRating: 8,
     followedPlan: null,
+    trailingSl: null,
     mistakeTags: [],
     notes: ''
   });
@@ -359,6 +378,7 @@ export function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
         emotionAfter: matchedAfter,
         disciplineRating: psych.disciplineRating != null ? Number(psych.disciplineRating) : 8,
         followedPlan: psych.followedPlan !== undefined ? psych.followedPlan : null,
+        trailingSl: psych.trailingSl || null,
         mistakeTags: normalizedMistakes,
         notes: psych.notes || ''
       });
@@ -540,6 +560,62 @@ export function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
               <span>Controlled</span>
               <span>Flawless</span>
             </div>
+          </div>
+        </div>
+
+        {/* Trailing Stop-Loss Execution */}
+        <div className="p-4 bg-card-alt rounded-2xl border border-border">
+          <div className="flex justify-between items-center mb-2.5">
+            <div>
+              <label className="text-[11px] font-black text-text-faint uppercase tracking-wider block">
+                Trailing Stop-Loss Execution
+              </label>
+              <p className="text-[10px] text-text-muted mt-0.5">
+                How did you manage trailing your stop loss during this trade?
+              </p>
+            </div>
+            {formData.trailingSl && (
+              <button 
+                type="button" 
+                onClick={() => setFormData({ ...formData, trailingSl: null })}
+                className="text-[10px] text-text-faint hover:text-text-primary underline cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {TRAILING_SL_OPTIONS.map(opt => {
+              const isSelected = formData.trailingSl === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    const nextVal = isSelected ? null : opt.value;
+                    let nextMistakes = [...formData.mistakeTags];
+                    if (nextVal === 'failed_to_trail' && !nextMistakes.includes('failed_to_trail_sl')) {
+                      nextMistakes.push('failed_to_trail_sl');
+                    } else if (nextVal === 'trailed_too_tight' && !nextMistakes.includes('trailed_too_tight')) {
+                      nextMistakes.push('trailed_too_tight');
+                    }
+                    setFormData({ ...formData, trailingSl: nextVal, mistakeTags: nextMistakes });
+                  }}
+                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'border-2 shadow-sm font-bold scale-[1.01]' 
+                      : 'bg-card border-border text-text-secondary hover:border-blue-500/30 hover:bg-card-alt'
+                  }`}
+                  style={isSelected ? { borderColor: opt.color, backgroundColor: opt.bg, color: opt.color } : {}}
+                >
+                  <span className="text-xl leading-none mt-0.5">{opt.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black leading-tight">{opt.label}</p>
+                    <p className="text-[10px] opacity-80 leading-tight mt-0.5">{opt.desc}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 

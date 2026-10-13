@@ -19,7 +19,8 @@ import {
   StrategyModal,
   PsychologyModal,
   getEmotionInfo,
-  getMistakeInfo
+  getMistakeInfo,
+  getTrailingSlInfo
 } from '../components/trade/TradeIntelligenceModals';
 
 const IST_OFFSET = '+05:30';
@@ -101,12 +102,14 @@ export default function TradeDetail() {
     psych.emotionAfter || 
     psych.disciplineRating != null || 
     psych.followedPlan !== null || 
+    psych.trailingSl ||
     (Array.isArray(psych.mistakeTags) && psych.mistakeTags.length > 0) || 
     psych.notes
   );
 
   const beforeInfo = getEmotionInfo(psych.emotionBefore, 'before');
   const afterInfo = getEmotionInfo(psych.emotionAfter, 'after');
+  const trailingSlInfo = getTrailingSlInfo(psych.trailingSl);
 
   const ratingStars = trade.rating ? Number(trade.rating) : 3;
 
@@ -313,7 +316,7 @@ export default function TradeDetail() {
 
           {hasPsychologyData ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                 {/* Pre-trade */}
                 <div className="p-4 rounded-2xl bg-card-alt border border-border">
                   <p className="text-[10px] font-black text-text-muted uppercase tracking-wider mb-2">Pre-Trade Entry</p>
@@ -356,8 +359,21 @@ export default function TradeDetail() {
                   )}
                 </div>
 
-                {/* Discipline Rating */}
+                {/* Trailing Stop-Loss */}
                 <div className="p-4 rounded-2xl bg-card-alt border border-border">
+                  <p className="text-[10px] font-black text-text-muted uppercase tracking-wider mb-2">Trailing Stop-Loss</p>
+                  {trailingSlInfo ? (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border" style={{ backgroundColor: trailingSlInfo.bg, borderColor: `${trailingSlInfo.color}40`, color: trailingSlInfo.color }}>
+                      <span className="text-sm">{trailingSlInfo.emoji}</span>
+                      <span>{trailingSlInfo.label}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-text-faint font-medium">Not Specified</span>
+                  )}
+                </div>
+
+                {/* Discipline Rating */}
+                <div className="p-4 rounded-2xl bg-card-alt border border-border sm:col-span-2 lg:col-span-1">
                   <div className="flex justify-between items-center mb-1.5">
                     <p className="text-[10px] font-black text-text-muted uppercase tracking-wider">Discipline</p>
                     <span className="text-xs font-black font-mono text-blue-600 dark:text-blue-400">

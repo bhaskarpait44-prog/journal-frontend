@@ -50,11 +50,21 @@ const MISTAKE_LABELS = {
   revenge_trade: 'Revenge Trade',
   overtrading: 'Overtrading',
   no_stoploss: 'No Stop-Loss',
+  failed_to_trail_sl: 'Failed to Trail SL',
+  trailed_too_tight: 'Trailed Too Tight',
   oversized_position: 'Oversized Position',
   early_exit: 'Early Exit',
   late_entry: 'Late Entry',
   chasing_market: 'Chasing Market',
   ignored_plan: 'Ignored Trade Plan'
+};
+
+const TRAILING_SL_LABELS = {
+  trailed_disciplined: { label: 'Trailed per Plan', emoji: '🛡️', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+  trailed_to_cost:     { label: 'Trailed to Cost / BE', emoji: '🔒', color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+  failed_to_trail:     { label: 'Failed to Trail SL', emoji: '❌', color: 'text-rose-700 dark:text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20' },
+  trailed_too_tight:   { label: 'Trailed Too Tight', emoji: '⚠️', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+  not_applicable:      { label: 'Fixed Target / SL', emoji: '🎯', color: 'text-text-muted', bg: 'bg-card-alt border-border' }
 };
 
 const BATCH_PRESETS = [
@@ -66,6 +76,18 @@ const BATCH_PRESETS = [
     emotionAfter: 'satisfied',
     disciplineRating: 9,
     followedPlan: true,
+    trailingSl: 'trailed_disciplined',
+    mistakeTags: []
+  },
+  {
+    id: 'trailed_profit',
+    name: '🛡️ Trailed to Profit',
+    desc: 'Locked gains per trailing stop rules',
+    emotionBefore: 'calm',
+    emotionAfter: 'satisfied',
+    disciplineRating: 9,
+    followedPlan: true,
+    trailingSl: 'trailed_disciplined',
     mistakeTags: []
   },
   {
@@ -76,7 +98,30 @@ const BATCH_PRESETS = [
     emotionAfter: 'relieved',
     disciplineRating: 8,
     followedPlan: true,
+    trailingSl: 'not_applicable',
     mistakeTags: []
+  },
+  {
+    id: 'failed_trail',
+    name: '📉 Failed to Trail SL',
+    desc: 'Greed: let a winning trade turn red',
+    emotionBefore: 'overconfident',
+    emotionAfter: 'regretful',
+    disciplineRating: 3,
+    followedPlan: false,
+    trailingSl: 'failed_to_trail',
+    mistakeTags: ['failed_to_trail_sl']
+  },
+  {
+    id: 'trailed_tight',
+    name: '🤏 Trailed Too Tight',
+    desc: 'Fear: suffocated trade early before target',
+    emotionBefore: 'fearful',
+    emotionAfter: 'frustrated',
+    disciplineRating: 5,
+    followedPlan: false,
+    trailingSl: 'trailed_too_tight',
+    mistakeTags: ['trailed_too_tight']
   },
   {
     id: 'fomo',
@@ -86,6 +131,7 @@ const BATCH_PRESETS = [
     emotionAfter: 'regretful',
     disciplineRating: 4,
     followedPlan: false,
+    trailingSl: 'not_applicable',
     mistakeTags: ['fomo_entry']
   },
   {
@@ -96,6 +142,7 @@ const BATCH_PRESETS = [
     emotionAfter: 'frustrated',
     disciplineRating: 2,
     followedPlan: false,
+    trailingSl: 'not_applicable',
     mistakeTags: ['revenge_trade', 'oversized_position']
   }
 ];
@@ -118,6 +165,16 @@ const DEMO_STATS = {
   revengeTradeLoss: -6800.0,
   fomoTrades: 3,
   overtradingCount: 1,
+  failedToTrailCount: 2,
+  failedToTrailLoss: 5400.0,
+  trailedProfitLocked: 28400.0,
+  trailingSlStats: [
+    { status: 'trailed_disciplined', label: 'Trailed per Plan', emoji: '🛡️', count: 8, wins: 7, winRate: 87.5, totalPnl: 28400.0, avgPnl: 3550.0 },
+    { status: 'trailed_to_cost', label: 'Trailed to Cost / BE', emoji: '🔒', count: 3, wins: 2, winRate: 66.7, totalPnl: 4200.0, avgPnl: 1400.0 },
+    { status: 'failed_to_trail', label: 'Failed to Trail SL', emoji: '❌', count: 2, wins: 0, winRate: 0.0, totalPnl: -5400.0, avgPnl: -2700.0, totalLoss: 5400.0 },
+    { status: 'trailed_too_tight', label: 'Trailed Too Tight', emoji: '⚠️', count: 2, wins: 1, winRate: 50.0, totalPnl: -800.0, avgPnl: -400.0 },
+    { status: 'not_applicable', label: 'Fixed Target / SL', emoji: '🎯', count: 1, wins: 1, winRate: 100.0, totalPnl: 3600.0, avgPnl: 3600.0 }
+  ],
   mostCommonMistake: 'fomo_entry',
   emotionWinRate: [
     { emotion: 'calm', trades: 7, wins: 6, winRate: 85.7, totalPnl: 26400.0, avgPnl: 3771.4 },
@@ -365,7 +422,7 @@ export default function Psychology() {
       </div>
 
       {/* Hero Behavioral Scorecards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Card 1: Process Discipline */}
         <Card variant="elevated" className="p-5 sm:p-6 relative overflow-hidden bg-card border-border/80 flex flex-col justify-between shadow-md">
           <div>
@@ -454,8 +511,58 @@ export default function Psychology() {
           )}
         </Card>
 
-        {/* Card 3: Tilt & Emotional Vulnerability */}
-        <Card variant="elevated" className="p-5 sm:p-6 relative overflow-hidden bg-card border-border/80 flex flex-col justify-between shadow-md sm:col-span-2 lg:col-span-1">
+        {/* Card 3: Trailing Stop-Loss Protection */}
+        <Card variant="elevated" className="p-5 sm:p-6 relative overflow-hidden bg-card border-border/80 flex flex-col justify-between shadow-md">
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Trailing SL Discipline</span>
+              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                (stats.failedToTrailCount || 0) === 0 
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' 
+                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'
+              }`}>
+                {(stats.failedToTrailCount || 0) === 0 ? '🛡️ Profit Protected' : '⚠️ Profit Leaks'}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-2 mb-3">
+              <span className="text-4xl sm:text-5xl font-black font-heading tracking-tight text-emerald-600 dark:text-emerald-400">
+                +{fmtINR(stats.trailedProfitLocked || 0)}
+              </span>
+            </div>
+            <div className="space-y-2 mb-2">
+              <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20">
+                <span className="font-bold text-text-secondary flex items-center gap-1.5">
+                  <span>🛡️</span> Trailed per Plan
+                </span>
+                <span className="font-black text-emerald-700 dark:text-emerald-400">
+                  {((stats.trailingSlStats || []).filter(s => s.status === 'trailed_disciplined' || s.status === 'trailed_to_cost').reduce((acc, x) => acc + x.count, 0))} trades
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20">
+                <span className="font-bold text-text-secondary flex items-center gap-1.5">
+                  <span>❌</span> Failed to Trail SL
+                </span>
+                <span className="font-black text-rose-700 dark:text-rose-400">
+                  {stats.failedToTrailCount || 0} trades
+                </span>
+              </div>
+            </div>
+          </div>
+          {(stats.failedToTrailLoss || 0) > 0 ? (
+            <div className="pt-2 border-t border-border flex items-center justify-between text-xs font-black text-rose-700 dark:text-rose-400">
+              <span>Cost of Not Trailing</span>
+              <span>-{fmtINR(stats.failedToTrailLoss)}</span>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-border flex items-center justify-between text-xs font-bold text-text-muted">
+              <span>Trailing Status</span>
+              <span className="text-emerald-700 dark:text-emerald-400 font-bold">Zero Profit Surrenders</span>
+            </div>
+          )}
+        </Card>
+
+        {/* Card 4: Tilt & Emotional Vulnerability */}
+        <Card variant="elevated" className="p-5 sm:p-6 relative overflow-hidden bg-card border-border/80 flex flex-col justify-between shadow-md">
           <div>
             <div className="flex justify-between items-center mb-3">
               <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Tilt & Emotional Shield</span>
@@ -794,6 +901,102 @@ export default function Psychology() {
         </Card>
       </div>
 
+      {/* Trailing Stop-Loss Discipline & Profit Protection Section */}
+      <Card variant="default" className="border-border/80 shadow-lg overflow-hidden p-0 bg-card">
+        <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-base">🛡️</span>
+              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">
+                Trailing Stop-Loss Discipline &amp; Protection
+              </h3>
+            </div>
+            <p className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider mt-0.5">
+              Profit protection analytics and trailing execution breakdown
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+              +{fmtINR(stats.trailedProfitLocked || 0)} Protected
+            </span>
+            {(stats.failedToTrailLoss || 0) > 0 && (
+              <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
+                -{fmtINR(stats.failedToTrailLoss)} Surrendered
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {(stats.trailingSlStats || []).map((item) => {
+              const meta = TRAILING_SL_LABELS[item.status] || {
+                label: item.label,
+                emoji: item.emoji || '🎯',
+                color: 'text-text-primary',
+                bg: 'bg-card-alt border-border'
+              };
+              const isProfit = item.totalPnl >= 0;
+              return (
+                <div 
+                  key={item.status} 
+                  className={`p-3.5 sm:p-4 rounded-xl border flex flex-col justify-between transition-all ${meta.bg}`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-lg">{meta.emoji}</span>
+                      <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-card/80 text-text-secondary border border-border/60">
+                        {item.count} {item.count === 1 ? 'trade' : 'trades'}
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-black text-text-primary mb-1">
+                      {meta.label}
+                    </h4>
+                    <div className="flex items-baseline gap-1.5 mb-2">
+                      <span className={`text-base sm:text-lg font-black font-heading ${isProfit ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                        {fmtINR(item.totalPnl)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2.5 border-t border-border/60 space-y-1.5">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-text-muted">
+                      <span>Win Rate</span>
+                      <span className="text-text-primary font-black">{Number(item.winRate || 0).toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-card/80 rounded-full overflow-hidden border border-border/40">
+                      <div 
+                        className={`h-full rounded-full ${item.winRate >= 60 ? 'bg-emerald-500' : item.winRate >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                        style={{ width: `${Math.min(100, Math.max(0, item.winRate || 0))}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-bold text-text-muted pt-0.5">
+                      <span>Avg P&amp;L</span>
+                      <span className={item.avgPnl >= 0 ? 'text-emerald-700 dark:text-emerald-400 font-bold' : 'text-rose-700 dark:text-rose-400 font-bold'}>
+                        {fmtINR(item.avgPnl)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Psychological Takeaway Banner */}
+          <div className="p-3.5 rounded-xl bg-card-alt border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base">💡</span>
+              <span className="text-text-secondary">
+                <strong>Trailing SL Principle:</strong> Protect initial capital. Advance your stop to breakeven once price moves in your direction, then trail behind market swing pivots to let winning runners breathe.
+              </span>
+            </div>
+            <div className="shrink-0 text-[11px] font-black text-text-muted">
+              Disciplined Trails: {((stats.trailingSlStats || []).find(s => s.status === 'trailed_disciplined')?.count || 0)} Trades
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* Weekday Mental Game Heatmap */}
       {stats.dayOfWeekPsych?.length > 0 && (
         <Card variant="default" className="p-4 sm:p-6 border-border/80 shadow-md bg-card">
@@ -968,6 +1171,7 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
   const [emotionAfter, setEmotionAfter] = useState('satisfied');
   const [disciplineRating, setDisciplineRating] = useState(8);
   const [followedPlan, setFollowedPlan] = useState(true);
+  const [trailingSl, setTrailingSl] = useState('trailed_disciplined');
   const [mistakeTags, setMistakeTags] = useState([]);
   const [notes, setNotes] = useState('');
 
@@ -997,6 +1201,7 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
     setEmotionAfter(preset.emotionAfter);
     setDisciplineRating(preset.disciplineRating);
     setFollowedPlan(preset.followedPlan);
+    if (preset.trailingSl !== undefined) setTrailingSl(preset.trailingSl);
     setMistakeTags(preset.mistakeTags || []);
   };
 
@@ -1033,6 +1238,7 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
         emotionAfter,
         disciplineRating: Number(disciplineRating),
         followedPlan: Boolean(followedPlan),
+        trailingSl,
         mistakeTags,
         notes
       });
@@ -1181,6 +1387,58 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
                 No (Deviated)
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Trailing Stop-Loss Selector */}
+        <div>
+          <div className="flex justify-between items-center mb-1.5">
+            <label className="text-xs font-black uppercase tracking-wider text-text-muted">
+              Trailing Stop-Loss Execution
+            </label>
+            <span className="text-[10px] font-bold text-text-muted">
+              Profit protection &amp; stop advancement
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {[
+              { value: 'trailed_disciplined', label: 'Trailed per Plan', emoji: '🛡️', desc: 'Locked profit' },
+              { value: 'trailed_to_cost',     label: 'To Cost / BE',     emoji: '🔒', desc: 'Protected risk' },
+              { value: 'failed_to_trail',     label: 'Failed to Trail',  emoji: '❌', desc: 'Greed: let win go' },
+              { value: 'trailed_too_tight',   label: 'Trailed Too Tight',emoji: '⚠️', desc: 'Fear: suffocated' },
+              { value: 'not_applicable',      label: 'Fixed Target/SL',  emoji: '🎯', desc: 'Static stop' },
+            ].map((opt) => {
+              const isSelected = trailingSl === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setTrailingSl(opt.value);
+                    if (opt.value === 'failed_to_trail' && !mistakeTags.includes('failed_to_trail_sl')) {
+                      setMistakeTags(prev => [...prev, 'failed_to_trail_sl']);
+                    } else if (opt.value === 'trailed_too_tight' && !mistakeTags.includes('trailed_too_tight')) {
+                      setMistakeTags(prev => [...prev, 'trailed_too_tight']);
+                    }
+                  }}
+                  className={`p-2 rounded-xl text-left transition-all border ${
+                    isSelected
+                      ? 'border-accent bg-accent/10 shadow-sm'
+                      : 'border-border bg-card-alt hover:bg-card text-text-muted'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-sm">{opt.emoji}</span>
+                    <span className={`text-[11px] font-black ${isSelected ? 'text-accent' : 'text-text-primary'}`}>
+                      {opt.label}
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-text-muted block line-clamp-1">
+                    {opt.desc}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -1345,6 +1603,21 @@ function generateInsights(d) {
     insights.push({ 
       icon: '📉', 
       text: `Process discipline score is critical (<span class="text-rose-700 dark:text-rose-400 font-black">${Number(d.avgDiscipline || 0).toFixed(1)}/10</span>). Resist modifying stop-loss or profit targets mid-trade.` 
+    });
+  }
+
+  if (d.failedToTrailCount > 0) {
+    insights.push({ 
+      icon: '🛡️', 
+      text: `Profit surrender detected: <span class="text-rose-700 dark:text-rose-400 font-black">${d.failedToTrailCount} winning trade${d.failedToTrailCount > 1 ? 's' : ''}</span> turned into losses costing <span class="text-rose-700 dark:text-rose-400 font-black">${fmtINR(d.failedToTrailLoss || 0)}</span> due to not trailing your SL. Move stop to breakeven once 1R is reached.` 
+    });
+  }
+
+  const trailedDiscip = d.trailingSlStats?.find(s => s.status === 'trailed_disciplined');
+  if (trailedDiscip && trailedDiscip.count >= 2) {
+    insights.push({
+      icon: '💎',
+      text: `Trailing SL edge: Disciplined trailing generated <span class="text-emerald-700 dark:text-emerald-400 font-black">+${fmtINR(trailedDiscip.totalPnl || 0)}</span> with a <span class="text-emerald-700 dark:text-emerald-400 font-black">${Number(trailedDiscip.winRate || 0).toFixed(1)}%</span> win rate across ${trailedDiscip.count} trades.`
     });
   }
 
