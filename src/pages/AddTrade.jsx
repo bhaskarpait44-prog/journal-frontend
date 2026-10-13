@@ -86,106 +86,7 @@ const SETUPS = [
   'Other',
 ];
 
-const BATCH_PSYCHOLOGY_PRESETS = [
-  {
-    id: 'disciplined',
-    name: 'Disciplined Win',
-    icon: '🎯',
-    color: '#10b981',
-    desc: 'Calm execution, followed system',
-    data: {
-      emotionBefore: 'calm',
-      disciplineRating: 9,
-      followedPlan: true,
-      trailingSl: 'trailed_disciplined',
-      mistakeTags: [],
-    },
-  },
-  {
-    id: 'trailed_profit',
-    name: 'Trailed Profit',
-    icon: '🛡️',
-    color: '#10b981',
-    desc: 'Locked gains per trailing stop rules',
-    data: {
-      emotionBefore: 'calm',
-      disciplineRating: 9,
-      followedPlan: true,
-      trailingSl: 'trailed_disciplined',
-      mistakeTags: [],
-    },
-  },
-  {
-    id: 'process',
-    name: 'Process Focused',
-    icon: '🧘',
-    color: '#06b6d4',
-    desc: 'Emotion-free, stuck to edge',
-    data: {
-      emotionBefore: 'calm',
-      disciplineRating: 8,
-      followedPlan: true,
-      trailingSl: 'trailed_to_cost',
-      mistakeTags: [],
-    },
-  },
-  {
-    id: 'failed_trail',
-    name: 'Failed to Trail',
-    icon: '📉',
-    color: '#ef4444',
-    desc: 'Greed: winning trade turned red',
-    data: {
-      emotionBefore: 'overconfident',
-      disciplineRating: 3,
-      followedPlan: false,
-      trailingSl: 'failed_to_trail',
-      mistakeTags: [],
-    },
-  },
-  {
-    id: 'trailed_tight',
-    name: 'Trailed Too Tight',
-    icon: '🤏',
-    color: '#f59e0b',
-    desc: 'Fear: suffocated trade early',
-    data: {
-      emotionBefore: 'fearful',
-      disciplineRating: 5,
-      followedPlan: false,
-      trailingSl: 'trailed_too_tight',
-      mistakeTags: [],
-    },
-  },
-  {
-    id: 'fomo',
-    name: 'FOMO / Impulsive',
-    icon: '⚡',
-    color: '#f59e0b',
-    desc: 'Chased entry, poor location',
-    data: {
-      emotionBefore: 'fomo',
-      disciplineRating: 3,
-      followedPlan: false,
-      trailingSl: 'not_applicable',
-      mistakeTags: ['fomo_entry'],
-    },
-  },
-  {
-    id: 'tilt',
-    name: 'Revenge / Tilt',
-    icon: '🛑',
-    color: '#ef4444',
-    desc: 'Fighting market, moved stop',
-    data: {
-      emotionBefore: 'revenge',
-      disciplineRating: 2,
-      followedPlan: false,
-      trailingSl: 'not_applicable',
-      mistakeTags: ['revenge_trade', 'moved_sl'],
-    },
-  },
-];
+
 
 const EMOTIONS_BEFORE = [
   { value: 'calm', label: '😌', name: 'Calm', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
@@ -690,24 +591,13 @@ function BatchPsychologyCard({
   onChange,
   tradeCountNotice = 'all imported trades in this batch',
 }) {
-  const isFilled = Boolean(data.emotionBefore || data.emotionAfter || (data.mistakeTags && data.mistakeTags.length > 0) || data.followedPlan !== null || data.trailingSl);
+  const isFilled = Boolean(data.emotionBefore || (data.mistakeTags && data.mistakeTags.length > 0) || data.notes);
 
   const resetAll = () => {
     onChange({
       emotionBefore: '',
-      emotionAfter: '',
-      disciplineRating: 5,
-      followedPlan: null,
-      trailingSl: null,
       mistakeTags: [],
       notes: '',
-    });
-  };
-
-  const applyPreset = (preset) => {
-    onChange({
-      ...preset.data,
-      notes: data.notes || '',
     });
   };
 
@@ -846,33 +736,19 @@ function BatchPsychologyCard({
                   <span style={{ color: 'var(--text-secondary)' }}>
                     {data.emotionBefore ? `Mindset: ${data.emotionBefore}` : 'No entry mindset'}
                   </span>
-                  <span style={{ color: 'var(--text-faint)' }}>•</span>
-                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {data.disciplineRating || 5}/10 Discipline
-                  </span>
-                  <span style={{ color: 'var(--text-faint)' }}>•</span>
-                  <span style={{
-                    color: data.followedPlan === true ? '#10b981' : data.followedPlan === false ? '#ef4444' : 'var(--text-faint)',
-                    fontWeight: 600,
-                  }}>
-                    {data.followedPlan === true ? 'Plan Followed ✓' : data.followedPlan === false ? 'Deviated ✕' : 'Plan: Neutral'}
-                  </span>
-                  {data.trailingSl && (
-                    <>
-                      <span style={{ color: 'var(--text-faint)' }}>•</span>
-                      <span style={{
-                        color: data.trailingSl === 'trailed_disciplined' ? '#10b981' : data.trailingSl === 'failed_to_trail' ? '#ef4444' : '#8b5cf6',
-                        fontWeight: 700,
-                      }}>
-                        {data.trailingSl === 'trailed_disciplined' ? '🛡️ Trailed Plan' : data.trailingSl === 'trailed_to_cost' ? '🔒 Trailed to Cost' : data.trailingSl === 'failed_to_trail' ? '❌ Failed Trail' : data.trailingSl === 'trailed_too_tight' ? '⚠️ Trailed Tight' : '🎯 Fixed Stop'}
-                      </span>
-                    </>
-                  )}
                   {data.mistakeTags?.length > 0 && (
                     <>
                       <span style={{ color: 'var(--text-faint)' }}>•</span>
                       <span style={{ color: '#ef4444', fontWeight: 600 }}>
                         {data.mistakeTags.length} mistake{data.mistakeTags.length > 1 ? 's' : ''}
+                      </span>
+                    </>
+                  )}
+                  {data.notes && (
+                    <>
+                      <span style={{ color: 'var(--text-faint)' }}>•</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        Debrief logged
                       </span>
                     </>
                   )}
@@ -889,62 +765,7 @@ function BatchPsychologyCard({
                 )}
               </div>
 
-              {/* Quick Session Presets */}
-              <div>
-                <div style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  color: 'var(--text-faint)',
-                  letterSpacing: '0.08em',
-                  marginBottom: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}>
-                  <span>⚡ 1-Click Session Presets</span>
-                  <span style={{ fontWeight: 400, textTransform: 'none', fontSize: 10 }}>Auto-fill mindset parameters</span>
-                </div>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                  gap: 8,
-                }}>
-                  {BATCH_PSYCHOLOGY_PRESETS.map((preset) => (
-                    <motion.button
-                      type="button"
-                      key={preset.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => applyPreset(preset)}
-                      style={{
-                        padding: '8px 10px',
-                        borderRadius: 10,
-                        border: '1px solid var(--border)',
-                        backgroundColor: 'var(--bg-card-alt)',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        transition: 'all 0.15s',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        <span>{preset.icon}</span>
-                        <span>{preset.name}</span>
-                      </div>
-                      <div style={{ fontSize: 9, color: 'var(--text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {preset.desc}
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-
-              <Divider style={{ margin: '4px 0' }} />
-
-              {/* Mindset Picker */}
+              {/* 1. Pre-Trade Mindset */}
               <EmojiPicker
                 label="Pre-Trade Mindset"
                 value={data.emotionBefore}
@@ -954,117 +775,15 @@ function BatchPsychologyCard({
 
               <Divider style={{ margin: '4px 0' }} />
 
-              {/* Discipline & Plan Adherence */}
-              <Row gutter={[20, 20]}>
-                <Col xs={24} sm={12}>
-                  <DisciplineSlider
-                    value={data.disciplineRating}
-                    onChange={(val) => onChange({ disciplineRating: val })}
-                  />
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Plan Adherence</span>
-                    {data.followedPlan !== null && (
-                      <button
-                        type="button"
-                        onClick={() => onChange({ followedPlan: null })}
-                        style={{ fontSize: 10, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-                      >
-                        Reset
-                      </button>
-                    )}
-                  </div>
-                  <Segmented
-                    block
-                    value={data.followedPlan === null ? undefined : data.followedPlan ? 'yes' : 'no'}
-                    onChange={(val) => onChange({ followedPlan: val === 'yes' })}
-                    options={[
-                      { label: 'Followed Plan', value: 'yes' },
-                      { label: 'Deviated', value: 'no' },
-                    ]}
-                    size="large"
-                  />
-                  <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 6 }}>
-                    {data.followedPlan === true
-                      ? '✓ All trades adhered strictly to setup rules & risk limits.'
-                      : data.followedPlan === false
-                      ? '✕ Trades deviated from planned sizing, entry rules, or stop loss.'
-                      : 'Indicate whether this session adhered to strategy rules.'}
-                  </div>
-                </Col>
-              </Row>
-
-              <Divider style={{ margin: '4px 0' }} />
-
-              {/* Trailing Stop-Loss Execution */}
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Batch Trailing Stop-Loss Policy</span>
-                  {data.trailingSl && (
-                    <button
-                      type="button"
-                      onClick={() => onChange({ trailingSl: null })}
-                      style={{ fontSize: 10, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 6 }}>
-                  {TRAILING_SL_OPTIONS.map((opt) => {
-                    const isSelected = data.trailingSl === opt.value;
-                    return (
-                      <motion.button
-                        type="button"
-                        key={opt.value}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          const nextVal = isSelected ? null : opt.value;
-                          const updates = { trailingSl: nextVal };
-                          if (nextVal === 'failed_to_trail') {
-                            updates.mistakeTags = Array.from(new Set([...(data.mistakeTags || []), 'failed_to_trail_sl']));
-                          } else if (nextVal === 'trailed_too_tight') {
-                            updates.mistakeTags = Array.from(new Set([...(data.mistakeTags || []), 'trailed_too_tight']));
-                          }
-                          onChange(updates);
-                        }}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-start',
-                          padding: '8px 10px',
-                          borderRadius: 10,
-                          border: isSelected ? '2px solid #8b5cf6' : '1px solid var(--border)',
-                          backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.12)' : 'var(--bg-card-alt)',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: isSelected ? '#8b5cf6' : 'var(--text-primary)' }}>
-                          <span>{opt.emoji}</span>
-                          <span>{opt.label}</span>
-                        </div>
-                        <span style={{ fontSize: 9, color: 'var(--text-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
-                          {opt.desc}
-                        </span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <Divider style={{ margin: '4px 0' }} />
-
-              {/* Execution Mistakes */}
+              {/* 2. Execution Mistakes */}
               <MistakesTagCloud
                 selectedTags={data.mistakeTags || []}
                 onChange={(next) => onChange({ mistakeTags: next })}
               />
 
-              {/* Notes with Quick Prompts */}
+              <Divider style={{ margin: '4px 0' }} />
+
+              {/* 3. Batch Psychological Debrief */}
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                   Batch Psychological Debrief
@@ -1098,7 +817,7 @@ function BatchPsychologyCard({
                         backgroundColor: 'var(--bg-card-alt)',
                         color: 'var(--text-faint)',
                         cursor: 'pointer',
-                        transition: 'all 0.15s',
+                        transition: 'all 0.15s ease',
                       }}
                     >
                       + {prompt}

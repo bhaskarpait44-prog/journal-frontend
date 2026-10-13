@@ -67,78 +67,7 @@ const TRAILING_SL_LABELS = {
   not_applicable:      { label: 'Fixed Target / SL', emoji: '🎯', color: 'text-text-muted', bg: 'bg-card-alt border-border' }
 };
 
-const BATCH_PRESETS = [
-  {
-    id: 'disciplined',
-    name: '🧘 Disciplined Win',
-    desc: 'Calm execution, followed trade plan',
-    emotionBefore: 'calm',
-    disciplineRating: 9,
-    followedPlan: true,
-    trailingSl: 'trailed_disciplined',
-    mistakeTags: []
-  },
-  {
-    id: 'trailed_profit',
-    name: '🛡️ Trailed to Profit',
-    desc: 'Locked gains per trailing stop rules',
-    emotionBefore: 'calm',
-    disciplineRating: 9,
-    followedPlan: true,
-    trailingSl: 'trailed_disciplined',
-    mistakeTags: []
-  },
-  {
-    id: 'clean_loss',
-    name: '🛡️ Controlled Stop-Out',
-    desc: 'Took defined risk without hesitation',
-    emotionBefore: 'calm',
-    disciplineRating: 8,
-    followedPlan: true,
-    trailingSl: 'not_applicable',
-    mistakeTags: []
-  },
-  {
-    id: 'failed_trail',
-    name: '📉 Failed to Trail SL',
-    desc: 'Greed: let a winning trade turn red',
-    emotionBefore: 'overconfident',
-    disciplineRating: 3,
-    followedPlan: false,
-    trailingSl: 'failed_to_trail',
-    mistakeTags: []
-  },
-  {
-    id: 'trailed_tight',
-    name: '🤏 Trailed Too Tight',
-    desc: 'Fear: suffocated trade early before target',
-    emotionBefore: 'fearful',
-    disciplineRating: 5,
-    followedPlan: false,
-    trailingSl: 'trailed_too_tight',
-    mistakeTags: []
-  },
-  {
-    id: 'fomo',
-    name: '⚡ FOMO Entry',
-    desc: 'Chased a fast move, poor entry',
-    emotionBefore: 'overconfident',
-    disciplineRating: 4,
-    followedPlan: false,
-    trailingSl: 'not_applicable',
-    mistakeTags: ['fomo_entry']
-  },
-  {
-    id: 'revenge',
-    name: '😡 Revenge Trade',
-    desc: 'Frustrated after a loss, oversized position',
-    emotionBefore: 'revenge',
-    disciplineRating: 2,
-    followedPlan: false,
-    trailingSl: 'not_applicable',
-    mistakeTags: ['revenge_trade', 'oversized_position']
-  }
-];
+
 
 // Demo / Simulated Psychology Data for previewing empty states
 const DEMO_STATS = {
@@ -1078,11 +1007,8 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
   const [loadingTrades, setLoadingTrades] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Form State
+  // Form State: strictly Pre-Trade Mindset, Execution Mistakes, Batch Psychological Debrief
   const [emotionBefore, setEmotionBefore] = useState('calm');
-  const [disciplineRating, setDisciplineRating] = useState(8);
-  const [followedPlan, setFollowedPlan] = useState(true);
-  const [trailingSl, setTrailingSl] = useState('trailed_disciplined');
   const [mistakeTags, setMistakeTags] = useState([]);
   const [notes, setNotes] = useState('');
 
@@ -1106,14 +1032,6 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
     }
     loadTrades();
   }, [isOpen]);
-
-  const handleApplyPreset = (preset) => {
-    setEmotionBefore(preset.emotionBefore);
-    setDisciplineRating(preset.disciplineRating);
-    setFollowedPlan(preset.followedPlan);
-    if (preset.trailingSl !== undefined) setTrailingSl(preset.trailingSl);
-    setMistakeTags(preset.mistakeTags || []);
-  };
 
   const toggleMistakeTag = (tag) => {
     setMistakeTags(prev => 
@@ -1145,9 +1063,6 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
       await api.post('/trades/batch-psychology', {
         tradeIds: selectedIds,
         emotionBefore,
-        disciplineRating: Number(disciplineRating),
-        followedPlan: Boolean(followedPlan),
-        trailingSl,
         mistakeTags,
         notes
       });
@@ -1189,135 +1104,35 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
       }
     >
       <div className="space-y-5">
-        {/* Preset Pills */}
+        {/* 1. Pre-Trade Mindset */}
         <div>
           <label className="text-xs font-black uppercase tracking-wider text-text-muted block mb-2">
-            Quick Mindset Presets
+            Pre-Trade Mindset
           </label>
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-2">
-            {BATCH_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => handleApplyPreset(p)}
-                className="p-2.5 rounded-xl border border-border bg-card-alt hover:bg-card text-left transition-all group shadow-sm"
-              >
-                <span className="text-xs font-bold text-text-primary block">{p.name}</span>
-                <span className="text-[10px] text-text-muted block mt-0.5 line-clamp-1">{p.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Form Controls: Entry Mindset, Discipline Rating, Followed Plan */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-card-alt border border-border">
-          {/* Entry Mindset */}
-          <div>
-            <label className="text-xs font-black uppercase tracking-wider text-text-secondary block mb-1.5">
-              Entry Mindset
-            </label>
-            <select
-              value={emotionBefore}
-              onChange={(e) => setEmotionBefore(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl bg-card border border-border text-xs font-bold text-text-primary focus:outline-none focus:border-accent"
-            >
-              <option value="calm">😌 Calm & Focused</option>
-              <option value="confident">💪 Confident Setup</option>
-              <option value="overconfident">🤩 Overconfident</option>
-              <option value="fearful">😨 Fearful / Hesitant</option>
-              <option value="frustrated">😤 Frustrated</option>
-              <option value="revenge">😡 Revenge State</option>
-            </select>
-          </div>
-
-          {/* Discipline Rating */}
-          <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-text-secondary">
-                Discipline Rating
-              </label>
-              <span className="text-xs font-black text-accent">{disciplineRating} / 10</span>
-            </div>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={disciplineRating}
-              onChange={(e) => setDisciplineRating(Number(e.target.value))}
-              className="w-full accent-accent cursor-pointer mt-2"
-            />
-          </div>
-
-          {/* Followed Plan Toggle */}
-          <div>
-            <label className="text-xs font-black uppercase tracking-wider text-text-secondary block mb-1.5">
-              Followed Trade Plan
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFollowedPlan(true)}
-                className={`py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                  followedPlan 
-                    ? 'bg-emerald-600 text-white shadow-sm' 
-                    : 'bg-card border border-border text-text-muted hover:text-text-primary'
-                }`}
-              >
-                Yes (Clean)
-              </button>
-              <button
-                type="button"
-                onClick={() => setFollowedPlan(false)}
-                className={`py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                  !followedPlan 
-                    ? 'bg-rose-600 text-white shadow-sm' 
-                    : 'bg-card border border-border text-text-muted hover:text-text-primary'
-                }`}
-              >
-                No (Deviated)
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Trailing Stop-Loss Selector */}
-        <div>
-          <div className="flex justify-between items-center mb-1.5">
-            <label className="text-xs font-black uppercase tracking-wider text-text-muted">
-              Trailing Stop-Loss Execution
-            </label>
-            <span className="text-[10px] font-bold text-text-muted">
-              Profit protection &amp; stop advancement
-            </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-6 gap-2">
             {[
-              { value: 'trailed_disciplined', label: 'Trailed per Plan', emoji: '🛡️', desc: 'Locked profit' },
-              { value: 'trailed_to_cost',     label: 'To Cost / BE',     emoji: '🔒', desc: 'Protected risk' },
-              { value: 'failed_to_trail',     label: 'Failed to Trail',  emoji: '❌', desc: 'Greed: let win go' },
-              { value: 'trailed_too_tight',   label: 'Trailed Too Tight',emoji: '⚠️', desc: 'Fear: suffocated' },
-              { value: 'not_applicable',      label: 'Fixed Target/SL',  emoji: '🎯', desc: 'Static stop' },
-            ].map((opt) => {
-              const isSelected = trailingSl === opt.value;
+              { value: 'calm', label: 'Calm', emoji: '😌' },
+              { value: 'confident', label: 'Confident', emoji: '💪' },
+              { value: 'fomo', label: 'FOMO', emoji: '⚡' },
+              { value: 'revenge', label: 'Revenge', emoji: '😡' },
+              { value: 'fearful', label: 'Fearful', emoji: '😨' },
+              { value: 'overconfident', label: 'Overconfident', emoji: '🤩' },
+            ].map((emo) => {
+              const isSelected = emotionBefore === emo.value;
               return (
                 <button
-                  key={opt.value}
+                  key={emo.value}
                   type="button"
-                  onClick={() => setTrailingSl(opt.value)}
-                  className={`p-2 rounded-xl text-left transition-all border ${
+                  onClick={() => setEmotionBefore(emo.value)}
+                  className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                     isSelected
                       ? 'border-accent bg-accent/10 shadow-sm'
                       : 'border-border bg-card-alt hover:bg-card text-text-muted'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-sm">{opt.emoji}</span>
-                    <span className={`text-[11px] font-black ${isSelected ? 'text-accent' : 'text-text-primary'}`}>
-                      {opt.label}
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-text-muted block line-clamp-1">
-                    {opt.desc}
+                  <span className="text-lg block mb-0.5">{emo.emoji}</span>
+                  <span className={`text-[11px] block ${isSelected ? 'text-accent font-black' : 'font-bold text-text-primary'}`}>
+                    {emo.label}
                   </span>
                 </button>
               );
@@ -1325,10 +1140,10 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
           </div>
         </div>
 
-        {/* Mistake Tags */}
+        {/* 2. Execution Mistakes */}
         <div>
           <label className="text-xs font-black uppercase tracking-wider text-text-muted block mb-2">
-            Behavioral Mistakes (Select all that apply)
+            Execution Mistakes (Select all that apply)
           </label>
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {Object.entries(MISTAKE_LABELS)
@@ -1340,7 +1155,7 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
                     key={tag}
                     type="button"
                     onClick={() => toggleMistakeTag(tag)}
-                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       active 
                         ? 'bg-rose-600 dark:bg-rose-500 text-white shadow-sm' 
                         : 'bg-card-alt border border-border text-text-secondary hover:text-text-primary hover:border-border-strong'
@@ -1350,6 +1165,37 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
                   </button>
                 );
               })}
+          </div>
+        </div>
+
+        {/* 3. Batch Psychological Debrief */}
+        <div>
+          <label className="text-xs font-black uppercase tracking-wider text-text-muted block mb-2">
+            Batch Psychological Debrief
+          </label>
+          <textarea
+            rows={3}
+            placeholder="Log overall mental debrief for this batch (e.g. mental clarity, market conditions, discipline lessons)..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full p-3 rounded-xl bg-card-alt border border-border text-xs font-medium text-text-primary focus:outline-none focus:border-accent"
+          />
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {[
+              'Patiently waited for high-probability setups',
+              'Maintained calm discipline throughout session',
+              'Chased entries due to market volatility',
+              'Overtraded after initial morning loss',
+            ].map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => setNotes(prev => prev ? `${prev}. ${prompt}` : prompt)}
+                className="text-[10px] px-2.5 py-1 rounded-lg border border-dashed border-border bg-card-alt text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+              >
+                + {prompt}
+              </button>
+            ))}
           </div>
         </div>
 
