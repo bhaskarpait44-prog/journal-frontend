@@ -1,7 +1,8 @@
 import { useAuthStore } from '../store/authStore';
 
-const BASE = import.meta.env.VITE_API_URL
-  ? import.meta.env.VITE_API_URL + '/api'
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim();
+const BASE = rawApiUrl
+  ? (rawApiUrl.endsWith('/api') ? rawApiUrl : rawApiUrl.replace(/\/+$/, '') + '/api')
   : '/api';
 
 let navigate;
