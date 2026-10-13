@@ -233,37 +233,22 @@ export function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
 export function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    emotionBefore: '',
-    emotionAfter: '',
-    disciplineRating: 8,
-    followedPlan: null,
-    trailingSl: null,
+    emotionBefore: 'calm',
     mistakeTags: [],
     notes: ''
   });
 
-  // Pre-fill / fetch existing mindset data from trade
   useEffect(() => {
     if (trade && isOpen) {
       const psych = trade.psychology || {};
-      
-      // Match emotionBefore (case-insensitive & alias fallback)
-      let matchedBefore = '';
+
+      let matchedBefore = 'calm';
       if (psych.emotionBefore) {
         const cleanB = String(psych.emotionBefore).toLowerCase().trim();
         const foundB = EMOTIONS_BEFORE_LIST.find(e => e.value === cleanB || e.label.toLowerCase() === cleanB);
         matchedBefore = foundB ? foundB.value : psych.emotionBefore;
       }
 
-      // Match emotionAfter (case-insensitive & alias fallback)
-      let matchedAfter = '';
-      if (psych.emotionAfter) {
-        const cleanA = String(psych.emotionAfter).toLowerCase().trim();
-        const foundA = EMOTIONS_AFTER_LIST.find(e => e.value === cleanA || e.label.toLowerCase() === cleanA);
-        matchedAfter = foundA ? foundA.value : psych.emotionAfter;
-      }
-
-      // Normalize mistake tags
       const currentMistakes = Array.isArray(psych.mistakeTags) ? psych.mistakeTags : [];
       const normalizedMistakes = currentMistakes.map(m => {
         const clean = String(m).toLowerCase().trim().replace(/[-\s]/g, '_');
@@ -273,10 +258,6 @@ export function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
 
       setFormData({
         emotionBefore: matchedBefore,
-        emotionAfter: matchedAfter,
-        disciplineRating: psych.disciplineRating != null ? Number(psych.disciplineRating) : 8,
-        followedPlan: psych.followedPlan !== undefined ? psych.followedPlan : null,
-        trailingSl: psych.trailingSl || null,
         mistakeTags: normalizedMistakes,
         notes: psych.notes || ''
       });
@@ -301,189 +282,61 @@ export function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
     setLoading(true);
     try {
       await api.put(`/trades/${trade.id}`, { psychology: formData });
-      toast.success('Mindset log saved successfully');
+      toast.success('Mindset log saved');
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Failed to save mindset analysis');
+      toast.error(err.message || 'Failed to save mindset');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Mindset & Emotional Analysis">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Pre-Trade Mindset */}
+    <Modal isOpen={isOpen} onClose={onClose} title="Trade Psychology & Mindset" maxWidth="560px">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* 1. Pre-Trade Mindset */}
         <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="text-[11px] font-black text-text-faint uppercase tracking-wider">
-              Pre-Trade Entry Mindset
-            </label>
-            {formData.emotionBefore && (
-              <button 
-                type="button" 
-                onClick={() => setFormData({ ...formData, emotionBefore: '' })}
-                className="text-[10px] text-text-faint hover:text-text-primary underline cursor-pointer"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-            {EMOTIONS_BEFORE_LIST.map(e => {
-              const isSelected = formData.emotionBefore === e.value || String(formData.emotionBefore).toLowerCase() === e.value;
-              return (
-                <button
-                  key={e.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, emotionBefore: isSelected ? '' : e.value })}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'border-2 shadow-sm scale-102 font-bold' 
-                      : 'bg-card-alt border-border text-text-secondary hover:border-blue-500/40 hover:bg-card'
-                  }`}
-                  style={isSelected ? { borderColor: e.color, backgroundColor: e.bg, color: e.color } : {}}
-                >
-                  <span className="text-xl mb-1">{e.emoji}</span>
-                  <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{e.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Plan Adherence & Discipline */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Plan Adherence */}
-          <div className="p-4 bg-card-alt rounded-2xl border border-border">
-            <label className="text-[11px] font-black text-text-faint uppercase tracking-wider block mb-2.5">
-              Trading Plan Adherence
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button 
-                type="button" 
-                onClick={() => setFormData({ ...formData, followedPlan: true })}
-                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  formData.followedPlan === true 
-                    ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 font-black' 
-                    : 'bg-card border border-border text-text-secondary hover:text-emerald-600'
-                }`}
-              >
-                <span>✓</span> Followed
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setFormData({ ...formData, followedPlan: false })}
-                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  formData.followedPlan === false 
-                    ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/20 font-black' 
-                    : 'bg-card border border-border text-text-secondary hover:text-rose-600'
-                }`}
-              >
-                <span>✕</span> Deviated
-              </button>
-            </div>
-            {formData.followedPlan !== null && (
-              <button 
-                type="button"
-                onClick={() => setFormData({ ...formData, followedPlan: null })}
-                className="text-[10px] text-text-faint hover:text-text-primary underline mt-2 block text-center cursor-pointer"
-              >
-                Reset Selection
-              </button>
-            )}
-          </div>
-
-          {/* Discipline Score */}
-          <div className="p-4 bg-card-alt rounded-2xl border border-border flex flex-col justify-between">
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-[11px] font-black text-text-faint uppercase tracking-wider">
-                Discipline Rating
-              </label>
-              <span className="text-sm font-black font-mono text-blue-600 dark:text-blue-400">
-                {formData.disciplineRating || 0} / 10
-              </span>
-            </div>
-            <input 
-              type="range" 
-              min="1" 
-              max="10" 
-              step="1"
-              value={formData.disciplineRating || 8}
-              onChange={e => setFormData({ ...formData, disciplineRating: Number(e.target.value) })}
-              className="w-full accent-blue-600 cursor-pointer my-2"
-            />
-            <div className="flex justify-between text-[9px] font-bold text-text-faint uppercase">
-              <span>Impulsive</span>
-              <span>Controlled</span>
-              <span>Flawless</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Trailing Stop-Loss Execution */}
-        <div className="p-4 bg-card-alt rounded-2xl border border-border">
-          <div className="flex justify-between items-center mb-2.5">
-            <div>
-              <label className="text-[11px] font-black text-text-faint uppercase tracking-wider block">
-                Trailing Stop-Loss Execution
-              </label>
-              <p className="text-[10px] text-text-muted mt-0.5">
-                How did you manage trailing your stop loss during this trade?
-              </p>
-            </div>
-            {formData.trailingSl && (
-              <button 
-                type="button" 
-                onClick={() => setFormData({ ...formData, trailingSl: null })}
-                className="text-[10px] text-text-faint hover:text-text-primary underline cursor-pointer"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {TRAILING_SL_OPTIONS.map(opt => {
-              const isSelected = formData.trailingSl === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    const nextVal = isSelected ? null : opt.value;
-                    let nextMistakes = [...formData.mistakeTags];
-                    if (nextVal === 'failed_to_trail' && !nextMistakes.includes('failed_to_trail_sl')) {
-                      nextMistakes.push('failed_to_trail_sl');
-                    } else if (nextVal === 'trailed_too_tight' && !nextMistakes.includes('trailed_too_tight')) {
-                      nextMistakes.push('trailed_too_tight');
-                    }
-                    setFormData({ ...formData, trailingSl: nextVal, mistakeTags: nextMistakes });
-                  }}
-                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'border-2 shadow-sm font-bold scale-[1.01]' 
-                      : 'bg-card border-border text-text-secondary hover:border-blue-500/30 hover:bg-card-alt'
-                  }`}
-                  style={isSelected ? { borderColor: opt.color, backgroundColor: opt.bg, color: opt.color } : {}}
-                >
-                  <span className="text-xl leading-none mt-0.5">{opt.emoji}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-black leading-tight">{opt.label}</p>
-                    <p className="text-[10px] opacity-80 leading-tight mt-0.5">{opt.desc}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Common Mistakes */}
-        <div>
-          <label className="text-[11px] font-black text-text-faint uppercase tracking-wider mb-2.5 block">
-            Execution Mistakes & Behavioral Biases
+          <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-2">
+            Pre-Trade Mindset
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {[
+              { value: 'calm', label: 'Calm', emoji: '😌' },
+              { value: 'confident', label: 'Confident', emoji: '💪' },
+              { value: 'fomo', label: 'FOMO', emoji: '⚡' },
+              { value: 'revenge', label: 'Revenge', emoji: '😡' },
+              { value: 'fearful', label: 'Fearful', emoji: '😨' },
+              { value: 'overconfident', label: 'Overconf.', emoji: '🤩' },
+            ].map((emo) => {
+              const isSelected = formData.emotionBefore === emo.value;
+              return (
+                <button
+                  key={emo.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, emotionBefore: emo.value })}
+                  className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                    isSelected
+                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30 shadow-sm'
+                      : 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 hover:border-zinc-300'
+                  }`}
+                >
+                  <span className="text-lg block mb-0.5">{emo.emoji}</span>
+                  <span className={`text-[11px] block font-medium ${isSelected ? 'text-violet-700 dark:text-violet-300 font-bold' : 'text-zinc-600 dark:text-zinc-400'}`}>
+                    {emo.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. Execution Mistakes */}
+        <div>
+          <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-2">
+            Execution Mistakes
+          </label>
+          <div className="flex flex-wrap gap-1.5">
             {MISTAKES_LIST.map(m => {
               const isSelected = formData.mistakeTags.includes(m.value);
               return (
@@ -491,40 +344,39 @@ export function PsychologyModal({ isOpen, onClose, trade, onSuccess }) {
                   key={m.value}
                   type="button"
                   onClick={() => toggleMistake(m.value)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
-                    isSelected 
-                      ? 'bg-rose-500/15 border-rose-500/40 text-rose-600 dark:text-rose-400 font-black shadow-sm' 
-                      : 'bg-card-alt border-border text-text-secondary hover:border-rose-500/30 hover:text-text-primary'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-red-500 dark:bg-red-600 text-white shadow-sm'
+                      : 'bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
                   }`}
                 >
-                  <span>{m.emoji}</span>
-                  <span>{m.label}</span>
+                  {m.emoji} {m.label}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Psychology Notes */}
+        {/* 3. Debrief Notes */}
         <div>
-          <label className="text-[11px] font-black text-text-faint uppercase tracking-wider mb-2 block">
-            Psychological & Mental Reflections
+          <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-2">
+            Psychological Debrief
           </label>
-          <Input 
-            as="textarea"
+          <textarea
             rows={3}
             value={formData.notes}
             onChange={e => setFormData({ ...formData, notes: e.target.value })}
-            placeholder="Document mental triggers, hesitation, greed, fear or what gave you clarity..."
+            placeholder="Mental triggers, hesitation, discipline lessons..."
+            className="w-full p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:border-violet-400 resize-none"
           />
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <Button variant="secondary" className="flex-1 h-12" type="button" onClick={onClose}>
+        <div className="flex gap-2 pt-2">
+          <Button variant="ghost" className="flex-1" type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" className="flex-1 h-12 shadow-glow-blue" type="submit" loading={loading}>
-            Save Mindset Log
+          <Button variant="primary" className="flex-1" type="submit" loading={loading}>
+            Save Mindset
           </Button>
         </div>
       </form>
