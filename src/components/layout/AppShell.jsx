@@ -42,7 +42,7 @@ const AppShell = () => {
           className="sticky top-0 z-30 h-16" 
         />
         
-        <main className="flex-1 p-4 pb-[72px] sm:pb-6 min-[900px]:p-6 animate-fade-in">
+        <main className="flex-1 p-3 sm:p-5 min-[900px]:p-6 pb-[84px] min-[900px]:pb-6 animate-fade-in">
           <div key={location.pathname} className="max-w-[1400px] mx-auto min-w-0 animate-fade-up">
             <Outlet />
           </div>
@@ -51,7 +51,7 @@ const AppShell = () => {
         {/* Mobile Bottom Nav */}
         <MobileNav 
           onMoreClick={() => setMoreSheetOpen(true)} 
-          className="sm:hidden" 
+          className="min-[900px]:hidden" 
         />
       </div>
 

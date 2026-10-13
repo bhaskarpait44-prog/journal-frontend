@@ -2180,7 +2180,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
       </div>
 
       {/* Ant Design Steps indicator */}
-      <Card styles={{ body: { padding: '16px 24px' } }} style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
+      <Card styles={{ body: { padding: '12px 16px' } }} style={{ borderRadius: 16, border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
         <Steps
           current={currentStep - 1}
           onChange={(current) => goToStep(current + 1)}
@@ -2231,7 +2231,7 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
       {currentStep > 1 && (
         <Card
           size="small"
-          styles={{ body: { padding: '10px 20px' } }}
+          styles={{ body: { padding: '10px 14px' } }}
           style={{
             position: 'sticky',
             top: 0,
@@ -2242,30 +2242,25 @@ function ManualEntryTab({ form, setForm, psychology, setPsychology, onSuccess, l
             boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
           }}
         >
-          <Row align="middle" justify="space-between" gutter={12}>
-            <Col>
-              <Space size={8}>
+          <Row align="middle" justify="space-between" gutter={[8, 8]}>
+            <Col xs={24} sm={12}>
+              <Space size={8} wrap>
                 <Badge
                   color={form.tradeType === 'BUY' ? '#22c55e' : '#ef4444'}
                   text={form.tradeType}
                   style={{ fontSize: 10, fontWeight: 700 }}
                 />
-                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: 14 }}>
+                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: 13, wordBreak: 'break-all' }}>
                   {buildSymbol(form.underlying, form.expiryDate, form.strikePrice, form.optionType) || 'Unknown Contract'}
                 </span>
               </Space>
             </Col>
-            <Col xs={0} sm={12} style={{ textAlign: 'right', fontSize: 11, color: 'var(--text-faint)' }}>
-              <Space size={16}>
+            <Col xs={24} sm={12} style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+              <div className="flex flex-wrap items-center sm:justify-end gap-3 sm:gap-4">
                 <span>Lots: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{form.quantity || 0}</strong></span>
                 <span>Entry: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>₹{form.entryPrice || 0}</strong></span>
                 <span>Exposure: <strong style={{ color: '#3b82f6', fontFamily: 'monospace' }}>₹{fmtINR((parseFloat(form.entryPrice) || 0) * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0))}</strong></span>
-              </Space>
-            </Col>
-            <Col sm={0}>
-              <strong style={{ color: '#3b82f6', fontFamily: 'monospace', fontSize: 13 }}>
-                ₹{fmtINR((parseFloat(form.entryPrice) || 0) * (parseInt(form.lotSize) || 0) * (parseInt(form.quantity) || 0))}
-              </strong>
+              </div>
             </Col>
           </Row>
         </Card>
@@ -2808,32 +2803,24 @@ export default function AddTrade() {
       </Modal>
 
       {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
-        <Space size={12}>
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-faint)' }}>Log Activity</span>
-          <span style={{ height: 12, width: 1, backgroundColor: 'var(--border)', display: 'inline-block' }} />
-          <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-faint)' }}>Trading Journal</span>
-        </Space>
-        <Space size={12}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-black uppercase tracking-[0.15em] text-text-faint">Log Activity</span>
+          <span className="h-3 w-px bg-border inline-block" />
+          <span className="text-[10px] font-medium text-text-faint">Trading Journal</span>
+        </div>
+        <div className="flex items-center justify-between sm:justify-end gap-2.5 flex-wrap">
           <Button
             size="small"
             danger
             type="dashed"
             icon={<ClearOutlined />}
             onClick={() => setShowClearConfirm(true)}
-            style={{ borderRadius: 8 }}
+            className="rounded-lg text-xs"
           >
             Clear Form
           </Button>
-          <div style={{
-            display: 'flex',
-            gap: 2,
-            backgroundColor: 'var(--bg-card-alt)',
-            padding: 3,
-            borderRadius: 10,
-            border: '1px solid var(--border)',
-            position: 'relative'
-          }}>
+          <div className="flex items-center gap-1 bg-card-alt p-1 rounded-xl border border-border overflow-x-auto no-scrollbar max-w-full">
             {[
               { id: 'manual', label: 'Manual', icon: <EditOutlined /> },
               { id: 'csv', label: 'CSV Import', icon: <FileExcelOutlined /> },
@@ -2861,6 +2848,7 @@ export default function AddTrade() {
                     transition: 'color 0.2s',
                     zIndex: 1,
                     outline: 'none',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {isActive && (
@@ -2889,7 +2877,7 @@ export default function AddTrade() {
               );
             })}
           </div>
-        </Space>
+        </div>
       </div>
 
       <div style={{ minHeight: 450 }}>

@@ -197,7 +197,7 @@ export default function Psychology() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-6 sm:space-y-8 animate-fade-up px-3 sm:px-6 pb-16 sm:pb-12">
+    <div className="max-w-[1400px] mx-auto space-y-6 sm:space-y-8 animate-fade-up">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -313,8 +313,8 @@ export default function Psychology() {
                 {totalMistakeLoss === 0 ? 'Clean Execution' : `${totalMistakesCount} Biases Tagged`}
               </span>
             </div>
-            <div className="flex items-baseline gap-2 mb-3">
-              <span className={`text-3xl sm:text-4xl font-black font-heading tracking-tight ${
+            <div className="flex flex-wrap items-baseline gap-2 mb-3">
+              <span className={`text-2xl sm:text-3xl lg:text-4xl font-black font-heading tracking-tight break-all ${
                 totalMistakeLoss === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
               }`}>
                 {totalMistakeLoss === 0 ? '₹0' : `-${fmtINR(totalMistakeLoss)}`}
@@ -534,7 +534,7 @@ export default function Psychology() {
                                 <span className={`font-black ${m.totalPnl >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
                                   {fmtINR(m.totalPnl)}
                                 </span>
-                                <span className="text-[10px] text-text-muted font-bold ml-1.5 hidden xs:inline">
+                                <span className="text-[10px] text-text-muted font-bold ml-1.5 hidden sm:inline">
                                   (Avg {fmtINR(m.avgPnl)})
                                 </span>
                               </div>
@@ -736,7 +736,7 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
           <label className="text-xs font-black uppercase tracking-wider text-text-muted block mb-2">
             Pre-Trade Mindset
           </label>
-          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-6 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             {[
               { value: 'calm', label: 'Calm', emoji: '😌' },
               { value: 'confident', label: 'Confident', emoji: '💪' },

@@ -168,18 +168,19 @@ export default function Trades() {
           <Button 
             variant="secondary" 
             onClick={() => openModal('import')}
-            className="flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none min-h-[44px]"
           >
-            <IconImport className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Import CSV</span>
+            <IconImport className="w-4 h-4 mr-1.5" />
+            <span className="text-xs font-bold sm:hidden">Import</span>
+            <span className="text-xs font-bold hidden sm:inline">Import CSV</span>
           </Button>
           <Button 
             variant="primary"
             onClick={() => navigate('/add-trade')}
-            className="flex-1 sm:flex-none shadow-glow-blue"
+            className="flex-1 sm:flex-none shadow-glow-blue min-h-[44px]"
           >
-            <IconPlus className="w-4 h-4 sm:mr-2" strokeWidth={2.5} />
-            <span className="hidden sm:inline">Add Trade</span>
+            <IconPlus className="w-4 h-4 mr-1.5" strokeWidth={2.5} />
+            <span className="text-xs font-bold">Add Trade</span>
           </Button>
         </div>
       </div>
@@ -201,12 +202,12 @@ export default function Trades() {
             </div>
             <Button 
               variant={showFilters ? 'primary' : 'secondary'} 
-              className="lg:hidden h-11 px-4 rounded-xl min-w-[44px]"
+              className="lg:hidden h-11 px-3 sm:px-4 rounded-xl min-w-[44px]"
               onClick={() => setShowFilters(!showFilters)}
             >
-              <IconFilter className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline text-xs uppercase tracking-widest font-black">Filters</span>
-              {activeFiltersCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-black">{activeFiltersCount}</span>}
+              <IconFilter className="w-4 h-4 mr-1.5" />
+              <span className="text-xs uppercase tracking-wider font-bold">Filters</span>
+              {activeFiltersCount > 0 && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-black">{activeFiltersCount}</span>}
             </Button>
           </div>
 
@@ -404,17 +405,19 @@ export default function Trades() {
                   onClick={() => navigate(`/trades/${trade.id}`)}
                 >
                   <div className="p-4 flex items-center justify-between border-b border-border bg-card-alt/20">
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedIds.has(trade.id)} 
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          toggleSelect(trade.id);
-                        }}
-                        className="rounded-md border-border text-accent w-4 h-4"
-                      />
-                      <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <label 
+                        className="flex items-center justify-center min-w-[44px] min-h-[44px] -m-2 p-2 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input 
+                          type="checkbox" 
+                          checked={selectedIds.has(trade.id)} 
+                          onChange={() => toggleSelect(trade.id)}
+                          className="rounded-md border-border text-accent w-4 h-4 cursor-pointer"
+                        />
+                      </label>
+                      <div className="flex flex-wrap items-center gap-1.5 ml-1">
                         <div className="font-black text-sm">{trade.symbol}</div>
                         <Badge type={trade.tradeType} className="scale-75 origin-left" />
                       </div>
@@ -435,10 +438,22 @@ export default function Trades() {
                       <PnlSpan value={trade.pnl} className="text-base font-black" />
                     </div>
                   </div>
-                  <div className="px-4 pb-4 flex gap-2">
-                    <button onClick={(e) => { e.stopPropagation(); openModal('strategy', trade); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-card-alt border border-border text-accent transition-colors"><IconEdit className="w-4 h-4" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); openModal('psychology', trade); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-card-alt border border-border text-violet-500 transition-colors"><IconPsychology className="w-4 h-4" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-card-alt border border-border text-loss transition-colors"><IconTrash className="w-4 h-4" /></button>
+                  <div className="px-4 pb-4 flex items-center justify-between gap-2 border-t border-border/40 pt-3">
+                    <div>
+                      {trade.status === 'OPEN' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openModal('close', trade); }}
+                          className="min-h-[44px] px-3.5 rounded-xl bg-profit/10 text-profit text-xs font-black uppercase tracking-wider hover:bg-profit hover:text-white transition-all flex items-center"
+                        >
+                          Close Trade
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <button onClick={(e) => { e.stopPropagation(); openModal('strategy', trade); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-card-alt border border-border text-accent transition-colors" title="Journal"><IconEdit className="w-4 h-4" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); openModal('psychology', trade); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-card-alt border border-border text-violet-500 transition-colors" title="Psychology"><IconPsychology className="w-4 h-4" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(trade.id); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-card-alt border border-border text-loss transition-colors" title="Delete"><IconTrash className="w-4 h-4" /></button>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -454,81 +469,57 @@ export default function Trades() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <>
-          {/* Desktop Pagination */}
-          <div className="hidden sm:flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
-            <p className="text-xs font-bold text-text-faint uppercase tracking-widest">
-              Showing <span className="text-text-primary">{(page - 1) * LIMIT + 1}</span> to <span className="text-text-primary">{Math.min(page * LIMIT, total)}</span> of {total} trades
-            </p>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                disabled={page === 1}
-                onClick={() => handlePageChange(page - 1)}
-                className="rounded-full w-10 h-10 p-0 min-h-[40px] min-w-[40px]"
-              >
-                <IconChevronDown className="w-5 h-5 rotate-90" />
-              </Button>
-              
-              <div className="flex items-center gap-1">
-                {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                  let p = page - 2 + i;
-                  if (page <= 2) p = i + 1;
-                  if (page >= totalPages - 1) p = totalPages - 4 + i;
-                  if (p <= 0 || p > totalPages) return null;
-                  
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => handlePageChange(p)}
-                      className={`w-10 h-10 rounded-full text-xs font-black transition-all ${page === p ? 'bg-accent text-white shadow-glow-blue scale-110' : 'text-text-muted hover:bg-card-alt hover:text-text-primary'}`}
-                    >
-                      {p}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                disabled={page === totalPages}
-                onClick={() => handlePageChange(page + 1)}
-                className="rounded-full w-10 h-10 p-0 min-h-[40px] min-w-[40px]"
-              >
-                <IconChevronDown className="w-5 h-5 -rotate-90" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Pagination (Sticky) */}
-          <div className="sm:hidden fixed bottom-[calc(58px+env(safe-area-inset-bottom))] left-0 right-0 z-40 bg-card/90 backdrop-blur border-t border-border px-4 py-2 flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 border-t border-border mt-4">
+          <p className="text-xs font-bold text-text-faint uppercase tracking-widest text-center sm:text-left">
+            Showing <span className="text-text-primary">{(page - 1) * LIMIT + 1}</span> to <span className="text-text-primary">{Math.min(page * LIMIT, total)}</span> of {total} trades
+          </p>
+          <div className="flex items-center gap-2">
             <Button 
               variant="secondary" 
               size="sm" 
               disabled={page === 1}
               onClick={() => handlePageChange(page - 1)}
-              className="rounded-xl h-10 px-4 min-h-[40px]"
+              className="rounded-xl h-11 px-4 min-h-[44px]"
             >
-              <IconChevronDown className="w-4 h-4 rotate-90 mr-2" />
+              <IconChevronDown className="w-4 h-4 rotate-90 mr-1.5" />
               Prev
             </Button>
-            <span className="text-[10px] font-black uppercase tracking-widest text-text-faint">
-              Page {page} of {totalPages}
+            
+            <div className="hidden sm:flex items-center gap-1">
+              {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                let p = page - 2 + i;
+                if (page <= 2) p = i + 1;
+                if (page >= totalPages - 1) p = totalPages - 4 + i;
+                if (p <= 0 || p > totalPages) return null;
+                
+                return (
+                  <button
+                    key={p}
+                    onClick={() => handlePageChange(p)}
+                    className={`w-10 h-10 rounded-full text-xs font-black transition-all ${page === p ? 'bg-accent text-white shadow-glow-blue scale-110' : 'text-text-muted hover:bg-card-alt hover:text-text-primary'}`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
+
+            <span className="sm:hidden text-xs font-black text-text-muted px-2">
+              {page} / {totalPages}
             </span>
+
             <Button 
               variant="secondary" 
               size="sm" 
               disabled={page === totalPages}
               onClick={() => handlePageChange(page + 1)}
-              className="rounded-xl h-10 px-4 min-h-[40px]"
+              className="rounded-xl h-11 px-4 min-h-[44px]"
             >
               Next
-              <IconChevronDown className="w-4 h-4 -rotate-90 ml-2" />
+              <IconChevronDown className="w-4 h-4 -rotate-90 ml-1.5" />
             </Button>
           </div>
-        </>
+        </div>
       )}
 
       {/* Modals */}

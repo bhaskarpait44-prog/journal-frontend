@@ -125,24 +125,18 @@ export default function Dashboard() {
           </p>
 
           {/* The number */}
-          <div className={`text-4xl sm:text-5xl lg:text-6xl font-black font-mono tabular-nums tracking-tighter leading-none ${isProfitable ? 'text-profit' : 'text-loss'}`}>
+          <div className={`text-3xl sm:text-5xl lg:text-6xl font-black font-mono tabular-nums tracking-tighter leading-none break-words ${isProfitable ? 'text-profit' : 'text-loss'}`}>
             {fmtINR(totalPnl, true)}
           </div>
 
           {/* Inline secondary stats */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-5">
-            <InlineStat label="Win Rate"      value={fmtPct(summary?.winRate, 1)}          />
-            <div className="w-px h-4 bg-border" />
-            <InlineStat label="Profit Factor" value={fmtNum(summary?.profitFactor, 2)}         />
-            <div className="w-px h-4 bg-border" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-border/60 mt-5">
+            <InlineStat label="Win Rate"      value={fmtPct(summary?.winRate, 1)} />
+            <InlineStat label="Profit Factor" value={fmtNum(summary?.profitFactor, 2)} />
             <InlineStat label="Expectancy"    value={fmtINR(summary?.expectancy ?? 0, true)} pnl={summary?.expectancy} />
-            <div className="w-px h-4 bg-border" />
-            <InlineStat label="Total Trades"  value={summary?.totalTrades ?? 0}            />
+            <InlineStat label="Total Trades"  value={summary?.totalTrades ?? 0} />
             {summary?.openTrades > 0 && (
-              <>
-                <div className="w-px h-4 bg-border" />
-                <InlineStat label="Open" value={summary.openTrades} highlight />
-              </>
+              <InlineStat label="Open" value={summary.openTrades} highlight />
             )}
           </div>
 
@@ -296,15 +290,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Mobile FAB */}
-      <button
-        onClick={() => setQuickLogOpen(true)}
-        className="sm:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-accent shadow-glow-blue flex items-center justify-center active:scale-95 transition-transform"
-        aria-label="Add Trade"
-      >
-        <IconPlus className="w-6 h-6 text-white" strokeWidth={2.5} />
-      </button>
-
       <QuickLogSheet
         isOpen={quickLogOpen}
         onClose={() => setQuickLogOpen(false)}
@@ -333,9 +318,9 @@ function InlineStat({ label, value, pnl, highlight }) {
 
 function MiniStat({ label, value, pos, neg }) {
   return (
-    <div className="bg-card-alt rounded-lg px-3 py-2">
-      <p className="text-[8px] font-black text-text-faint uppercase tracking-wider mb-0.5">{label}</p>
-      <p className={`text-xs font-black font-mono tabular-nums ${pos ? 'text-profit' : neg ? 'text-loss' : 'text-text-primary'}`}>
+    <div className="bg-card-alt rounded-lg px-2.5 sm:px-3 py-2 min-w-0">
+      <p className="text-[8px] font-black text-text-faint uppercase tracking-wider mb-0.5 truncate">{label}</p>
+      <p className={`text-xs font-black font-mono tabular-nums truncate ${pos ? 'text-profit' : neg ? 'text-loss' : 'text-text-primary'}`}>
         {value}
       </p>
     </div>

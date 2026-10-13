@@ -22,6 +22,23 @@ import {
   IconDollar, IconTrades
 } from '../components/ui/Icons';
 
+function fmtCompactINR(n, sign = true) {
+  if (n == null || isNaN(n)) return '—';
+  const abs = Math.abs(n);
+  let formatted = '';
+  if (abs >= 10000000) {
+    formatted = `${(abs / 10000000).toFixed(1)}Cr`;
+  } else if (abs >= 100000) {
+    formatted = `${(abs / 100000).toFixed(1)}L`;
+  } else if (abs >= 1000) {
+    formatted = `${(abs / 1000).toFixed(1)}k`;
+  } else {
+    formatted = abs.toFixed(0);
+  }
+  const prefix = sign ? (n >= 0 ? '+' : '-') : '';
+  return `${prefix}₹${formatted}`;
+}
+
 export default function CalendarPage() {
   const [viewDate, setViewDate] = useState(dayjs());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -226,7 +243,7 @@ export default function CalendarPage() {
             {stats.tradeDays} active trading session{stats.tradeDays !== 1 ? 's' : ''} logged
           </span>
         </div>
-        <Space size={8}>
+        <Space size={8} wrap>
           <Button
             size="small"
             onClick={() => onChange(dayjs())}
@@ -324,8 +341,9 @@ export default function CalendarPage() {
             <span style={{ fontSize: 8, color: 'var(--text-faint)', opacity: 0.65, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em', display: 'inline-block', transform: 'scale(0.9)', transformOrigin: 'right' }} className="hide-mobile-small">
               {data.trades} TRADE{data.trades !== 1 ? 'S' : ''}
             </span>
-            <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: isPos ? 'var(--text-profit)' : 'var(--text-loss)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '100%' }}>
-              {isPos ? '+' : ''}{fmtINR(data.pnl)}
+            <span style={{ fontWeight: 800, fontFamily: 'monospace', color: isPos ? 'var(--text-profit)' : 'var(--text-loss)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '100%' }}>
+              <span className="hidden sm:inline text-xs">{isPos ? '+' : ''}{fmtINR(data.pnl)}</span>
+              <span className="sm:hidden text-[10px] tracking-tight">{fmtCompactINR(data.pnl, true)}</span>
             </span>
           </div>
         )}
@@ -391,14 +409,14 @@ export default function CalendarPage() {
         }
         @media (max-width: 640px) {
           .custom-trading-calendar .ant-picker-cell-inner {
-            height: 58px !important;
+            height: 56px !important;
           }
           .custom-trading-calendar .ant-picker-calendar-date {
-            height: 52px !important;
+            height: 50px !important;
             margin: 2px 1px !important;
           }
           .calendar-cell-overlay {
-            padding: 4px 6px !important;
+            padding: 3px 4px !important;
             border-radius: 8px !important;
           }
           .hide-mobile-small {
@@ -409,14 +427,14 @@ export default function CalendarPage() {
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
-        <Space size={12}>
+        <div className="flex items-center gap-3 flex-wrap">
           <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-faint)' }}>
             <IconCalendar style={{ width: 15, height: 15, color: 'var(--accent)', verticalAlign: 'middle', marginRight: 6 }} />
             Trading Calendar & Session Heatmap
           </span>
-          <span style={{ height: 12, width: 1, backgroundColor: 'var(--border)', display: 'inline-block' }} />
-          <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)' }}>Daily & Weekly Performance Overview</span>
-        </Space>
+          <span className="hidden sm:inline-block" style={{ height: 12, width: 1, backgroundColor: 'var(--border)' }} />
+          <span className="hidden sm:inline-block" style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)' }}>Daily & Weekly Performance Overview</span>
+        </div>
       </div>
 
       {/* Monthly Scorecard */}
@@ -465,7 +483,8 @@ export default function CalendarPage() {
           border: '1px solid var(--border)',
           backgroundColor: 'var(--bg-card)',
         }}
-        styles={{ body: { padding: '16px 20px 24px 20px' } }}
+        styles={{ body: { padding: '12px 6px 16px 6px' } }}
+        className="sm:[&_.ant-card-body]:!p-5"
       >
         <div className="custom-trading-calendar">
           <Calendar
