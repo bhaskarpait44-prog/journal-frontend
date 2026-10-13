@@ -56,32 +56,6 @@ const MISTAKE_LABELS = {
   ignored_plan: 'Ignored Trade Plan'
 };
 
-// Demo / Simulated Psychology Data for previewing empty states
-const DEMO_STATS = {
-  totalLogged: 16,
-  totalTradesInPeriod: 22,
-  postLossPerformance: { count: 5, winRate: 40.0, avgPnl: -1250.0, totalPnl: -6250.0 },
-  postWinPerformance: { count: 10, winRate: 70.0, avgPnl: 2800.0, totalPnl: 28000.0 },
-  revengeTrades: 2,
-  revengeTradeLoss: -6800.0,
-  fomoTrades: 3,
-  overtradingCount: 1,
-  mostCommonMistake: 'fomo_entry',
-  emotionWinRate: [
-    { emotion: 'calm', trades: 7, wins: 6, winRate: 85.7, totalPnl: 26400.0, avgPnl: 3771.4 },
-    { emotion: 'confident', trades: 4, wins: 3, winRate: 75.0, totalPnl: 14200.0, avgPnl: 3550.0 },
-    { emotion: 'overconfident', trades: 2, wins: 1, winRate: 50.0, totalPnl: -1800.0, avgPnl: -900.0 },
-    { emotion: 'fearful', trades: 2, wins: 0, winRate: 0.0, totalPnl: -5400.0, avgPnl: -2700.0 },
-    { emotion: 'revenge', trades: 1, wins: 0, winRate: 0.0, totalPnl: -4800.0, avgPnl: -4800.0 }
-  ],
-  mistakeFrequency: [
-    { tag: 'fomo_entry', count: 3, totalPnl: -7800.0, avgPnl: -2600.0, totalLoss: 7800.0 },
-    { tag: 'revenge_trade', count: 2, totalPnl: -6800.0, avgPnl: -3400.0, totalLoss: 6800.0 },
-    { tag: 'early_exit', count: 2, totalPnl: -1400.0, avgPnl: -700.0, totalLoss: 1400.0 },
-    { tag: 'overtrading', count: 1, totalPnl: -2600.0, avgPnl: -2600.0, totalLoss: 2600.0 }
-  ]
-};
-
 export default function Psychology() {
   const navigate = useNavigate();
   const { theme } = useThemeStore();
@@ -92,7 +66,6 @@ export default function Psychology() {
   // Period state
   const [period, setPeriod] = useState('all');
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
-  const [previewDemo, setPreviewDemo] = useState(false);
 
   const dateParams = useMemo(() => {
     if (period === 'all') return '';
@@ -101,21 +74,19 @@ export default function Psychology() {
     return `&from=${from}&to=${to}`;
   }, [period]);
 
-  const { data: realStats, loading: statsLoading, refetch: refetchStats } = useApi(`/analytics/psychology?_t=1${dateParams}`);
+  const { data: stats, loading: statsLoading, refetch: refetchStats } = useApi(`/analytics/psychology?_t=1${dateParams}`);
 
   const handleRefreshAll = () => {
     refetchStats();
   };
 
-  const isDemo = previewDemo || (!statsLoading && (!realStats || realStats.totalLogged === 0) && previewDemo);
-  const stats = isDemo ? DEMO_STATS : realStats;
   const isLoading = statsLoading;
 
   if (isLoading) return <PsychologySkeleton />;
 
   const hasNoData = !stats || stats.totalLogged === 0;
 
-  if (hasNoData && !previewDemo) {
+  if (hasNoData) {
     return (
       <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fade-up px-3 sm:px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -128,9 +99,6 @@ export default function Psychology() {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <Button variant="secondary" onClick={() => setPreviewDemo(true)} className="text-xs font-bold flex-1 sm:flex-initial">
-              👁️ View Demo
-            </Button>
             <Button variant="primary" onClick={() => setIsBatchModalOpen(true)} className="shadow-glow-blue text-xs font-bold flex-1 sm:flex-initial">
               <IconPlus className="w-4 h-4 mr-1.5" strokeWidth={2.5} />
               Batch Tag
@@ -146,17 +114,14 @@ export default function Psychology() {
             No Mindset Logs Found Yet
           </h2>
           <p className="text-xs sm:text-sm text-text-muted max-w-lg mx-auto leading-relaxed mb-6 sm:mb-8">
-            You have trades recorded in your journal, but haven't tagged them with mental states or discipline ratings yet. 
-            Use our <strong>1-Click Batch Tag</strong> tool to quickly tag existing trades or explore the preview dashboard.
+            You have trades recorded in your journal, but haven't tagged them with mental states yet. 
+            Use our <strong>1-Click Batch Tag</strong> tool to quickly tag existing trades.
           </p>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-md mx-auto">
             <Button variant="primary" size="lg" onClick={() => setIsBatchModalOpen(true)} className="shadow-glow-blue justify-center text-xs font-bold">
               <IconPlus className="w-4 h-4 mr-2" strokeWidth={2.5} />
               Batch Tag Existing Trades
-            </Button>
-            <Button variant="secondary" size="lg" onClick={() => setPreviewDemo(true)} className="justify-center text-xs font-bold">
-              View Interactive Demo
             </Button>
             <Button variant="ghost" size="lg" onClick={() => navigate('/trades')} className="justify-center text-xs font-bold text-text-secondary">
               Go to Trade Book
@@ -188,7 +153,6 @@ export default function Psychology() {
           onClose={() => setIsBatchModalOpen(false)} 
           onSuccess={() => {
             setIsBatchModalOpen(false);
-            setPreviewDemo(false);
             handleRefreshAll();
           }} 
         />
@@ -232,30 +196,6 @@ export default function Psychology() {
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-6 sm:space-y-8 animate-fade-up px-3 sm:px-6 pb-16 sm:pb-12">
-      {/* Demo Banner Notification */}
-      {isDemo && (
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl shrink-0">👁️</span>
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-violet-700 dark:text-violet-300">
-                Interactive Preview Mode
-              </p>
-              <p className="text-xs text-text-muted leading-relaxed">
-                Viewing simulated behavioral analytics. Tag your actual trades to see real personalized metrics.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="primary" size="sm" onClick={() => setIsBatchModalOpen(true)} className="flex-1 sm:flex-initial text-xs font-bold">
-              Batch Tag Real Trades
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setPreviewDemo(false)} className="text-xs font-bold text-text-secondary">
-              Exit Preview
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -630,7 +570,6 @@ export default function Psychology() {
         onClose={() => setIsBatchModalOpen(false)} 
         onSuccess={() => {
           setIsBatchModalOpen(false);
-          setPreviewDemo(false);
           handleRefreshAll();
         }} 
       />
