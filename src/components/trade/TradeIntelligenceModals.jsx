@@ -96,7 +96,6 @@ export function getTrailingSlInfo(val) {
 
 export function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
   const [loading, setLoading] = useState(false);
-  const [tagInput, setTagInput] = useState('');
   const [options, setOptions] = useState({
     strategies: DEFAULT_STRATEGIES,
     setups: DEFAULT_SETUPS
@@ -104,10 +103,7 @@ export function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
 
   const [formData, setFormData] = useState({
     strategy: '',
-    setupType: '',
-    notes: '',
-    rating: 3,
-    tags: []
+    setupType: ''
   });
 
   // Fetch meta options (user's existing strategies + setups)
@@ -131,32 +127,10 @@ export function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
     if (trade && isOpen) {
       setFormData({
         strategy: trade.strategy || '',
-        setupType: trade.setupType || '',
-        notes: trade.notes || '',
-        rating: trade.rating ? Number(trade.rating) : 3,
-        tags: Array.isArray(trade.tags) ? trade.tags : []
+        setupType: trade.setupType || ''
       });
-      setTagInput('');
     }
   }, [trade, isOpen]);
-
-  const handleAddTag = (e) => {
-    if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
-      e.preventDefault();
-      const newTag = tagInput.trim().replace(/^#/, '');
-      if (!formData.tags.includes(newTag)) {
-        setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag] }));
-      }
-      setTagInput('');
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(t => t !== tagToRemove)
-    }));
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -164,7 +138,7 @@ export function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
     setLoading(true);
     try {
       await api.put(`/trades/${trade.id}`, formData);
-      toast.success('Strategy & execution details saved');
+      toast.success('Strategy & setup details saved');
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -174,10 +148,8 @@ export function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
     }
   };
 
-  const ratingLabels = ['', 'Low Conviction', 'Fair Setup', 'Solid Trade', 'High Conviction', 'A+ Master Setup'];
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Trade Strategy & Setup Intelligence">
+    <Modal isOpen={isOpen} onClose={onClose} title="Trade Strategy & Setup">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Strategy Selection */}
         <div>
@@ -241,82 +213,6 @@ export function StrategyModal({ isOpen, onClose, trade, onSuccess }) {
           <datalist id="setup-list">
             {options.setups.map(s => <option key={s} value={s} />)}
           </datalist>
-        </div>
-
-        {/* Confidence Rating */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-[11px] font-black text-text-faint uppercase tracking-wider">
-              Confidence & Conviction Rating
-            </label>
-            <span className="text-xs font-bold text-amber-500">
-              {ratingLabels[formData.rating] || ''}
-            </span>
-          </div>
-          <div className="flex gap-2.5 items-center">
-            {[1, 2, 3, 4, 5].map(s => (
-              <button 
-                key={s} 
-                type="button"
-                onClick={() => setFormData({ ...formData, rating: s })}
-                className={`w-12 h-11 rounded-2xl flex items-center justify-center text-lg transition-all active:scale-95 cursor-pointer ${
-                  formData.rating >= s 
-                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' 
-                    : 'bg-card-alt border border-border text-text-faint opacity-50 hover:opacity-80'
-                }`}
-                title={`${s} Star${s > 1 ? 's' : ''}`}
-              >
-                ⭐
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tags */}
-        <div>
-          <label className="text-[11px] font-black text-text-faint uppercase tracking-wider mb-2 block">
-            Trade Tags
-          </label>
-          <div className="flex flex-wrap gap-2 mb-2 min-h-[32px]">
-            {formData.tags.map(tag => (
-              <span 
-                key={tag} 
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-              >
-                #{tag}
-                <button 
-                  type="button" 
-                  onClick={() => handleRemoveTag(tag)}
-                  className="hover:text-red-500 cursor-pointer text-xs"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            {formData.tags.length === 0 && (
-              <span className="text-xs text-text-faint italic py-1">No tags added yet. Type below and press Enter.</span>
-            )}
-          </div>
-          <Input 
-            value={tagInput}
-            onChange={e => setTagInput(e.target.value)}
-            onKeyDown={handleAddTag}
-            placeholder="Type a tag and press Enter (e.g. gap-up, expiry-hero)"
-          />
-        </div>
-
-        {/* Trade Observations / Execution Notes */}
-        <div>
-          <label className="text-[11px] font-black text-text-faint uppercase tracking-wider mb-2 block">
-            Execution Notes & Observations
-          </label>
-          <Input 
-            as="textarea"
-            rows={4}
-            value={formData.notes}
-            onChange={e => setFormData({ ...formData, notes: e.target.value })}
-            placeholder="Document what worked, entry trigger, key price levels, or lessons learned..."
-          />
         </div>
 
         <div className="flex gap-3 pt-2">
