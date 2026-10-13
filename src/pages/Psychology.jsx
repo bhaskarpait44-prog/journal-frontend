@@ -3,9 +3,7 @@ import { useApi } from '../hooks/useApi';
 import { Card } from '../components/ui/Card';
 import { Skeleton } from '../components/ui/Skeleton';
 import { PnlSpan } from '../components/ui/PnlSpan';
-import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { fmtINR } from '../lib/utils';
 import { api } from '../lib/api';
@@ -13,13 +11,12 @@ import { useThemeStore } from '../store/themeStore';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
-  IconPsychology, IconCheck, IconArrowDown, IconArrowUp, IconPlus,
-  IconAnalytics, IconDollar, IconRefresh, IconSearch, IconChevronDown,
-  IconCalendar, IconClose
+  IconPsychology, IconCheck, IconArrowDown, IconPlus,
+  IconAnalytics, IconRefresh
 } from '../components/ui/Icons';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Cell, AreaChart, Area
+  Cell
 } from 'recharts';
 
 // Date Helpers
@@ -59,44 +56,16 @@ const MISTAKE_LABELS = {
   ignored_plan: 'Ignored Trade Plan'
 };
 
-const TRAILING_SL_LABELS = {
-  trailed_disciplined: { label: 'Trailed per Plan', emoji: '🛡️', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-  trailed_to_cost:     { label: 'Trailed to Cost / BE', emoji: '🔒', color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
-  failed_to_trail:     { label: 'Failed to Trail SL', emoji: '❌', color: 'text-rose-700 dark:text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20' },
-  trailed_too_tight:   { label: 'Trailed Too Tight', emoji: '⚠️', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-  not_applicable:      { label: 'Fixed Target / SL', emoji: '🎯', color: 'text-text-muted', bg: 'bg-card-alt border-border' }
-};
-
-
-
 // Demo / Simulated Psychology Data for previewing empty states
 const DEMO_STATS = {
   totalLogged: 16,
   totalTradesInPeriod: 22,
-  avgDiscipline: 7.4,
-  disciplineTrend: 'up',
-  followedPlanRate: 75.0,
-  planPerformance: {
-    followed: { total: 32400, avg: 2700.0, count: 12, wins: 9, winRate: 75.0 },
-    deviated: { total: -11800, avg: -2950.0, count: 4, wins: 1, winRate: 25.0 }
-  },
-  totalDeviationCost: 22600.0,
   postLossPerformance: { count: 5, winRate: 40.0, avgPnl: -1250.0, totalPnl: -6250.0 },
   postWinPerformance: { count: 10, winRate: 70.0, avgPnl: 2800.0, totalPnl: 28000.0 },
   revengeTrades: 2,
   revengeTradeLoss: -6800.0,
   fomoTrades: 3,
   overtradingCount: 1,
-  failedToTrailCount: 2,
-  failedToTrailLoss: 5400.0,
-  trailedProfitLocked: 28400.0,
-  trailingSlStats: [
-    { status: 'trailed_disciplined', label: 'Trailed per Plan', emoji: '🛡️', count: 8, wins: 7, winRate: 87.5, totalPnl: 28400.0, avgPnl: 3550.0 },
-    { status: 'trailed_to_cost', label: 'Trailed to Cost / BE', emoji: '🔒', count: 3, wins: 2, winRate: 66.7, totalPnl: 4200.0, avgPnl: 1400.0 },
-    { status: 'failed_to_trail', label: 'Failed to Trail SL', emoji: '❌', count: 2, wins: 0, winRate: 0.0, totalPnl: -5400.0, avgPnl: -2700.0, totalLoss: 5400.0 },
-    { status: 'trailed_too_tight', label: 'Trailed Too Tight', emoji: '⚠️', count: 2, wins: 1, winRate: 50.0, totalPnl: -800.0, avgPnl: -400.0 },
-    { status: 'not_applicable', label: 'Fixed Target / SL', emoji: '🎯', count: 1, wins: 1, winRate: 100.0, totalPnl: 3600.0, avgPnl: 3600.0 }
-  ],
   mostCommonMistake: 'fomo_entry',
   emotionWinRate: [
     { emotion: 'calm', trades: 7, wins: 6, winRate: 85.7, totalPnl: 26400.0, avgPnl: 3771.4 },
@@ -110,29 +79,7 @@ const DEMO_STATS = {
     { tag: 'revenge_trade', count: 2, totalPnl: -6800.0, avgPnl: -3400.0, totalLoss: 6800.0 },
     { tag: 'early_exit', count: 2, totalPnl: -1400.0, avgPnl: -700.0, totalLoss: 1400.0 },
     { tag: 'overtrading', count: 1, totalPnl: -2600.0, avgPnl: -2600.0, totalLoss: 2600.0 }
-  ],
-  lossByEmotion: [
-    { emotion: 'satisfied', trades: 7, wins: 7, winRate: 100.0, totalPnl: 34500.0, avgPnl: 4928.6, absPnl: 34500.0 },
-    { emotion: 'relieved', trades: 3, wins: 2, winRate: 66.7, totalPnl: 6100.0, avgPnl: 2033.3, absPnl: 6100.0 },
-    { emotion: 'anxious', trades: 2, wins: 0, winRate: 0.0, totalPnl: -3900.0, avgPnl: -1950.0, absPnl: 3900.0 },
-    { emotion: 'frustrated', trades: 3, wins: 0, winRate: 0.0, totalPnl: -8200.0, avgPnl: -2733.3, absPnl: 8200.0 },
-    { emotion: 'regretful', trades: 1, wins: 0, winRate: 0.0, totalPnl: -4800.0, avgPnl: -4800.0, absPnl: 4800.0 }
-  ],
-  dayOfWeekPsych: [
-    { day: 'Monday', count: 3, avgDiscipline: 8.3, negativeRatio: 0.0, pnl: 12400.0 },
-    { day: 'Tuesday', count: 4, avgDiscipline: 8.0, negativeRatio: 0.0, pnl: 16800.0 },
-    { day: 'Wednesday', count: 4, avgDiscipline: 7.2, negativeRatio: 25.0, pnl: 3400.0 },
-    { day: 'Thursday', count: 3, avgDiscipline: 6.7, negativeRatio: 33.3, pnl: -3200.0 },
-    { day: 'Friday', count: 2, avgDiscipline: 5.5, negativeRatio: 50.0, pnl: -6800.0 }
   ]
-};
-
-const DEMO_TRENDS = {
-  periods: ["W36 '26", "W37 '26", "W38 '26", "W39 '26", "W40 '26"],
-  discipline: [5.6, 6.2, 7.0, 7.5, 8.1],
-  winRate: [40.0, 50.0, 66.7, 75.0, 80.0],
-  tradeCount: [4, 3, 3, 4, 2],
-  pnl: [-4800.0, 2400.0, 11500.0, 15800.0, 7700.0]
 };
 
 export default function Psychology() {
@@ -144,7 +91,6 @@ export default function Psychology() {
 
   // Period state
   const [period, setPeriod] = useState('all');
-  const [trendGroup, setTrendGroup] = useState('week');
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [previewDemo, setPreviewDemo] = useState(false);
 
@@ -156,17 +102,14 @@ export default function Psychology() {
   }, [period]);
 
   const { data: realStats, loading: statsLoading, refetch: refetchStats } = useApi(`/analytics/psychology?_t=1${dateParams}`);
-  const { data: realTrends, loading: trendsLoading, refetch: refetchTrends } = useApi(`/analytics/psychology-trends?period=${trendGroup}${dateParams}`);
 
   const handleRefreshAll = () => {
     refetchStats();
-    refetchTrends();
   };
 
   const isDemo = previewDemo || (!statsLoading && (!realStats || realStats.totalLogged === 0) && previewDemo);
   const stats = isDemo ? DEMO_STATS : realStats;
-  const trends = isDemo ? DEMO_TRENDS : realTrends;
-  const isLoading = statsLoading || trendsLoading;
+  const isLoading = statsLoading;
 
   if (isLoading) return <PsychologySkeleton />;
 
@@ -227,9 +170,9 @@ export default function Psychology() {
               <p className="text-xs text-text-muted leading-relaxed">Uncover how calm, fear, revenge, and overconfidence impact your win rate and P&L.</p>
             </div>
             <div className="p-4 rounded-xl sm:rounded-2xl bg-card-alt border border-border/60">
-              <span className="text-xl mb-2 block">📋</span>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary mb-1">Cost of Indiscipline</h4>
-              <p className="text-xs text-text-muted leading-relaxed">Measure the exact rupee difference between following vs deviating from your trade rules.</p>
+              <span className="text-xl mb-2 block">⚠️</span>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary mb-1">Execution Mistakes</h4>
+              <p className="text-xs text-text-muted leading-relaxed">Measure the exact rupee loss caused by FOMO, revenge trading, and overtrading.</p>
             </div>
             <div className="p-4 rounded-xl sm:rounded-2xl bg-card-alt border border-border/60">
               <span className="text-xl mb-2 block">🛡️</span>
@@ -252,6 +195,38 @@ export default function Psychology() {
       </div>
     );
   }
+
+  const calmTrades = useMemo(() => {
+    if (!stats?.emotionWinRate) return 0;
+    return stats.emotionWinRate
+      .filter(e => e.emotion === 'calm' || e.emotion === 'confident')
+      .reduce((acc, curr) => acc + (curr.trades || 0), 0);
+  }, [stats]);
+
+  const totalEmotionTrades = useMemo(() => {
+    if (!stats?.emotionWinRate) return 0;
+    return stats.emotionWinRate.reduce((acc, curr) => acc + (curr.trades || 0), 0);
+  }, [stats]);
+
+  const calmRate = totalEmotionTrades > 0 ? Math.round((calmTrades / totalEmotionTrades) * 100) : 0;
+
+  const totalMistakeLoss = useMemo(() => {
+    if (!stats?.mistakeFrequency) return 0;
+    return stats.mistakeFrequency.reduce((acc, curr) => {
+      const loss = curr.totalLoss != null ? Number(curr.totalLoss) : Math.abs(Math.min(0, Number(curr.totalPnl || 0)));
+      return acc + loss;
+    }, 0);
+  }, [stats]);
+
+  const totalMistakesCount = useMemo(() => {
+    if (!stats?.mistakeFrequency) return 0;
+    return stats.mistakeFrequency.reduce((acc, curr) => acc + (curr.count || 0), 0);
+  }, [stats]);
+
+  const topMistakeItem = useMemo(() => {
+    if (!stats?.mistakeFrequency || stats.mistakeFrequency.length === 0) return null;
+    return [...stats.mistakeFrequency].sort((a, b) => (b.count || 0) - (a.count || 0))[0];
+  }, [stats]);
 
   const insights = generateInsights(stats);
 
@@ -345,157 +320,129 @@ export default function Psychology() {
 
       {/* Hero Behavioral Scorecards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {/* Card 1: Process Discipline */}
+        {/* Card 1: Mindset Quality (Calm & Confident Entry Rate) */}
         <Card variant="elevated" className="p-5 sm:p-6 relative overflow-hidden bg-card border-border/80 flex flex-col justify-between shadow-md">
           <div>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Process Discipline</span>
-              {stats.disciplineTrend !== 'flat' && (
-                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                  stats.disciplineTrend === 'up' 
-                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' 
+              <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Mindset Quality</span>
+              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                calmRate >= 70 
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' 
+                  : calmRate >= 50
+                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
                     : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'
-                }`}>
-                  {stats.disciplineTrend === 'up' ? '▲ Improving' : '▼ Declining'}
-                </span>
-              )}
+              }`}>
+                {calmRate >= 70 ? 'Optimal State' : calmRate >= 50 ? 'Moderate Focus' : 'Vulnerable'}
+              </span>
             </div>
             <div className="flex items-baseline gap-2 mb-3">
               <span className={`text-4xl sm:text-5xl font-black font-heading tracking-tight ${
-                stats.avgDiscipline >= 7 
-                  ? 'text-emerald-600 dark:text-emerald-400' 
-                  : stats.avgDiscipline >= 5 
-                    ? 'text-amber-600 dark:text-amber-400' 
-                    : 'text-rose-600 dark:text-rose-400'
+                calmRate >= 70 ? 'text-emerald-600 dark:text-emerald-400' : calmRate >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'
               }`}>
-                {Number(stats.avgDiscipline || 0).toFixed(1)}
+                {calmRate}%
               </span>
-              <span className="text-base sm:text-lg font-bold text-text-muted">/ 10</span>
+              <span className="text-xs sm:text-sm font-bold text-text-muted">Calm / Confident</span>
             </div>
             <div className="w-full h-2.5 bg-card-alt border border-border rounded-full overflow-hidden mb-3">
               <div 
                 className={`h-full rounded-full transition-all duration-1000 ${
-                  stats.avgDiscipline >= 7 ? 'bg-profit' : stats.avgDiscipline >= 5 ? 'bg-amber-500' : 'bg-loss'
+                  calmRate >= 70 ? 'bg-profit' : calmRate >= 50 ? 'bg-amber-500' : 'bg-loss'
                 }`}
-                style={{ width: `${Math.min(100, Math.max(0, (stats.avgDiscipline || 0) * 10))}%` }}
+                style={{ width: `${Math.min(100, Math.max(0, calmRate))}%` }}
               />
             </div>
           </div>
           <div className="pt-3 border-t border-border flex items-center justify-between text-xs font-bold text-text-muted">
-            <span>Sessions Analyzed</span>
-            <span className="text-text-primary font-black">{stats.totalLogged} Trades</span>
+            <span>Disciplined Entries</span>
+            <span className="text-text-primary font-black">{calmTrades} of {totalEmotionTrades} trades</span>
           </div>
         </Card>
 
-        {/* Card 2: Plan Adherence & Cost of Indiscipline */}
+        {/* Card 2: Behavioral Leaks & Execution Mistakes */}
         <Card variant="elevated" className="p-5 sm:p-6 relative overflow-hidden bg-card border-border/80 flex flex-col justify-between shadow-md">
           <div>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Plan Adherence</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Behavioral Leaks</span>
               <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                stats.followedPlanRate >= 75 
+                totalMistakeLoss === 0 
                   ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' 
-                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'
               }`}>
-                {stats.followedPlanRate >= 75 ? 'Rules Respected' : 'Deviations Detected'}
+                {totalMistakeLoss === 0 ? 'Clean Execution' : `${totalMistakesCount} Biases Tagged`}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-2 mb-3">
+              <span className={`text-3xl sm:text-4xl font-black font-heading tracking-tight ${
+                totalMistakeLoss === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+              }`}>
+                {totalMistakeLoss === 0 ? '₹0' : `-${fmtINR(totalMistakeLoss)}`}
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-text-muted">Capital Drained</span>
+            </div>
+            <div className="space-y-1.5 mb-2">
+              <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-card-alt border border-border">
+                <span className="font-bold text-text-secondary">Primary Leak</span>
+                <span className="font-black text-rose-700 dark:text-rose-400">
+                  {topMistakeItem ? (MISTAKE_LABELS[topMistakeItem.tag] || topMistakeItem.tag) : 'None'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="pt-3 border-t border-border flex items-center justify-between text-xs font-bold text-text-muted">
+            <span>Mistake Incidents</span>
+            <span className="text-text-primary font-black">{totalMistakesCount} Occurrences</span>
+          </div>
+        </Card>
+
+        {/* Card 3: Tilt & Revenge Shield */}
+        <Card variant="elevated" className="p-5 sm:p-6 relative overflow-hidden bg-card border-border/80 flex flex-col justify-between shadow-md">
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Tilt & Revenge Shield</span>
+              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                stats.revengeTrades === 0 
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' 
+                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'
+              }`}>
+                {stats.revengeTrades === 0 ? 'Shield Active' : 'Tilt Detected'}
               </span>
             </div>
             <div className="flex items-baseline gap-2 mb-3">
               <span className={`text-4xl sm:text-5xl font-black font-heading tracking-tight ${
-                stats.followedPlanRate >= 75 
-                  ? 'text-emerald-600 dark:text-emerald-400' 
-                  : 'text-amber-600 dark:text-amber-400'
+                stats.revengeTrades === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
               }`}>
-                {Number(stats.followedPlanRate || 0).toFixed(1)}%
+                {stats.revengeTrades}
               </span>
+              <span className="text-xs sm:text-sm font-bold text-text-muted">Revenge Trades</span>
             </div>
-            <div className="space-y-2 mb-2">
-              <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20">
-                <span className="font-bold text-text-secondary">Followed Plan Avg</span>
-                <span className="font-black text-emerald-700 dark:text-emerald-400">+{fmtINR(stats.planPerformance?.followed?.avg || 0)}</span>
-              </div>
+            <div className="space-y-1.5 mb-2">
               <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20">
-                <span className="font-bold text-text-secondary">Deviated Plan Avg</span>
-                <span className="font-black text-rose-700 dark:text-rose-400">{fmtINR(stats.planPerformance?.deviated?.avg || 0)}</span>
-              </div>
-            </div>
-          </div>
-          {stats.totalDeviationCost > 0 ? (
-            <div className="pt-2 border-t border-border flex items-center justify-between text-xs font-black text-rose-700 dark:text-rose-400">
-              <span>Penalty of Deviations</span>
-              <span>-{fmtINR(stats.totalDeviationCost)}</span>
-            </div>
-          ) : (
-            <div className="pt-2 border-t border-border flex items-center justify-between text-xs font-bold text-text-muted">
-              <span>Plan Execution</span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold">Zero Penalties</span>
-            </div>
-          )}
-        </Card>
-
-        {/* Card 3: Trailing Stop-Loss Protection */}
-        <Card variant="elevated" className="p-5 sm:p-6 relative overflow-hidden bg-card border-border/80 flex flex-col justify-between shadow-md">
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Trailing SL Discipline</span>
-              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                (stats.failedToTrailCount || 0) === 0 
-                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' 
-                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'
-              }`}>
-                {(stats.failedToTrailCount || 0) === 0 ? '🛡️ Profit Protected' : '⚠️ Profit Leaks'}
-              </span>
-            </div>
-            <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-4xl sm:text-5xl font-black font-heading tracking-tight text-emerald-600 dark:text-emerald-400">
-                +{fmtINR(stats.trailedProfitLocked || 0)}
-              </span>
-            </div>
-            <div className="space-y-2 mb-2">
-              <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20">
-                <span className="font-bold text-text-secondary flex items-center gap-1.5">
-                  <span>🛡️</span> Trailed per Plan
-                </span>
-                <span className="font-black text-emerald-700 dark:text-emerald-400">
-                  {((stats.trailingSlStats || []).filter(s => s.status === 'trailed_disciplined' || s.status === 'trailed_to_cost').reduce((acc, x) => acc + x.count, 0))} trades
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20">
-                <span className="font-bold text-text-secondary flex items-center gap-1.5">
-                  <span>❌</span> Failed to Trail SL
-                </span>
+                <span className="font-bold text-text-secondary">Revenge Loss</span>
                 <span className="font-black text-rose-700 dark:text-rose-400">
-                  {stats.failedToTrailCount || 0} trades
+                  {fmtINR(stats.revengeTradeLoss || 0)}
                 </span>
               </div>
             </div>
           </div>
-          {(stats.failedToTrailLoss || 0) > 0 ? (
-            <div className="pt-2 border-t border-border flex items-center justify-between text-xs font-black text-rose-700 dark:text-rose-400">
-              <span>Cost of Not Trailing</span>
-              <span>-{fmtINR(stats.failedToTrailLoss)}</span>
-            </div>
-          ) : (
-            <div className="pt-2 border-t border-border flex items-center justify-between text-xs font-bold text-text-muted">
-              <span>Trailing Status</span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold">Zero Profit Surrenders</span>
-            </div>
-          )}
+          <div className="pt-3 border-t border-border flex items-center justify-between text-xs font-bold text-text-muted">
+            <span>FOMO Entries</span>
+            <span className="text-amber-700 dark:text-amber-400 font-black">{stats.fomoTrades || 0} trades</span>
+          </div>
         </Card>
 
-        {/* Card 4: Tilt & Emotional Vulnerability */}
+        {/* Card 4: Post-Loss Resilience */}
         <Card variant="elevated" className="p-5 sm:p-6 relative overflow-hidden bg-card border-border/80 flex flex-col justify-between shadow-md">
           <div>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Tilt & Emotional Shield</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-text-muted">Post-Loss Resilience</span>
               <span className="text-[10px] font-black uppercase text-text-muted">
-                Post-Loss Behavior
+                Recovery Hit Rate
               </span>
             </div>
             
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mb-3.5">
               <div className="p-3 rounded-xl bg-card-alt border border-border">
-                <span className="text-[10px] font-bold text-text-muted uppercase block">Post-Loss Hit Rate</span>
+                <span className="text-[10px] font-bold text-text-muted uppercase block">Post-Loss</span>
                 <span className={`text-xl sm:text-2xl font-black font-heading ${
                   stats.postLossPerformance?.winRate >= 50 
                     ? 'text-emerald-600 dark:text-emerald-400' 
@@ -504,38 +451,25 @@ export default function Psychology() {
                   {Number(stats.postLossPerformance?.winRate || 0).toFixed(1)}%
                 </span>
                 <span className="text-[10px] font-bold text-text-muted block mt-0.5">
-                  {stats.postLossPerformance?.count || 0} occurrences
+                  {stats.postLossPerformance?.count || 0} trades
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-card-alt border border-border">
-                <span className="text-[10px] font-bold text-text-muted uppercase block">Post-Win Hit Rate</span>
+                <span className="text-[10px] font-bold text-text-muted uppercase block">Post-Win</span>
                 <span className="text-xl sm:text-2xl font-black font-heading text-emerald-600 dark:text-emerald-400">
                   {Number(stats.postWinPerformance?.winRate || 0).toFixed(1)}%
                 </span>
                 <span className="text-[10px] font-bold text-text-muted block mt-0.5">
-                  {stats.postWinPerformance?.count || 0} occurrences
+                  {stats.postWinPerformance?.count || 0} trades
                 </span>
-              </div>
-            </div>
-
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-text-secondary">Revenge Trades</span>
-                <span className="font-black text-rose-700 dark:text-rose-400">
-                  {stats.revengeTrades} <span className="opacity-80 font-normal">({fmtINR(stats.revengeTradeLoss)})</span>
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-text-secondary">FOMO Entries</span>
-                <span className="font-black text-amber-700 dark:text-amber-400">{stats.fomoTrades}</span>
               </div>
             </div>
           </div>
           <div className="pt-3 border-t border-border text-[11px] font-bold text-text-muted">
-            {stats.revengeTrades === 0 
-              ? '✅ Zero revenge trades logged in this period' 
-              : '⚠️ Take a 15-minute mandatory break after a loss'}
+            {(stats.postLossPerformance?.winRate || 0) >= 50
+              ? '✅ Resilient mindset maintained after losses' 
+              : '⚠️ Take a 15-minute cooldown after any loss'}
           </div>
         </Card>
       </div>
@@ -570,128 +504,47 @@ export default function Psychology() {
         </div>
       </Card>
 
-      {/* Main Charts Grid */}
+      {/* Main Analytics: Pre-Trade Mindset & Execution Mistakes side-by-side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-        {/* Behavioral Momentum (Trend Chart) */}
-        <Card variant="default" padding="p-0" className="overflow-hidden border-border/80 shadow-lg">
-          <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-                <h3 className="font-black text-text-primary text-xs sm:text-sm uppercase tracking-tight">Behavioral Momentum</h3>
-              </div>
-              <p className="text-[10px] sm:text-xs text-text-muted font-bold uppercase tracking-wider mt-0.5">
-                Discipline Rating vs. Win Rate Correlation
-              </p>
-            </div>
-            <div className="flex items-center bg-card p-1 rounded-xl border border-border shadow-inner">
-              {['week', 'month'].map((p) => (
-                <button 
-                  key={p}
-                  onClick={() => setTrendGroup(p)}
-                  className={`px-2.5 sm:px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                    trendGroup === p ? 'bg-accent text-white shadow-sm' : 'text-text-muted hover:text-text-primary'
-                  }`}
-                >
-                  {p === 'week' ? 'Weekly' : 'Monthly'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="h-[280px] sm:h-[340px] w-full p-4 sm:p-6 bg-card">
-            {trends?.periods?.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart 
-                  data={(trends.periods || []).map((p, i) => ({
-                    period: p,
-                    discipline: trends.discipline[i],
-                    winRate: trends.winRate[i],
-                    pnl: trends.pnl[i]
-                  }))} 
-                  margin={{ top: 15, right: 10, left: -25, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorDisc" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35}/>
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorWin" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'} />
-                  <XAxis 
-                    dataKey="period" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 10, fill: chartTextColor, fontWeight: 700 }} 
-                    dy={8}
-                  />
-                  <YAxis yAxisId="left" hide domain={[0, 10]} />
-                  <YAxis yAxisId="right" hide domain={[0, 100]} />
-                  <Tooltip content={<CustomTrendTooltip isDark={isDark} />} />
-                  <Area yAxisId="left" type="monotone" dataKey="discipline" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorDisc)" />
-                  <Area yAxisId="right" type="monotone" dataKey="winRate" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorWin)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-xs font-bold text-text-muted">
-                Insufficient trend sessions logged in this timeframe
-              </div>
-            )}
-          </div>
-
-          <div className="px-5 sm:px-6 py-3 bg-card-alt border-t border-border flex justify-center gap-6 sm:gap-8">
-            <div className="flex items-center gap-2 text-[10px] font-black text-text-muted uppercase tracking-wider">
-              <div className="w-2.5 h-2.5 rounded-full bg-violet-500" />
-              Discipline (0-10)
-            </div>
-            <div className="flex items-center gap-2 text-[10px] font-black text-text-muted uppercase tracking-wider">
-              <div className="w-2.5 h-2.5 rounded-full bg-profit" />
-              Win Rate %
-            </div>
-          </div>
-        </Card>
-
         {/* Entry Mindset Efficiency */}
-        <Card variant="default" padding="p-0" className="overflow-hidden border-border/80 shadow-lg">
-          <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex items-center justify-between">
-            <div>
-              <h3 className="font-black text-text-primary text-xs sm:text-sm uppercase tracking-tight">Entry Mindset Hit Rate</h3>
-              <p className="text-[10px] sm:text-xs text-text-muted font-bold uppercase tracking-wider mt-0.5">
-                Win Rate & P&L by emotional state at trade entry
-              </p>
-            </div>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shadow-inner">
-              <IconCheck className="w-4 h-4" strokeWidth={2.5} />
-            </div>
-          </div>
-
-          <div className="h-[280px] sm:h-[340px] w-full p-4 sm:p-6 bg-card">
-            {stats.emotionWinRate?.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.emotionWinRate} layout="vertical" margin={{ left: 15, right: 15 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'} />
-                  <XAxis type="number" hide domain={[0, 100]} />
-                  <YAxis dataKey="emotion" type="category" axisLine={false} tickLine={false} width={85} tick={<CustomEmotionTick color={chartTextColor} />} />
-                  <Tooltip content={<CustomBarTooltip isDark={isDark} />} />
-                  <Bar dataKey="winRate" radius={[0, 8, 8, 0]} barSize={22}>
-                    {stats.emotionWinRate.map((entry, index) => (
-                      <Cell 
-                        key={index} 
-                        fill={entry.winRate >= 60 ? '#10b981' : entry.winRate >= 45 ? '#8b5cf6' : entry.winRate >= 30 ? '#f59e0b' : '#ef4444'} 
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-xs font-bold text-text-muted">
-                No entry emotions recorded
+        <Card variant="default" padding="p-0" className="overflow-hidden border-border/80 shadow-lg flex flex-col justify-between bg-card">
+          <div>
+            <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex items-center justify-between">
+              <div>
+                <h3 className="font-black text-text-primary text-xs sm:text-sm uppercase tracking-tight">Entry Mindset Hit Rate</h3>
+                <p className="text-[10px] sm:text-xs text-text-muted font-bold uppercase tracking-wider mt-0.5">
+                  Win Rate & P&L by emotional state at trade entry
+                </p>
               </div>
-            )}
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shadow-inner">
+                <IconCheck className="w-4 h-4" strokeWidth={2.5} />
+              </div>
+            </div>
+
+            <div className="h-[300px] sm:h-[360px] w-full p-4 sm:p-6 bg-card">
+              {stats.emotionWinRate?.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.emotionWinRate} layout="vertical" margin={{ left: 15, right: 15 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'} />
+                    <XAxis type="number" hide domain={[0, 100]} />
+                    <YAxis dataKey="emotion" type="category" axisLine={false} tickLine={false} width={85} tick={<CustomEmotionTick color={chartTextColor} />} />
+                    <Tooltip content={<CustomBarTooltip isDark={isDark} />} />
+                    <Bar dataKey="winRate" radius={[0, 8, 8, 0]} barSize={22}>
+                      {stats.emotionWinRate.map((entry, index) => (
+                        <Cell 
+                          key={index} 
+                          fill={entry.winRate >= 60 ? '#10b981' : entry.winRate >= 45 ? '#8b5cf6' : entry.winRate >= 30 ? '#f59e0b' : '#ef4444'} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-xs font-bold text-text-muted">
+                  No entry emotions recorded
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="px-5 sm:px-6 py-3 bg-card-alt border-t border-border flex justify-between items-center text-[10px] font-black uppercase text-text-muted">
@@ -699,216 +552,77 @@ export default function Psychology() {
             <span>{stats.totalLogged} Trades Logged</span>
           </div>
         </Card>
-      </div>
 
-      {/* Systematic Errors & Leaks */}
-      <Card variant="default" className="border-border/80 shadow-lg overflow-hidden p-0 bg-card">
-        <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex items-center justify-between">
+        {/* Execution Mistakes & Leaks */}
+        <Card variant="default" padding="p-0" className="border-border/80 shadow-lg overflow-hidden flex flex-col justify-between bg-card">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base">⚠️</span>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">Systematic Errors & Leaks</h3>
+            <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">⚠️</span>
+                  <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">Execution Mistakes & Leaks</h3>
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider mt-0.5">
+                  Financial impact and frequency of behavioral execution leaks
+                </p>
+              </div>
+              <div className="w-8 h-8 rounded-xl bg-rose-500/10 dark:bg-rose-500/20 flex items-center justify-center text-rose-700 dark:text-rose-400 shadow-inner">
+                <IconArrowDown className="w-4 h-4" strokeWidth={2.5} />
+              </div>
             </div>
-            <p className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider mt-0.5">
-              Financial impact and frequency of behavioral execution leaks
-            </p>
-          </div>
-          <div className="w-8 h-8 rounded-xl bg-rose-500/10 dark:bg-rose-500/20 flex items-center justify-center text-rose-700 dark:text-rose-400 shadow-inner">
-            <IconArrowDown className="w-4 h-4" strokeWidth={2.5} />
-          </div>
-        </div>
 
-        <div className="p-4 sm:p-6">
-          {stats.mistakeFrequency?.length > 0 ? (
-            (() => {
-              const maxCount = Math.max(...stats.mistakeFrequency.map(m => m.count), 1);
-              return (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                  {stats.mistakeFrequency.map((m) => {
-                    const label = MISTAKE_LABELS[m.tag] || m.tag.replace(/_/g, ' ');
-                    return (
-                      <div key={m.tag} className="p-3 sm:p-3.5 rounded-xl bg-card-alt border border-border/80 space-y-2">
-                        <div className="flex justify-between items-center text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="font-black uppercase tracking-wider text-text-primary">{label}</span>
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-card text-text-muted border border-border">
-                              {m.count} {m.count === 1 ? 'trade' : 'trades'}
-                            </span>
+            <div className="p-4 sm:p-6 max-h-[360px] overflow-y-auto">
+              {stats.mistakeFrequency?.length > 0 ? (
+                (() => {
+                  const maxCount = Math.max(...stats.mistakeFrequency.map(m => m.count), 1);
+                  return (
+                    <div className="space-y-3">
+                      {stats.mistakeFrequency.map((m) => {
+                        const label = MISTAKE_LABELS[m.tag] || m.tag.replace(/_/g, ' ');
+                        return (
+                          <div key={m.tag} className="p-3 sm:p-3.5 rounded-xl bg-card-alt border border-border/80 space-y-2">
+                            <div className="flex justify-between items-center text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="font-black uppercase tracking-wider text-text-primary">{label}</span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-card text-text-muted border border-border">
+                                  {m.count} {m.count === 1 ? 'trade' : 'trades'}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className={`font-black ${m.totalPnl >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                                  {fmtINR(m.totalPnl)}
+                                </span>
+                                <span className="text-[10px] text-text-muted font-bold ml-1.5 hidden xs:inline">
+                                  (Avg {fmtINR(m.avgPnl)})
+                                </span>
+                              </div>
+                            </div>
+                            <div className="w-full h-2 bg-card border border-border/60 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-loss/70 to-loss rounded-full transition-all duration-700" 
+                                style={{ width: `${Math.min(100, (m.count / maxCount) * 100)}%` }} 
+                              />
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className={`font-black ${m.totalPnl >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                              {fmtINR(m.totalPnl)}
-                            </span>
-                            <span className="text-[10px] text-text-muted font-bold ml-1.5 hidden xs:inline">
-                              (Avg {fmtINR(m.avgPnl)})
-                            </span>
-                          </div>
-                        </div>
-                        <div className="w-full h-2 bg-card border border-border/60 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-loss/70 to-loss rounded-full transition-all duration-700" 
-                            style={{ width: `${Math.min(100, (m.count / maxCount) * 100)}%` }} 
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="text-center py-12 text-xs font-bold text-text-muted">
+                  No mistake tags recorded in this period. Clean execution! 🎯
                 </div>
-              );
-            })()
-          ) : (
-            <div className="text-center py-8 text-xs font-bold text-text-muted">
-              No mistake tags recorded in this period. Clean execution! 🎯
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Trailing Stop-Loss Discipline & Profit Protection Section */}
-      <Card variant="default" className="border-border/80 shadow-lg overflow-hidden p-0 bg-card">
-        <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base">🛡️</span>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">
-                Trailing Stop-Loss Discipline &amp; Protection
-              </h3>
-            </div>
-            <p className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider mt-0.5">
-              Profit protection analytics and trailing execution breakdown
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-              +{fmtINR(stats.trailedProfitLocked || 0)} Protected
-            </span>
-            {(stats.failedToTrailLoss || 0) > 0 && (
-              <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
-                -{fmtINR(stats.failedToTrailLoss)} Surrendered
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="p-4 sm:p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {(stats.trailingSlStats || []).map((item) => {
-              const meta = TRAILING_SL_LABELS[item.status] || {
-                label: item.label,
-                emoji: item.emoji || '🎯',
-                color: 'text-text-primary',
-                bg: 'bg-card-alt border-border'
-              };
-              const isProfit = item.totalPnl >= 0;
-              return (
-                <div 
-                  key={item.status} 
-                  className={`p-3.5 sm:p-4 rounded-xl border flex flex-col justify-between transition-all ${meta.bg}`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-lg">{meta.emoji}</span>
-                      <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-card/80 text-text-secondary border border-border/60">
-                        {item.count} {item.count === 1 ? 'trade' : 'trades'}
-                      </span>
-                    </div>
-                    <h4 className="text-xs font-black text-text-primary mb-1">
-                      {meta.label}
-                    </h4>
-                    <div className="flex items-baseline gap-1.5 mb-2">
-                      <span className={`text-base sm:text-lg font-black font-heading ${isProfit ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                        {fmtINR(item.totalPnl)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2.5 border-t border-border/60 space-y-1.5">
-                    <div className="flex justify-between items-center text-[10px] font-bold text-text-muted">
-                      <span>Win Rate</span>
-                      <span className="text-text-primary font-black">{Number(item.winRate || 0).toFixed(0)}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-card/80 rounded-full overflow-hidden border border-border/40">
-                      <div 
-                        className={`h-full rounded-full ${item.winRate >= 60 ? 'bg-emerald-500' : item.winRate >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                        style={{ width: `${Math.min(100, Math.max(0, item.winRate || 0))}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] font-bold text-text-muted pt-0.5">
-                      <span>Avg P&amp;L</span>
-                      <span className={item.avgPnl >= 0 ? 'text-emerald-700 dark:text-emerald-400 font-bold' : 'text-rose-700 dark:text-rose-400 font-bold'}>
-                        {fmtINR(item.avgPnl)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Psychological Takeaway Banner */}
-          <div className="p-3.5 rounded-xl bg-card-alt border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-base">💡</span>
-              <span className="text-text-secondary">
-                <strong>Trailing SL Principle:</strong> Protect initial capital. Advance your stop to breakeven once price moves in your direction, then trail behind market swing pivots to let winning runners breathe.
-              </span>
-            </div>
-            <div className="shrink-0 text-[11px] font-black text-text-muted">
-              Disciplined Trails: {((stats.trailingSlStats || []).find(s => s.status === 'trailed_disciplined')?.count || 0)} Trades
+              )}
             </div>
           </div>
-        </div>
-      </Card>
 
-      {/* Weekday Mental Game Heatmap */}
-      {stats.dayOfWeekPsych?.length > 0 && (
-        <Card variant="default" className="p-4 sm:p-6 border-border/80 shadow-md bg-card">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
-            <div>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-text-primary">Session Day Discipline</h3>
-              <p className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider mt-0.5">
-                Mental discipline and negative emotions across trading days
-              </p>
-            </div>
-            <div className="text-xs font-bold text-text-muted">Monday - Friday</div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
-            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day, idx) => {
-              const d = stats.dayOfWeekPsych.find(x => x.day === day) || { count: 0, avgDiscipline: 0, pnl: 0, negativeRatio: 0 };
-              // Friday spans 2 columns on 2-col mobile layout so it doesn't leave an empty space
-              const isFriday = day === 'Friday';
-              return (
-                <div 
-                  key={day} 
-                  className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-card-alt border border-border text-center space-y-1.5 ${
-                    isFriday ? 'col-span-2 sm:col-span-1' : ''
-                  }`}
-                >
-                  <span className="text-[11px] font-black uppercase tracking-wider text-text-secondary block">{day}</span>
-                  <div className="text-lg sm:text-xl font-black font-heading text-text-primary">
-                    {d.count > 0 ? `${Number(d.avgDiscipline || 0).toFixed(1)}/10` : '—'}
-                  </div>
-                  <div className="text-xs font-bold">
-                    {d.count > 0 ? (
-                      <span className={d.pnl >= 0 ? 'text-emerald-700 dark:text-emerald-400 font-black' : 'text-rose-700 dark:text-rose-400 font-black'}>
-                        {fmtINR(d.pnl)}
-                      </span>
-                    ) : (
-                      <span className="text-text-muted">No trades</span>
-                    )}
-                  </div>
-                  {d.count > 0 && d.negativeRatio > 0 && (
-                    <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
-                      {Number(d.negativeRatio || 0).toFixed(0)}% Negatives
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+          <div className="px-5 sm:px-6 py-3 bg-card-alt border-t border-border flex justify-between items-center text-[10px] font-black uppercase text-text-muted">
+            <span>Capital Drain Tracking</span>
+            <span>{totalMistakesCount} Total Mistakes</span>
           </div>
         </Card>
-      )}
+      </div>
 
       {/* 1-Click Batch Tag Modal */}
       <BatchTagModal 
@@ -938,34 +652,6 @@ const CustomEmotionTick = ({ x, y, payload, color }) => {
       </text>
     </g>
   );
-};
-
-const CustomTrendTooltip = ({ active, payload }) => {
-  if (active && payload && payload.length) {
-    const d = payload[0].payload;
-    return (
-      <Card variant="elevated" padding="p-3" className="border-border shadow-xl min-w-[150px] bg-card text-text-primary">
-        <p className="text-[10px] font-black text-text-primary uppercase tracking-wider mb-2 border-b border-border pb-1">
-          {d.period}
-        </p>
-        <div className="space-y-1.5 text-xs">
-          <div className="flex justify-between items-center gap-4">
-            <span className="font-bold text-text-muted">Discipline</span>
-            <span className="font-black text-violet-700 dark:text-violet-300">{Number(d.discipline || 0).toFixed(1)}/10</span>
-          </div>
-          <div className="flex justify-between items-center gap-4">
-            <span className="font-bold text-text-muted">Win Rate</span>
-            <span className="font-black text-emerald-700 dark:text-emerald-400">{Number(d.winRate || 0).toFixed(1)}%</span>
-          </div>
-          <div className="flex justify-between items-center gap-4 pt-1 border-t border-border mt-1">
-            <span className="font-bold text-text-muted">Net P&L</span>
-            <PnlSpan value={d.pnl} className="font-black" />
-          </div>
-        </div>
-      </Card>
-    );
-  }
-  return null;
 };
 
 const CustomBarTooltip = ({ active, payload }) => {
@@ -1280,18 +966,17 @@ function BatchTagModal({ isOpen, onClose, onSuccess }) {
 function generateInsights(d) {
   const insights = [];
 
-  if (d.followedPlanRate < 75 && d.planPerformance?.deviated?.count > 0) {
-    const cost = Math.abs((d.planPerformance?.followed?.avg || 0) - (d.planPerformance?.deviated?.avg || 0));
-    insights.push({ 
-      icon: '📋', 
-      text: `Low plan adherence (<span class="text-blue-700 dark:text-blue-400 font-black">${Number(d.followedPlanRate || 0).toFixed(1)}%</span>). Deviating from rules is costing you <span class="text-rose-700 dark:text-rose-400 font-black">${fmtINR(cost)}</span> more per trade on average.` 
-    });
-  }
-  
   if (d.revengeTrades > 0) {
     insights.push({ 
       icon: '😡', 
       text: `You executed <span class="text-rose-700 dark:text-rose-400 font-black">${d.revengeTrades} revenge trade${d.revengeTrades > 1 ? 's' : ''}</span> costing <span class="text-rose-700 dark:text-rose-400 font-black">${fmtINR(Math.abs(d.revengeTradeLoss || 0))}</span> in capital. Enforce a mandatory 15-minute cooldown after any loss.` 
+    });
+  }
+
+  if (d.fomoTrades > 0) {
+    insights.push({ 
+      icon: '⚡', 
+      text: `Detected <span class="text-amber-700 dark:text-amber-400 font-black">${d.fomoTrades} FOMO ${d.fomoTrades === 1 ? 'entry' : 'entries'}</span>. Wait for price confirmation at key technical levels instead of chasing moves.` 
     });
   }
 
@@ -1312,14 +997,6 @@ function generateInsights(d) {
     }
   }
 
-  const worstDay = [...(d.dayOfWeekPsych || [])].filter(x => x.count > 0).sort((a,b) => a.avgDiscipline - b.avgDiscipline)[0];
-  if (worstDay && worstDay.avgDiscipline < 6.5) {
-    insights.push({ 
-      icon: '📅', 
-      text: `Psychological edge weakens on <span class="text-text-primary font-black">${worstDay.day}s</span> (avg discipline: <span class="text-rose-700 dark:text-rose-400 font-black">${Number(worstDay.avgDiscipline || 0).toFixed(1)}/10</span>). Consider scaling down position size on this day.` 
-    });
-  }
-
   const fearful = d.emotionWinRate?.find(e => e.emotion === 'fearful');
   const calm = d.emotionWinRate?.find(e => e.emotion === 'calm');
   if (fearful && calm && fearful.winRate < calm.winRate) {
@@ -1330,28 +1007,6 @@ function generateInsights(d) {
     });
   }
 
-  if (d.avgDiscipline > 0 && d.avgDiscipline < 5.5) {
-    insights.push({ 
-      icon: '📉', 
-      text: `Process discipline score is critical (<span class="text-rose-700 dark:text-rose-400 font-black">${Number(d.avgDiscipline || 0).toFixed(1)}/10</span>). Resist modifying stop-loss or profit targets mid-trade.` 
-    });
-  }
-
-  if (d.failedToTrailCount > 0) {
-    insights.push({ 
-      icon: '🛡️', 
-      text: `Profit surrender detected: <span class="text-rose-700 dark:text-rose-400 font-black">${d.failedToTrailCount} winning trade${d.failedToTrailCount > 1 ? 's' : ''}</span> turned into losses costing <span class="text-rose-700 dark:text-rose-400 font-black">${fmtINR(d.failedToTrailLoss || 0)}</span> due to not trailing your SL. Move stop to breakeven once 1R is reached.` 
-    });
-  }
-
-  const trailedDiscip = d.trailingSlStats?.find(s => s.status === 'trailed_disciplined');
-  if (trailedDiscip && trailedDiscip.count >= 2) {
-    insights.push({
-      icon: '💎',
-      text: `Trailing SL edge: Disciplined trailing generated <span class="text-emerald-700 dark:text-emerald-400 font-black">+${fmtINR(trailedDiscip.totalPnl || 0)}</span> with a <span class="text-emerald-700 dark:text-emerald-400 font-black">${Number(trailedDiscip.winRate || 0).toFixed(1)}%</span> win rate across ${trailedDiscip.count} trades.`
-    });
-  }
-
   if (d.mostCommonMistake) {
     insights.push({ 
       icon: '⚠️', 
@@ -1359,10 +1014,17 @@ function generateInsights(d) {
     });
   }
 
+  if (d.overtradingCount > 0) {
+    insights.push({
+      icon: '🛑',
+      text: `Overtrading flagged on <span class="text-amber-700 dark:text-amber-400 font-black">${d.overtradingCount} ${d.overtradingCount === 1 ? 'trade' : 'trades'}</span>. Limit setups to high-probability trade locations.`
+    });
+  }
+
   if (insights.length === 0) {
     insights.push({ 
       icon: '✅', 
-      text: `Solid psychological edge. High rule adherence and calm execution detected in this trading sample. Maintain your routine.` 
+      text: `Solid psychological edge. High emotional discipline and calm execution detected in this trading sample. Maintain your routine.` 
     });
   }
 
@@ -1375,15 +1037,16 @@ const PsychologySkeleton = () => (
       <Skeleton variant="title" width="240px" height="32px" />
       <Skeleton variant="button" width="140px" />
     </div>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <Skeleton variant="card" height="180px" />
       <Skeleton variant="card" height="180px" />
-      <Skeleton variant="card" height="180px" className="sm:col-span-2 lg:col-span-1" />
+      <Skeleton variant="card" height="180px" />
+      <Skeleton variant="card" height="180px" />
     </div>
     <Skeleton variant="card" height="140px" />
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-      <Skeleton variant="card" height="340px" />
-      <Skeleton variant="card" height="340px" />
+      <Skeleton variant="card" height="380px" />
+      <Skeleton variant="card" height="380px" />
     </div>
   </div>
 );
