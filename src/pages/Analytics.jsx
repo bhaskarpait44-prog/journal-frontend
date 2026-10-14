@@ -150,8 +150,8 @@ const Analytics = () => {
               </Badge>
             )}
           </div>
-          <p className="text-xs sm:text-sm font-bold text-text-muted uppercase tracking-wider">
-             Window: <span className="text-blue-700 dark:text-blue-400 font-black">{fmtDate(from)}</span> — <span className="text-blue-700 dark:text-blue-400 font-black">{fmtDate(to)}</span>
+          <p className="text-xs text-text-muted mt-0.5">
+             {fmtDate(from)} — {fmtDate(to)}
           </p>
         </div>
 
@@ -183,11 +183,6 @@ const Analytics = () => {
         </div>
       </div>
 
-      {/* Section Divider: Core Metrics */}
-      <div className="flex items-center gap-3">
-        <span className="text-[11px] font-black text-text-muted uppercase tracking-[0.2em] whitespace-nowrap">Core Performance Edge</span>
-        <div className="h-px flex-1 bg-border/70" />
-      </div>
 
       {/* Primary Metric Grid (2-cols on mobile, 3-cols on tablet, 6-cols on desktop) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
@@ -247,8 +242,8 @@ const Analytics = () => {
           <div className="flex flex-col gap-3 p-1">
             {/* Title */}
             <div>
-              <h4 className="text-xs sm:text-sm font-black uppercase tracking-tight text-text-primary">How Much to Risk Per Trade</h4>
-              <p className="text-[11px] text-text-muted mt-0.5">Based on your win rate of <span className="font-bold text-text-secondary">{Number(summary?.winRate || 0).toFixed(1)}%</span></p>
+              <h4 className="text-sm font-semibold text-text-primary">How Much to Risk Per Trade</h4>
+              <p className="text-xs text-text-muted mt-0.5">Based on your win rate of <span className="font-semibold text-text-secondary">{Number(summary?.winRate || 0).toFixed(1)}%</span></p>
             </div>
             {/* Three tiles */}
             <div className="flex flex-wrap gap-3">
@@ -276,12 +271,6 @@ const Analytics = () => {
         </Card>
       )}
 
-      {/* Section Divider: Risk Dynamics */}
-      <div className="flex items-center gap-3">
-        <span className="text-[11px] font-black text-text-muted uppercase tracking-[0.2em] whitespace-nowrap">Risk & Drawdown Dynamics</span>
-        <div className="h-px flex-1 bg-border/70" />
-      </div>
-
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <MetricCard label="Max Win" value={fmtINR(summary?.maxWin || 0, true)} sub="Best trade" icon={IconArrowUp} color="text-emerald-700 dark:text-emerald-400" />
         <MetricCard label="Max Loss" value={fmtINR(summary?.maxLoss || 0, true)} sub="Worst trade" icon={IconArrowDown} color="text-rose-700 dark:text-rose-400" />
@@ -295,13 +284,8 @@ const Analytics = () => {
         {/* Daily Performance Bar Chart */}
         <Card className="lg:col-span-2 p-0 overflow-hidden shadow-md" variant="default">
            <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border flex items-center justify-between bg-card-alt">
-              <div>
-                <h3 className="font-bold text-text-primary text-xs sm:text-sm uppercase tracking-tight">Daily Performance</h3>
-                <p className="text-[10px] sm:text-xs text-text-muted font-bold uppercase mt-0.5">Individual session P&L results</p>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-black font-mono text-text-secondary">{(summary?.winners || 0) + (summary?.losers || 0)} settled trades</span>
-              </div>
+              <h3 className="font-semibold text-text-primary text-sm">Daily P&L</h3>
+              <span className="text-xs text-text-muted font-mono">{(summary?.winners || 0) + (summary?.losers || 0)} trades</span>
            </div>
            <div className="h-[220px] sm:h-[280px] lg:h-[320px] w-full p-3 sm:p-6 bg-card">
               {!hasData ? <EmptyState icon={IconAnalytics} title="No Data Found" /> : (
@@ -342,8 +326,7 @@ const Analytics = () => {
         {/* Win / Loss Outcome Mix */}
         <Card padding="p-0" className="flex flex-col overflow-hidden shadow-md" variant="default">
            <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt">
-              <h3 className="font-bold text-text-primary text-xs sm:text-sm uppercase tracking-tight">Outcome Distribution</h3>
-              <p className="text-[10px] sm:text-xs text-text-muted font-bold uppercase mt-0.5">Win vs loss breakdown</p>
+              <h3 className="font-semibold text-text-primary text-sm">Win / Loss Split</h3>
            </div>
            <div className="flex-1 flex flex-col items-center justify-center p-5 sm:p-6 bg-card">
               {!hasData ? <EmptyState icon={IconCheck} title="No Data" /> : (
@@ -393,8 +376,7 @@ const Analytics = () => {
         <Card padding="p-0" className="overflow-hidden shadow-md" variant="default">
           <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border flex items-center justify-between bg-card-alt">
             <div>
-              <h3 className="font-bold text-text-primary text-xs sm:text-sm uppercase tracking-tight">Cumulative Equity Curve</h3>
-              <p className="text-[10px] sm:text-xs text-text-muted font-bold uppercase mt-0.5">Realized net portfolio trajectory</p>
+              <h3 className="font-semibold text-text-primary text-sm">Equity Curve</h3>
             </div>
             <PnlSpan value={summary?.totalPnl} className="text-base sm:text-xl font-black" />
           </div>
@@ -445,8 +427,7 @@ const Analytics = () => {
         <Card padding="p-0" className="overflow-hidden border-rose-500/20 shadow-md" variant="default">
           <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border flex items-center justify-between bg-rose-500/5 dark:bg-rose-500/10">
             <div>
-              <h3 className="font-bold text-rose-700 dark:text-rose-400 text-xs sm:text-sm uppercase tracking-tight">Drawdown Profile</h3>
-              <p className="text-[10px] sm:text-xs text-text-muted font-bold uppercase mt-0.5">Capital peak-to-trough risk</p>
+              <h3 className="font-semibold text-rose-700 dark:text-rose-400 text-sm">Drawdown</h3>
             </div>
             <span className="text-xs sm:text-sm font-black font-mono text-rose-700 dark:text-rose-400">Max DD: {fmtINR(summary?.maxDrawdown || 0)}</span>
           </div>
@@ -490,10 +471,7 @@ const Analytics = () => {
         {/* Performance by Asset */}
         <Card variant="default" className="shadow-md">
           <div className="flex items-center justify-between mb-6 pb-3 border-b border-border">
-            <div>
-              <h3 className="font-bold text-text-primary text-sm uppercase tracking-tight">Performance by Asset</h3>
-              <p className="text-xs text-text-muted font-bold mt-0.5 uppercase tracking-wider">Underlying profitability</p>
-            </div>
+            <h3 className="font-semibold text-text-primary text-sm">Performance by Asset</h3>
             <IconSearch className="w-4 h-4 text-text-muted" />
           </div>
           <div className="space-y-4">
@@ -532,14 +510,11 @@ const Analytics = () => {
         {/* Performance by Strategy */}
         <Card variant="default" padding="p-0" className="overflow-hidden shadow-md">
           <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-border bg-card-alt flex justify-between items-center">
-            <div>
-              <h3 className="font-bold text-text-primary text-sm uppercase tracking-tight">Performance by Strategy</h3>
-              <p className="text-xs text-text-muted font-bold mt-0.5 uppercase tracking-wider">Systematic playbook edge</p>
-            </div>
+            <h3 className="font-semibold text-text-primary text-sm">Performance by Strategy</h3>
             {selectedStrategy && (
               <button 
                 onClick={() => setSelectedStrategy('')}
-                className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase tracking-wider hover:underline"
+                className="text-xs font-medium text-blue-700 dark:text-blue-400 hover:underline"
               >
                 Clear Filter
               </button>
@@ -617,10 +592,7 @@ const Analytics = () => {
       {/* Deep Insights */}
       {deepData && !deepData.empty && (
         <div className="space-y-6 sm:space-y-8 pt-4">
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-black text-text-muted uppercase tracking-[0.2em] whitespace-nowrap">Deep Behavioral Execution</span>
-            <div className="h-px flex-1 bg-border/70" />
-          </div>
+          <p className="text-sm font-semibold text-text-primary">Patterns & Insights</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <InsightCard icon="🔥" label="Peak Win Streak" value={`${deepData.streaks?.maxWinStreak} trades`} sub={`${fmtINR(deepData.streaks?.bestStreakPnl, true)} profit`} color="emerald" />
@@ -637,7 +609,7 @@ const Analytics = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
             <Card variant="default" className="shadow-md">
-               <h3 className="text-xs sm:text-sm font-bold text-text-primary uppercase tracking-tight mb-4">P&L vs. Holding Interval</h3>
+               <h3 className="text-sm font-semibold text-text-primary mb-4">P&L by Hold Time</h3>
                <div className="h-[240px] sm:h-[280px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={deepData.holdingTime || []} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
@@ -657,7 +629,7 @@ const Analytics = () => {
             </Card>
 
             <Card variant="default" className="shadow-md">
-               <h3 className="text-xs sm:text-sm font-bold text-text-primary uppercase tracking-tight mb-4">Execution Efficiency by Day</h3>
+               <h3 className="text-sm font-semibold text-text-primary mb-4">P&L by Day of Week</h3>
                <div className="h-[240px] sm:h-[280px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={deepData.dayOfWeek || []} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
@@ -685,10 +657,7 @@ const Analytics = () => {
               {/* Option Type: CE vs PE */}
               <Card variant="default" className="flex flex-col shadow-md">
                 <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="font-bold text-text-primary text-xs sm:text-sm uppercase tracking-tight">Calls vs Puts</h3>
-                    <p className="text-[10px] text-text-muted font-bold uppercase mt-0.5">Instrument profitability</p>
-                  </div>
+                  <h3 className="font-semibold text-text-primary text-sm">Calls vs Puts</h3>
                   <Badge type="OPEN" className="text-[10px]">CE / PE</Badge>
                 </div>
                 <div className="space-y-2.5 flex-1 flex flex-col justify-center">
@@ -715,10 +684,7 @@ const Analytics = () => {
               {/* Trade Type: BUY vs SELL */}
               <Card variant="default" className="flex flex-col shadow-md">
                 <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="font-bold text-text-primary text-xs sm:text-sm uppercase tracking-tight">Long vs Short</h3>
-                    <p className="text-[10px] text-text-muted font-bold uppercase mt-0.5">BUY vs SELL efficiency</p>
-                  </div>
+                  <h3 className="font-semibold text-text-primary text-sm">Long vs Short</h3>
                   <Badge type="OPEN" className="text-[10px]">Direction</Badge>
                 </div>
                 <div className="space-y-2.5 flex-1 flex flex-col justify-center">
@@ -745,10 +711,7 @@ const Analytics = () => {
               {/* Session Timing Edge */}
               <Card variant="default" className="flex flex-col md:col-span-2 lg:col-span-1 shadow-md">
                 <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="font-bold text-text-primary text-xs sm:text-sm uppercase tracking-tight">Market Session Timing</h3>
-                    <p className="text-[10px] text-text-muted font-bold uppercase mt-0.5">Performance by market phase</p>
-                  </div>
+                  <h3 className="font-semibold text-text-primary text-sm">Session Timing</h3>
                   <Badge type="OPEN" className="text-[10px]">Timing</Badge>
                 </div>
                 <div className="space-y-2.5 flex-1 flex flex-col justify-center">
@@ -773,25 +736,6 @@ const Analytics = () => {
               </Card>
             </div>
           )}
-
-          {/* Trading Costs vs Performance */}
-          <Card variant="elevated" className="bg-card border border-border shadow-md">
-            <div className="flex items-center justify-between mb-6">
-               <h3 className="font-black text-text-primary uppercase tracking-wider text-xs sm:text-sm">Trading Costs vs Performance</h3>
-               <Badge type="SELL" className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20 text-xs font-bold">
-                 Leakage Analysis
-               </Badge>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                <LeakageStat label="Leakage Ratio" value={`${Number(deepData.chargesImpact?.chargesPct || 0).toFixed(1)}%`} sub="Charges as % of Gross P&L" trend={deepData.chargesImpact?.chargesPct > 15 ? 'up' : 'down'} />
-                <LeakageStat label="Impact Cost" value={fmtINR(deepData.chargesImpact?.avgCharges)} sub="Average cost per log entry" />
-                <LeakageStat label="Silent Killers" value={deepData.chargesImpact?.chargesAteIt} sub="Trades turned loss by fees" color={deepData.chargesImpact?.chargesAteIt > 0 ? 'text-rose-700 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'} />
-                <div className="p-4 rounded-2xl bg-card-alt border border-border shadow-sm flex flex-col justify-center">
-                   <p className="text-[11px] font-black text-text-muted uppercase tracking-wider mb-1">Net Portfolio Result</p>
-                   <PnlSpan value={deepData.chargesImpact?.netPnl} className="text-xl sm:text-2xl font-black" />
-                </div>
-            </div>
-          </Card>
         </div>
       )}
     </div>
@@ -802,18 +746,13 @@ const Analytics = () => {
 // Sub-components
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MetricCard = ({ label, value, sub, color, icon: Icon }) => (
-  <Card hover variant="default" padding="p-3.5 sm:p-4.5" className="relative overflow-hidden flex flex-col items-start justify-between gap-3 shadow-sm bg-card border-border">
-    <div className={`p-2 rounded-xl bg-card-alt border border-border ${color || 'text-text-secondary'}`}>
-      <Icon className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
-    </div>
-    <div className="w-full">
-      <p className="text-[11px] font-black text-text-muted uppercase tracking-wider mb-1 truncate">{label}</p>
-      <h4 className={`text-lg sm:text-xl font-black font-mono tracking-tight leading-tight truncate ${color || 'text-text-primary'}`}>
-        {value}
-      </h4>
-      <p className="text-[11px] font-bold text-text-muted uppercase mt-0.5 truncate">{sub}</p>
-    </div>
+const MetricCard = ({ label, value, sub, color }) => (
+  <Card hover variant="default" padding="p-3.5 sm:p-4" className="flex flex-col gap-1 shadow-sm bg-card border-border">
+    <p className="text-xs text-text-muted truncate">{label}</p>
+    <h4 className={`text-lg sm:text-xl font-bold font-mono leading-tight truncate ${color || 'text-text-primary'}`}>
+      {value}
+    </h4>
+    <p className="text-xs text-text-muted truncate">{sub}</p>
   </Card>
 );
 
